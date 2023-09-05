@@ -18,6 +18,8 @@ jobs:
         run: |
           pip install -r requirements.txt
           python manage.py collectstatic --noinput
+        env:
+          MODE: PRODUCTION
       - name: Create artifact
         run: zip -r mathesar-v${{github.ref_name}}.zip . -x '*.git*'
       - name: Upload artifact to release
