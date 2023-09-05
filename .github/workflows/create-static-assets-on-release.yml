@@ -2,14 +2,10 @@ name: Create static assets
 on:
   release:
     types: [published, edited]
-  push:
-    branches:
-      - 'test_gh_actions'
 jobs:
   static-assets:
     runs-on: ubuntu-latest
     steps:
-      - run: echo ${{github.ref_name}}
       - name: Checkout branch @${{github.ref_name}}
         uses: actions/checkout@v3
         with:
@@ -23,11 +19,7 @@ jobs:
           pip install -r requirements.txt
           cp .env.example .env
       - name: Run collectstatic
-        run: |
-          mkdir static/
-          python manage.py collectstatic
-        env:
-          MODE: PRODUCTION
+        run: python manage.py collectstatic --noinput
       - name: Create artifact
         run: zip -r mathesar-v${{github.ref_name}}.zip . -x '*.git*'
       - name: Upload artifact to release
