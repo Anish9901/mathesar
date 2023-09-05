@@ -21,8 +21,8 @@ jobs:
       - name: Run collectstatic
         run: python manage.py collectstatic --noinput
         env:
-          DEBUG: False
           MODE: PRODUCTION
+          DEBUG: False
       - name: Create artifact
         run: zip -r mathesar-v${{github.ref_name}}.zip . -x '*.git*'
       - name: Upload artifact to release
