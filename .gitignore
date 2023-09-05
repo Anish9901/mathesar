@@ -186,7 +186,7 @@ node_modules/
 storybook-static/
 
 # Client Build files
-mathesar/static/mathesar/
+# mathesar/static/mathesar/
 
 # Playwright trace files
 test-results/
