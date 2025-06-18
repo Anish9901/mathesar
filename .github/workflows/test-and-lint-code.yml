@@ -132,6 +132,10 @@ jobs:
       # container to run tests successfully
       - name: Fix permissions
         run: sudo chown -R 1000:1000 .
+      - name: docker version
+        run: |
+            docker -v
+            docker compose version
       - name: Pull images
         run: |
           docker pull python:${{ matrix.py-version }}
