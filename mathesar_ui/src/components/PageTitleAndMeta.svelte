@@ -44,7 +44,7 @@
     flex-wrap: wrap;
     gap: 1rem;
     flex-direction: row;
-    align-items: center;
+    align-items: flex-end;
     justify-content: space-between;
   }
 
@@ -66,7 +66,7 @@
     justify-content: center;
     align-items: center;
     color: var(--text-color-tertiary);
-    margin-right: 0.25rem;
+    margin-right: var(--sm2);
   }
 
   .entity-type-container {
@@ -78,19 +78,19 @@
   .left-meta-container {
     display: flex;
     flex-direction: column;
-    gap: var(--sm5);
+    gap: var(--sm3);
   }
 
   .entity-type-name {
     font-size: var(--lg1);
     font-weight: 500;
     line-height: 1;
-    color: var(--text-color-secondary);
+    color: var(--text-color-tertiary);
   }
 
   .entity-name {
     font-weight: var(--font-weight-extra-bold);
-    font-size: var(--lg5);
+    font-size: var(--lg4);
     line-height: 1;
     color: var(--text-color-primary);
   }

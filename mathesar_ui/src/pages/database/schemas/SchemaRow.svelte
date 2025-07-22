@@ -3,7 +3,6 @@
   import { _ } from 'svelte-i18n';
 
   import DropdownMenu from '@mathesar/component-library/dropdown-menu/DropdownMenu.svelte';
-  import MenuDivider from '@mathesar/component-library/menu/MenuDivider.svelte';
   import {
     iconDeleteMajor,
     iconEdit,
@@ -33,40 +32,41 @@
 </script>
 
 <div class="schema-row" class:hover={isHovered} class:focus={isFocused}>
-  <div class="top-row">
-    <div class="icon-container">
-      <Icon {...iconSchema} size="1rem" />
-    </div>
-    <div class="menu-trigger">
-      <DropdownMenu
-        showArrow={false}
-        triggerAppearance="plain"
-        preferredPlacement="bottom-end"
-        icon={iconMoreActions}
-        menuStyle="--Menu__padding-x:0.8em;"
-      >
-        <ButtonMenuItem
-          on:click={() => dispatch('edit')}
-          icon={iconEdit}
-          disabled={!$currentRoleOwns}
-        >
-          {$_('edit_schema')}
-        </ButtonMenuItem>
-        <MenuDivider />
-        <ButtonMenuItem
-          danger
-          on:click={() => dispatch('delete')}
-          icon={iconDeleteMajor}
-          disabled={!$currentRoleOwns}
-        >
-          {$_('delete_schema')}
-        </ButtonMenuItem>
-      </DropdownMenu>
-    </div>
-  </div>
-
   <div class="content">
-    <div class="name">{$name}</div>
+    <div class="content-header">
+      <div class="icon-container">
+        <Icon {...iconSchema} size="1rem" />
+      </div>
+      <div class="name">{$name}</div>
+      <div class="table-count">
+        <Icon {...iconTable} size="1rem" />
+        <SchemaConstituentCounts {schema} />
+      </div>
+      <div class="menu-trigger">
+        <DropdownMenu
+          showArrow={false}
+          triggerAppearance="plain"
+          preferredPlacement="bottom-end"
+          icon={iconMoreActions}
+        >
+          <ButtonMenuItem
+            on:click={() => dispatch('edit')}
+            icon={iconEdit}
+            disabled={!$currentRoleOwns}
+          >
+            {$_('edit_schema')}
+          </ButtonMenuItem>
+          <ButtonMenuItem
+            danger
+            on:click={() => dispatch('delete')}
+            icon={iconDeleteMajor}
+            disabled={!$currentRoleOwns}
+          >
+            {$_('delete_schema')}
+          </ButtonMenuItem>
+        </DropdownMenu>
+      </div>
+    </div>
 
     {#if $description}
       <p class="description" title={$description}>
@@ -75,13 +75,6 @@
     {:else}
       <div class="description-placeholder"></div>
     {/if}
-
-    <div class="bottom-row">
-      <div class="table-count">
-        <Icon {...iconTable} size="1rem" />
-        <SchemaConstituentCounts {schema} />
-      </div>
-    </div>
   </div>
 
   <!-- svelte-ignore a11y-missing-content -->
@@ -112,45 +105,41 @@
     --z-index-menu-trigger: 2;
     border-radius: var(--border-radius-l);
     border: 1px solid var(--card-border);
-    background: linear-gradient(
-      var(--gradient-direction-default),
-      var(--gradient-card-start),
-      var(--gradient-card-end)
-    );
-    padding: 1rem;
+    background-color: var(--card-background);
+    padding: var(--lg1);
     display: flex;
     flex-direction: column;
     height: 100%;
     width: 100%;
     box-shadow: var(--card-active-shadow);
-    transition: background 0.2s ease-in-out;
   }
 
   .schema-row.hover {
-    border: 1px solid var(--card-hover-border);
+    border: 1px solid var(--salmon-400);
     box-shadow: var(--card-hover-shadow);
-    background: linear-gradient(
-      var(--gradient-direction-hover),
-      var(--gradient-card-hover-start),
-      var(--gradient-card-hover-end)
-    );
+    background: var(--card-hover-background);
   }
 
   .schema-row.focus {
-    outline: 2px solid var(--sand-400);
+    outline: 2px solid var(--salmon-500);
     outline-offset: 1px;
   }
 
-  .top-row {
+  .content {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    flex-grow: 1;
+    min-width: 0;
+  }
+
+  .content-header {
+    display: flex;
     align-items: center;
-    width: 100%;
-    margin-bottom: 0.125rem;
+    gap: var(--sm2);
   }
 
   .icon-container {
-    background-color: var(--icon-background);
+    background: linear-gradient(135deg, var(--salmon-600), var(--salmon-700));
     border-radius: 50%;
     width: 2rem;
     height: 2rem;
@@ -159,14 +148,7 @@
     justify-content: center;
     flex-shrink: 0;
     z-index: var(--z-index-menu-trigger);
-  }
-
-  .content {
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-    gap: 0.125rem;
-    min-width: 0;
+    color: var(--white);
   }
 
   .hyperlink-overlay {
@@ -192,17 +174,10 @@
     line-clamp: 1;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    min-height: 1.5rem;
   }
 
   .description-placeholder {
     min-height: 1.5rem;
-  }
-
-  .bottom-row {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 0.25rem;
   }
 
   .table-count {
@@ -211,17 +186,16 @@
     gap: 0.375rem;
     color: var(--text-color-tertiary);
     font-size: var(--sm1);
+    margin-left: auto;
+    margin-right: var(--sm3);
   }
 
   .name {
-    font-size: var(--lg3);
+    font-size: var(--lg2);
     font-weight: var(--font-weight-medium);
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
     color: var(--text-color-primary);
-    margin-bottom: 0.125rem;
-    line-height: 1.2;
-    width: 100%;
+    flex: 1;
+    word-break: break-word;
+    hyphens: auto;
   }
 </style>
