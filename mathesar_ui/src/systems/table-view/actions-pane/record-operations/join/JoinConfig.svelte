@@ -3,10 +3,10 @@
 
   import TableName from '@mathesar/components/TableName.svelte';
   import {
-    CheckboxGroup,
+    Checkbox,
     Collapsible,
     Help,
-    component,
+    LabeledInput,
   } from '@mathesar-component-library';
 
   import type { SimpleManyToManyRelationship } from './joinConfigUtils';
@@ -22,11 +22,14 @@
     </div>
     <section slot="content">
       {#if simpleManyToManyRelationships.length}
-        <CheckboxGroup
-          options={simpleManyToManyRelationships}
-          getCheckboxLabel={(r) =>
-            component(TableName, { table: { name: r.targetTable.name } })}
-        />
+        {#each simpleManyToManyRelationships as relationship}
+          <LabeledInput layout="inline-input-first">
+            <span slot="label">
+              <TableName table={{ name: relationship.targetTable.name }} />
+            </span>
+            <Checkbox />
+          </LabeledInput>
+        {/each}
       {:else}
         <div class="empty">({$_('none')})</div>
       {/if}
