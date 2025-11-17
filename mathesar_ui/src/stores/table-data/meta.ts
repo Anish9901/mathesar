@@ -12,6 +12,7 @@ import {
 
 import { Filtering, type TerseFiltering } from './filtering';
 import { Grouping, type TerseGrouping } from './grouping';
+import { Joining, type TerseJoining } from './joining';
 import type { RecordsRequestParamsData } from './records';
 import { SearchFuzzy } from './searchFuzzy';
 import { Sorting, type TerseSorting } from './sorting';
@@ -50,6 +51,7 @@ export interface MetaProps {
   sorting: Sorting;
   grouping: Grouping;
   filtering: Filtering;
+  joining: Joining;
 }
 
 /** Adds default values. */
@@ -59,6 +61,7 @@ function getFullMetaProps(p?: Partial<MetaProps>): MetaProps {
     sorting: p?.sorting ?? new Sorting(),
     grouping: p?.grouping ?? new Grouping(),
     filtering: p?.filtering ?? new Filtering(),
+    joining: p?.joining ?? new Joining(),
   };
 }
 
@@ -67,14 +70,19 @@ export type TerseMetaProps = [
   TerseSorting,
   TerseGrouping,
   TerseFiltering,
+  TerseJoining,
 ];
 
 export function makeMetaProps(t: TerseMetaProps): MetaProps {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+  const terseJoining = (t[4] ?? []) as TerseJoining;
   return {
     pagination: Pagination.fromTerse(t[0]),
     sorting: Sorting.fromTerse(t[1]),
     grouping: Grouping.fromTerse(t[2]),
     filtering: Filtering.fromTerse(t[3]),
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+    joining: Joining.fromTerse(terseJoining),
   };
 }
 
@@ -85,6 +93,8 @@ export function makeTerseMetaProps(p?: Partial<MetaProps>): TerseMetaProps {
     props.sorting.terse(),
     props.grouping.terse(),
     props.filtering.terse(),
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    props.joining.terse(),
   ];
 }
 
@@ -97,7 +107,19 @@ function deserializeMetaProps(s: string): MetaProps | undefined {
   // more robust manner.
   if (!s) return undefined;
   try {
-    return makeMetaProps(JSON.parse(Url64.decode(s)) as TerseMetaProps);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const parsed = JSON.parse(Url64.decode(s)) as unknown;
+    if (!Array.isArray(parsed)) return undefined;
+    // Ensure the array has at least 5 elements for backward compatibility
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const terse: TerseMetaProps = [
+      parsed[0] ?? [],
+      parsed[1] ?? [],
+      parsed[2] ?? [],
+      parsed[3] ?? [['and'], []],
+      parsed[4] ?? [],
+    ] as TerseMetaProps;
+    return makeMetaProps(terse);
   } catch {
     return undefined;
   }
@@ -119,6 +141,8 @@ export class Meta {
   grouping: Writable<Grouping>;
 
   filtering: Writable<Filtering>;
+
+  joining: Writable<Joining>;
 
   searchFuzzy: Writable<SearchFuzzy>;
 
@@ -172,6 +196,7 @@ export class Meta {
     this.sorting = writable(props.sorting);
     this.grouping = writable(props.grouping);
     this.filtering = writable(props.filtering);
+    this.joining = writable(props.joining);
     this.searchFuzzy = writable(new SearchFuzzy());
 
     this.rowsWithClientSideErrors = derived(
@@ -215,13 +240,20 @@ export class Meta {
     );
 
     this.serialization = derived(
-      [this.pagination, this.sorting, this.grouping, this.filtering],
-      ([pagination, sorting, grouping, filtering]) => {
+      [
+        this.pagination,
+        this.sorting,
+        this.grouping,
+        this.filtering,
+        this.joining,
+      ],
+      ([pagination, sorting, grouping, filtering, joining]) => {
         const serialization = serializeMetaProps({
           pagination,
           sorting,
           grouping,
           filtering,
+          joining,
         });
         if (serialization === defaultMetaPropsSerialization) {
           // Avoid returning a serialization which only includes the empty data
