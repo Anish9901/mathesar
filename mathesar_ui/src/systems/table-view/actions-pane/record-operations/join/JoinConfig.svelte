@@ -21,11 +21,15 @@
       <Help>{$_('simple_many_to_many_relationships_help')}</Help>
     </div>
     <section slot="content">
-      <CheckboxGroup
-        options={simpleManyToManyRelationships}
-        getCheckboxLabel={(r) =>
-          component(TableName, { table: { name: r.targetTable.name } })}
-      />
+      {#if simpleManyToManyRelationships.length}
+        <CheckboxGroup
+          options={simpleManyToManyRelationships}
+          getCheckboxLabel={(r) =>
+            component(TableName, { table: { name: r.targetTable.name } })}
+        />
+      {:else}
+        <div class="empty">({$_('none')})</div>
+      {/if}
     </section>
   </Collapsible>
 </div>
@@ -33,5 +37,8 @@
 <style>
   section {
     padding-left: 2rem;
+  }
+  .empty {
+    color: var(--color-fg-subtle-2);
   }
 </style>

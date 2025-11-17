@@ -464,6 +464,7 @@
   "no_target_table_selected": "No target table selected",
   "no_type_constraints": "No {constraintType} Constraints",
   "no_users_found": "No users found",
+  "none": "None",
   "not_a_collaborator_help": "You have to be a collaborator on this database in order to access its data.",
   "not_aggregated": "Not Aggregated",
   "now": "Now",
