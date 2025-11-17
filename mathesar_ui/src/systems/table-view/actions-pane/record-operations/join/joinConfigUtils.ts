@@ -65,12 +65,17 @@ function buildSimpleManyToManyRelationship(
 
   const intermediateOid = joinableTable.join_path[0][1][0];
   const intermediateInfo = targetTableInfo[intermediateOid];
-  const countIntermediateNonPkColumns = Object.values(
-    intermediateInfo.columns,
-  ).filter((c) => !c.primary_key).length;
-  // Intermediate table must have exactly two non-PK columns. We already know
-  // these will be FK columns based on the previous validations of fkey_path.
-  if (countIntermediateNonPkColumns !== 2) return undefined;
+  const intermediateColumns = Object.values(intermediateInfo.columns);
+  const countIntermediateColumns = intermediateColumns.length;
+
+  if (countIntermediateColumns !== 3) return undefined;
+  // Intermediate table must have exactly three columns
+
+  const countIntermediatePkColumns = intermediateColumns.filter(
+    (c) => c.primary_key,
+  ).length;
+  // Intermediate table must have exactly one PK column.
+  if (countIntermediatePkColumns !== 1) return undefined;
 
   return {
     targetTable: { oid: targetOid, ...targetInfo },
