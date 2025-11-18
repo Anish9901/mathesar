@@ -74,15 +74,12 @@ export type TerseMetaProps = [
 ];
 
 export function makeMetaProps(t: TerseMetaProps): MetaProps {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-  const terseJoining = (t[4] ?? []) as TerseJoining;
   return {
     pagination: Pagination.fromTerse(t[0]),
     sorting: Sorting.fromTerse(t[1]),
     grouping: Grouping.fromTerse(t[2]),
     filtering: Filtering.fromTerse(t[3]),
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-    joining: Joining.fromTerse(terseJoining),
+    joining: Joining.fromTerse(t[4]),
   };
 }
 
@@ -93,7 +90,6 @@ export function makeTerseMetaProps(p?: Partial<MetaProps>): TerseMetaProps {
     props.sorting.terse(),
     props.grouping.terse(),
     props.filtering.terse(),
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     props.joining.terse(),
   ];
 }
@@ -107,19 +103,7 @@ function deserializeMetaProps(s: string): MetaProps | undefined {
   // more robust manner.
   if (!s) return undefined;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const parsed = JSON.parse(Url64.decode(s)) as unknown;
-    if (!Array.isArray(parsed)) return undefined;
-    // Ensure the array has at least 5 elements for backward compatibility
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const terse: TerseMetaProps = [
-      parsed[0] ?? [],
-      parsed[1] ?? [],
-      parsed[2] ?? [],
-      parsed[3] ?? [['and'], []],
-      parsed[4] ?? [],
-    ] as TerseMetaProps;
-    return makeMetaProps(terse);
+    return makeMetaProps(JSON.parse(Url64.decode(s)) as TerseMetaProps);
   } catch {
     return undefined;
   }

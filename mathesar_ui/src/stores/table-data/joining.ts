@@ -17,7 +17,10 @@ export class Joining {
     this.simpleManyToMany = simpleManyToMany ?? new ImmutableMap();
   }
 
-  withEntry(intermediateTableOid: number, joinPath: JoinPath): Joining {
+  withSimpleManyToMany(
+    intermediateTableOid: number,
+    joinPath: JoinPath,
+  ): Joining {
     return new Joining({
       simpleManyToMany: this.simpleManyToMany.withEntries([
         [intermediateTableOid, joinPath],
@@ -25,7 +28,7 @@ export class Joining {
     });
   }
 
-  withoutEntry(intermediateTableOid: number): Joining {
+  withoutSimpleManyToMany(intermediateTableOid: number): Joining {
     return new Joining({
       simpleManyToMany: this.simpleManyToMany.without(intermediateTableOid),
     });
