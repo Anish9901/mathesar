@@ -42,12 +42,16 @@
   export let fkColumn: Pick<RawColumnWithMetadata, 'id' | 'name' | 'metadata'>;
   export let isInModal = false;
 
-  $: tabularData = new TabularData({
-    database: table.schema.database,
-    table,
-    meta,
-    contextualFilters: new Map([[fkColumn.id, recordPk]]),
-  });
+  $: columnOrder = table.metadata?.column_order;
+  $: {
+    void columnOrder;
+    tabularData = new TabularData({
+      database: table.schema.database,
+      table,
+      meta,
+      contextualFilters: new Map([[fkColumn.id, recordPk]]),
+    });
+  }
   $: tabularDataStore.set(tabularData);
   $: ({ currentRolePrivileges } = table.currentAccess);
   $: canViewTable = $currentRolePrivileges.has('SELECT');
