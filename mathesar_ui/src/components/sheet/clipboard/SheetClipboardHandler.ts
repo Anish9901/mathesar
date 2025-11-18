@@ -6,7 +6,7 @@ import { getErrorMessage } from '@mathesar/utils/errors';
 
 import type SheetSelection from '../selection/SheetSelection';
 
-import { MIME_MATHESAR_SHEET_CLIPBOARD, MIME_PLAIN_TEXT } from './constants';
+import { MIME_PLAIN_TEXT } from './constants';
 import { type CopyingContext, getCopyContent } from './copy';
 import { type PastingContext, paste } from './paste';
 
@@ -45,11 +45,9 @@ function tsvToHtmlTable(tsv: string, structuredData: string): string {
       return `<tr>${cells}</tr>`;
     })
     .join('');
-  // Using data-mathesar-table attribute to mark this as Mathesar content
-  // and embed the structured data for internal paste operations
-  return `<table data-mathesar-table="true" data-mathesar-content="${encodeURIComponent(
+  return `<html><head></head><body><table data-mathesar-content="${encodeURIComponent(
     structuredData,
-  )}">${tableRows}</table>`;
+  )}"><tbody>${tableRows}</tbody></table></body></html>`;
 }
 
 export class SheetClipboardHandler implements ClipboardHandler {
@@ -76,13 +74,7 @@ export class SheetClipboardHandler implements ClipboardHandler {
         get(_)('copied_cells', { values: { count: content.cellCount } }),
       );
 
-      // Write plain text
       event.clipboardData.setData(MIME_PLAIN_TEXT, content.tsv);
-
-      // Write structured data as HTML table with data attributes
-      // This ensures keyboard shortcut and context menu produce identical clipboard data
-      // The table structure allows spreadsheet apps (Excel, Sheets) to create proper cells
-      // The data-mathesar-table attribute lets us identify our own content on paste
       const htmlContent = tsvToHtmlTable(content.tsv, content.structured);
       event.clipboardData.setData('text/html', htmlContent);
     } catch (e) {
@@ -109,10 +101,6 @@ export class SheetClipboardHandler implements ClipboardHandler {
     try {
       const selection = get(this.deps.selection);
       const content = getCopyContent(selection, this.deps.copyingContext);
-
-      // Use modern Clipboard API with standard MIME types and proper HTML table
-      // The table structure allows spreadsheet apps (Excel, Sheets) to create proper cells
-      // The data-mathesar-table attribute lets us identify our own content on paste
       const htmlContent = tsvToHtmlTable(content.tsv, content.structured);
 
       const clipboardItems = [
@@ -149,35 +137,23 @@ export class SheetClipboardHandler implements ClipboardHandler {
       const item = clipboardItems[0];
       if (!item) return;
 
-      // Try to read HTML first to extract Mathesar's structured data
-      let structuredData: string | undefined;
+      let htmlText = '';
       if (item.types.includes('text/html')) {
         const htmlBlob = await item.getType('text/html');
-        const htmlText = await htmlBlob.text();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(htmlText, 'text/html');
-        const table = doc.querySelector('table[data-mathesar-table="true"]');
-        if (table) {
-          const content = table.getAttribute('data-mathesar-content');
-          if (content) {
-            structuredData = decodeURIComponent(content);
-          }
-        }
+        htmlText = await htmlBlob.text();
       }
 
-      // Read plain text (used as fallback if no Mathesar data found)
       let plainText = '';
       if (item.types.includes(MIME_PLAIN_TEXT)) {
         const textBlob = await item.getType(MIME_PLAIN_TEXT);
         plainText = await textBlob.text();
       }
 
-      // Create a DataTransfer object to mimic ClipboardEvent
       const dataTransfer = new DataTransfer();
-      dataTransfer.setData(MIME_PLAIN_TEXT, plainText);
-      if (structuredData) {
-        dataTransfer.setData(MIME_MATHESAR_SHEET_CLIPBOARD, structuredData);
+      if (htmlText) {
+        dataTransfer.setData('text/html', htmlText);
       }
+      dataTransfer.setData(MIME_PLAIN_TEXT, plainText);
 
       await paste(dataTransfer, this.deps.selection, context);
     } catch (e) {
