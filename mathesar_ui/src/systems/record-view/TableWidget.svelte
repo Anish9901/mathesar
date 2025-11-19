@@ -81,7 +81,11 @@
       ),
   );
 
-  const tabularDataStore = setTabularDataStoreInContext(tabularData);
+  const tabularDataStore = setTabularDataStoreInContext(
+    // Sacrifice type safety here since the value is initialized reactively
+    // below.
+    undefined as unknown as TabularData,
+  );
   tabularDataStore.set(tabularData);
 
   $: currentTable = $tableStore;
