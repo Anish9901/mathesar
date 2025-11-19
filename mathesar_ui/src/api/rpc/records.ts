@@ -184,6 +184,10 @@ export const records = {
       limit?: number | null;
       offset?: number | null;
       search?: string | null;
+      linked_record_path?: {
+        record_pkey: ResultValue;
+        join_path: JoinPath;
+      } | null;
     },
     RecordsSummaryListResponse
   >(),
