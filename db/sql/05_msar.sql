@@ -6149,8 +6149,7 @@ RETURNS jsonb AS $$
         join_path jsonb
     )) WITH ORDINALITY AS t(alias, join_path, position)
     ORDER BY t.position ASC
-  ), sel_join_expr_cte AS (
-    SELECT jsonb_build_object(
+  ) SELECT jsonb_build_object(
       'selectable_joined_columns_expr', string_agg(
         format(
           'jsonb_agg(DISTINCT %I.%I) AS %I',
@@ -6163,19 +6162,14 @@ RETURNS jsonb AS $$
       'join_sql_expr', string_agg(
         cte.join_expr,
         E'\n'
-      )
-    ) AS sje FROM cte
-  ), group_by_expr_cte AS (
-    SELECT jsonb_build_object(
+      ),
       'join_group_by_expr', 'GROUP BY ' || string_agg(
-        format(
+        DISTINCT format(
           '%I.%I',
           base_table_name,
           base_tab_col_name
         ),
         ', '
       )
-    ) AS gbe FROM cte GROUP BY base_table_name
-  ) SELECT sel_join_expr_cte.sje::jsonb || group_by_expr_cte.gbe::jsonb
-  FROM sel_join_expr_cte, group_by_expr_cte
+  ) FROM cte
 $$ LANGUAGE SQL STABLE RETURNS NULL ON NULL INPUT;
