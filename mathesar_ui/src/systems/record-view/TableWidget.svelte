@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { derived, writable } from 'svelte/store';
   import { _ } from 'svelte-i18n';
 
   import type { RawColumnWithMetadata } from '@mathesar/api/rpc/columns';
@@ -20,16 +21,13 @@
     TabularData,
     setTabularDataStoreInContext,
   } from '@mathesar/stores/table-data';
+  import { ProcessedColumn } from '@mathesar/stores/table-data/processedColumns';
   import { currentTablesData } from '@mathesar/stores/tables';
   import MiniActionsPane from '@mathesar/systems/table-view/actions-pane/MiniActionsPane.svelte';
   import TableView from '@mathesar/systems/table-view/TableView.svelte';
   import Pagination from '@mathesar/utils/Pagination';
+  import { orderProcessedColumns } from '@mathesar/utils/tables';
 
-  const tabularDataStore = setTabularDataStoreInContext(
-    // Sacrifice type safety here since the value is initialized reactively
-    // below.
-    undefined as unknown as TabularData,
-  );
   const meta = new Meta({
     pagination: new Pagination({ size: 10 }),
   });
@@ -43,34 +41,59 @@
   export let fkColumn: Pick<RawColumnWithMetadata, 'id' | 'name' | 'metadata'>;
   export let isInModal = false;
 
+  // Create a writable store for the table so column order changes trigger reactivity
+  const tableStore = writable(table);
+
+  // Subscribe to table changes from the global store
+  $: {
+    const currentTable = $currentTablesData.tablesMap.get(table.oid);
+    if (currentTable) {
+      tableStore.set(currentTable);
+    }
+  }
+
+  // Create TabularData with the initial table
   const tabularData = new TabularData({
     database: table.schema.database,
     table,
     meta,
     contextualFilters: new Map([[fkColumn.id, recordPk]]),
   });
+
+  tabularData.processedColumns = derived(
+    [
+      tabularData.columnsDataStore.columns,
+      tabularData.constraintsDataStore,
+      tableStore,
+    ],
+    ([columns, constraintsData, currentTable]) =>
+      orderProcessedColumns(
+        new Map(
+          columns.map((column, columnIndex) => [
+            column.id,
+            new ProcessedColumn({
+              tableOid: currentTable.oid,
+              column,
+              columnIndex,
+              constraints: constraintsData.constraints,
+              hasEnhancedPrimaryKeyCell: true,
+            }),
+          ]),
+        ),
+        currentTable,
+      ),
+  );
+
+  const tabularDataStore = setTabularDataStoreInContext(tabularData);
   tabularDataStore.set(tabularData);
 
-  let columnOrder = JSON.stringify(table.metadata?.column_order);
-  $: {
-    const currentTable = $currentTablesData.tablesMap.get(table.oid);
-    if (currentTable) {
-      const newColumnOrder = JSON.stringify(
-        currentTable.metadata?.column_order,
-      );
-      if (newColumnOrder !== columnOrder) {
-        columnOrder = newColumnOrder;
-        // Update the table reference and refresh data
-        tabularData.table = currentTable;
-        void tabularData.refresh();
-      }
-    }
-  }
-
-  $: ({ currentRolePrivileges } = table.currentAccess);
+  $: currentTable = $tableStore;
+  $: ({ currentRolePrivileges } = currentTable.currentAccess);
   $: canViewTable = $currentRolePrivileges.has('SELECT');
   $: getTablePageUrl = $storeToGetTablePageUrl;
-  $: href = isInModal ? undefined : getTablePageUrl({ tableId: table.oid });
+  $: href = isInModal
+    ? undefined
+    : getTablePageUrl({ tableId: currentTable.oid });
 </script>
 
 <div class="table-widget">
@@ -78,15 +101,15 @@
     <h3 class="bold-header">
       {#if href}
         <a class="table-link" {href}>
-          <TableName {table} truncate={false} />
+          <TableName table={currentTable} truncate={false} />
         </a>
       {:else}
-        <TableName {table} truncate={false} />
+        <TableName table={currentTable} truncate={false} />
       {/if}
       <Help>
         <RichText text={$_('related_records_help')} let:slotName>
           {#if slotName === 'tableName'}
-            <TableName {table} truncate={false} />
+            <TableName table={currentTable} truncate={false} />
           {/if}
           {#if slotName === 'recordSummary'}
             <NameWithIcon icon={iconRecord} truncate={false} bold>
@@ -117,7 +140,7 @@
 
   <div class="results">
     {#if canViewTable}
-      <TableView context="widget" {table} />
+      <TableView context="widget" table={currentTable} />
     {:else}
       <WarningBox fullWidth>
         {$_('no_privileges_view_table')}
