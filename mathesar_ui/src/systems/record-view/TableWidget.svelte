@@ -55,7 +55,9 @@
   $: {
     const currentTable = $currentTablesData.tablesMap.get(table.oid);
     if (currentTable) {
-      const newColumnOrder = JSON.stringify(currentTable.metadata?.column_order);
+      const newColumnOrder = JSON.stringify(
+        currentTable.metadata?.column_order,
+      );
       if (newColumnOrder !== columnOrder) {
         columnOrder = newColumnOrder;
         // Update the table reference and refresh data
