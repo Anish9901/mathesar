@@ -15,6 +15,7 @@ def list_records_from_table(
     order=None,
     filter=None,
     group=None,
+    joined_columns=None,
     return_record_summaries=False,
     table_record_summary_templates=None,
 ):
@@ -34,6 +35,7 @@ def list_records_from_table(
         order: An array of ordering definition objects.
         filter: An array of filter definition objects.
         group: An array of group definition objects.
+        joined_columns: TODO
         return_record_summaries: Whether to return self record summaries.
         table_record_summary_templates: A dict of record summary templates, per table.
     """
@@ -46,6 +48,7 @@ def list_records_from_table(
         _json_or_none(order),
         _json_or_none(filter),
         _json_or_none(group),
+        _json_or_none(joined_columns),
         return_record_summaries,
         _json_or_none(table_record_summary_templates),
     ).fetchone()[0]

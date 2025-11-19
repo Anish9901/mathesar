@@ -241,6 +241,7 @@ def list_(
         order: list[OrderBy] = None,
         filter: Filter = None,
         grouping: Grouping = None,
+        joined_columns: list = None,
         return_record_summaries: bool = False,
         **kwargs
 ) -> RecordList:
@@ -256,6 +257,7 @@ def list_(
         order: An array of ordering definition objects.
         filter: An array of filter definition objects.
         grouping: An array of group definition objects.
+        joined_columns: TODO
         return_record_summaries: Whether to return summaries of retrieved
             records.
 
@@ -272,6 +274,7 @@ def list_(
             order=order,
             filter=filter,
             group=grouping,
+            joined_columns=joined_columns,
             return_record_summaries=return_record_summaries,
             table_record_summary_templates=get_table_record_summary_templates(database_id),
         )
