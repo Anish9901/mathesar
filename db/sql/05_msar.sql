@@ -5248,23 +5248,29 @@ BEGIN
     'where_clause', msar.build_where_clause(tab_id, filter_)
   ) INTO expr_object;
 
-  CASE WHEN joinable_columns IS NOT NULL THEN
-    joinable_expr_object := msar.get_joined_columns_expr_json(joinable_columns);
-  END CASE;
+  joinable_expr_object := 
+    CASE 
+      WHEN joinable_columns IS NOT NULL THEN
+        msar.get_joined_columns_expr_json(joinable_columns)
+      ELSE NULL
+    END;
 
   SELECT format(
-    $q$SELECT %1$s, %2$s, %3$s FROM %4$I.%5$I %6$s %7$s %8$s %9$s LIMIT %10$L OFFSET %11$L$q$,
-    COALESCE(expr_object ->> 'selectable_columns_expr', 'NULL'),
-    COALESCE(joinable_expr_object ->> 'selectable_joined_columns_expr', 'NULL'),
-    COALESCE(expr_object ->> 'grouping_expr', 'NULL'),
-    expr_object ->> 'relation_schema_name',
-    expr_object ->> 'relation_name',
-    COALESCE(joinable_expr_object ->> 'join_sql_expr', 'NULL'),
-    COALESCE(joinable_expr_object ->> 'join_group_by_expr', 'NULL'),
-    expr_object ->> 'where_clause',
-    expr_object ->> 'order_by_expr',
-    limit_,
-    offset_
+    $q$SELECT %1$s, %2$s FROM %3$I.%4$I %5$s %6$s %7$s %8$s LIMIT %9$L OFFSET %10$L$q$,
+    /* %1 */ CONCAT_WS(
+               ', ',
+               COALESCE(expr_object ->> 'selectable_columns_expr', 'NULL'),
+               joinable_expr_object ->> 'selectable_joined_columns_expr'
+             ),
+    /* %2 */ COALESCE(expr_object ->> 'grouping_expr', 'NULL'),
+    /* %3 */ expr_object ->> 'relation_schema_name',
+    /* %4 */ expr_object ->> 'relation_name',
+    /* %5 */ joinable_expr_object ->> 'join_sql_expr',
+    /* %6 */ joinable_expr_object ->> 'join_group_by_expr',
+    /* %7 */ expr_object ->> 'where_clause',
+    /* %8 */ expr_object ->> 'order_by_expr',
+    /* %9 */ limit_,
+    /* %10 */ offset_
   ) INTO results_cte_query;
 
   SELECT format(
