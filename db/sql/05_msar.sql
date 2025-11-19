@@ -5439,10 +5439,11 @@ BEGIN
     offset_,
     order_,
     filter_,
+    null,
     null
   ) INTO expr_and_ctes;
 
-  RETURN QUERY SELECT expr_and_ctes -> 'selectable_columns';
+  RETURN QUERY SELECT msar.get_selectable_columns(tab_id);
   RETURN QUERY EXECUTE format(
     $q$
     WITH results_cte AS ( %1$s )
@@ -5615,6 +5616,7 @@ SELECT msar.list_records_from_table(
       jsonb_build_object('type', 'literal', 'value', rec_id)
     )
   ),
+  null,
   null,
   return_record_summaries,
   table_record_summary_templates
