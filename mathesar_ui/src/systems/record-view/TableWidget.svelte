@@ -41,10 +41,8 @@
   export let fkColumn: Pick<RawColumnWithMetadata, 'id' | 'name' | 'metadata'>;
   export let isInModal = false;
 
-  // Create a writable store for the table so column order changes trigger reactivity
   const tableStore = writable(table);
 
-  // Subscribe to table changes from the global store
   $: {
     const currentTable = $currentTablesData.tablesMap.get(table.oid);
     if (currentTable) {
@@ -52,7 +50,6 @@
     }
   }
 
-  // Create TabularData with the initial table
   const tabularData = new TabularData({
     database: table.schema.database,
     table,
