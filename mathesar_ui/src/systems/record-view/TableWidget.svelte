@@ -20,6 +20,7 @@
     TabularData,
     setTabularDataStoreInContext,
   } from '@mathesar/stores/table-data';
+  import { currentTablesData } from '@mathesar/stores/tables';
   import MiniActionsPane from '@mathesar/systems/table-view/actions-pane/MiniActionsPane.svelte';
   import TableView from '@mathesar/systems/table-view/TableView.svelte';
   import Pagination from '@mathesar/utils/Pagination';
@@ -42,17 +43,28 @@
   export let fkColumn: Pick<RawColumnWithMetadata, 'id' | 'name' | 'metadata'>;
   export let isInModal = false;
 
-  $: columnOrder = table.metadata?.column_order;
+  const tabularData = new TabularData({
+    database: table.schema.database,
+    table,
+    meta,
+    contextualFilters: new Map([[fkColumn.id, recordPk]]),
+  });
+  tabularDataStore.set(tabularData);
+
+  let columnOrder = JSON.stringify(table.metadata?.column_order);
   $: {
-    void columnOrder;
-    tabularData = new TabularData({
-      database: table.schema.database,
-      table,
-      meta,
-      contextualFilters: new Map([[fkColumn.id, recordPk]]),
-    });
+    const currentTable = $currentTablesData.tablesMap.get(table.oid);
+    if (currentTable) {
+      const newColumnOrder = JSON.stringify(currentTable.metadata?.column_order);
+      if (newColumnOrder !== columnOrder) {
+        columnOrder = newColumnOrder;
+        // Update the table reference and refresh data
+        tabularData.table = currentTable;
+        void tabularData.refresh();
+      }
+    }
   }
-  $: tabularDataStore.set(tabularData);
+
   $: ({ currentRolePrivileges } = table.currentAccess);
   $: canViewTable = $currentRolePrivileges.has('SELECT');
   $: getTablePageUrl = $storeToGetTablePageUrl;
