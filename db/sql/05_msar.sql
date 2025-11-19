@@ -4623,7 +4623,14 @@ in the preproc function before grouping.
 */
 SELECT string_agg(
   COALESCE(
-    format(expr_template, quote_ident(msar.get_column_name(tab_id, col_id::smallint))),
+    format(
+      expr_template,
+      quote_ident(msar.get_relation_name(tab_id))
+      || '.' ||
+      quote_ident(msar.get_column_name(tab_id, col_id::smallint))
+    ),
+    quote_ident(msar.get_relation_name(tab_id))
+    || '.' ||
     quote_ident(msar.get_column_name(tab_id, col_id::smallint))
   ), ', ' ORDER BY ordinality
 )
@@ -4800,18 +4807,27 @@ WHERE
 $$ LANGUAGE SQL STABLE RETURNS NULL ON NULL INPUT;
 
 
-CREATE OR REPLACE FUNCTION msar.build_column_expr(columns jsonb) RETURNS text AS $$/*
+CREATE OR REPLACE FUNCTION msar.build_column_expr(tab_name text, columns jsonb) RETURNS text AS $$/*
 Build an SQL select-target expression of columns from the argument.
 This is meant to work together with output of functions like msar.get_selectable_columns.
 
 Returns an expr in the form: msar.format_data("<column name>") as "<oid>", ...
 
 Args:
+  tab_name: TODO
   columns: The columns to build the expr for, in the following jsonb sample format:
            { "2": <name of column with oid 2>, "4": <name of column with oid 4> }
 
 */
-SELECT string_agg(format('msar.format_data(%I) AS %I', sel_column.value, sel_column.key), ', ')
+SELECT string_agg(
+  format(
+    'msar.format_data(%I.%I) AS %I',
+    tab_name,
+    sel_column.value,
+    sel_column.key
+  ),
+  ', '
+)
 FROM jsonb_each_text(columns) as sel_column;
 $$ LANGUAGE SQL STABLE RETURNS NULL ON NULL INPUT;
 
@@ -4828,7 +4844,7 @@ msar.format_data("column_name") AS "2", msar.format_data("another_column_name") 
 Args:
   tab_id: The OID of the table containing the columns to select.
 */
-SELECT msar.build_column_expr(msar.get_selectable_columns(tab_id));
+SELECT msar.build_column_expr(msar.get_relation_name(tab_id), msar.get_selectable_columns(tab_id));
 $$ LANGUAGE SQL STABLE RETURNS NULL ON NULL INPUT;
 
 
@@ -5195,7 +5211,8 @@ CREATE OR REPLACE FUNCTION msar.build_record_list_query_components_with_ctes(
   offset_ integer,
   order_ jsonb,
   filter_ jsonb,
-  group_ jsonb
+  group_ jsonb,
+  joinable_columns jsonb
 ) RETURNS jsonb AS $$/*
   Constructs the components necessary for generating enriched query results,
   including expressions, clauses, selectable_column list, and CTEs, for a table.
@@ -5217,29 +5234,33 @@ CREATE OR REPLACE FUNCTION msar.build_record_list_query_components_with_ctes(
     Returns a jsonb object combining metadata, the expressions, and the generated SQL queries.
 */
 DECLARE
-  selectable_columns jsonb;
   expr_object jsonb;
+  joinable_expr_object jsonb;
   results_cte_query text;
   count_cte_query text;
 BEGIN
-  SELECT msar.get_selectable_columns(tab_id) INTO selectable_columns;
-
   SELECT jsonb_build_object(
     'relation_name', msar.get_relation_name(tab_id),
     'relation_schema_name', msar.get_relation_schema_name(tab_id),
-    'selectable_columns', selectable_columns,
-    'selectable_columns_expr', msar.build_column_expr(selectable_columns),
+    'selectable_columns_expr', msar.build_selectable_column_expr(tab_id),
     'grouping_expr', msar.build_grouping_expr(tab_id, group_),
     'order_by_expr', msar.build_order_by_expr(tab_id, order_),
     'where_clause', msar.build_where_clause(tab_id, filter_)
   ) INTO expr_object;
 
+  CASE WHEN joinable_columns IS NOT NULL THEN
+    joinable_expr_object := msar.get_join_column_expr_json(joinable_columns);
+  END CASE;
+
   SELECT format(
-    $q$SELECT %1$s, %2$s FROM %3$I.%4$I %5$s %6$s LIMIT %7$L OFFSET %8$L$q$,
+    $q$SELECT %1$s, %2$s, %3$s FROM %4$I.%5$I %6$s %7$s %8$s %9$s LIMIT %10$L OFFSET %11$L$q$,
     COALESCE(expr_object ->> 'selectable_columns_expr', 'NULL'),
+    COALESCE(joinable_expr_object ->> 'selectable_joined_columns_expr', 'NULL'),
     COALESCE(expr_object ->> 'grouping_expr', 'NULL'),
     expr_object ->> 'relation_schema_name',
     expr_object ->> 'relation_name',
+    COALESCE(joinable_expr_object ->> 'join_sql_expr', 'NULL'),
+    COALESCE(joinable_expr_object ->> 'join_group_by_expr', 'NULL'),
     expr_object ->> 'where_clause',
     expr_object ->> 'order_by_expr',
     limit_,
@@ -5269,6 +5290,7 @@ msar.list_records_from_table(
   order_ jsonb,
   filter_ jsonb,
   group_ jsonb,
+  joined_columns jsonb DEFAULT NULL,
   return_record_summaries boolean DEFAULT false,
   table_record_summary_templates jsonb DEFAULT NULL
 ) RETURNS jsonb AS $$/*
@@ -5281,6 +5303,7 @@ Args:
   order_: An array of ordering definition objects.
   filter_: An array of filter definition objects.
   group_: An array of group definition objects.
+  joined_columns: TODO
   return_record_summaries : Whether to return a summary for each record listed.
   table_record_summary_templates: (optional) A JSON object that maps table OIDs to record summary
     templates.
@@ -5298,7 +5321,8 @@ BEGIN
     offset_,
     order_,
     filter_,
-    group_
+    group_,
+    joined_columns
   ) INTO expr_and_ctes;
 
   EXECUTE format(
@@ -6076,3 +6100,74 @@ BEGIN
   EXECUTE insert_str;
 END;
 $$ LANGUAGE plpgsql RETURNS NULL ON NULL INPUT;
+
+
+CREATE OR REPLACE FUNCTION msar.build_join_expr(join_path jsonb) RETURNS TEXT AS $$
+  WITH cte AS (
+    SELECT
+      msar.get_relation_name((joins->0->>0)::oid) AS left_tab_name,
+      msar.get_column_name((joins->0->>0)::oid, (joins->0->>1)::int) AS left_col_name,
+      msar.get_relation_schema_name((joins->1->>0)::oid) AS right_tab_sch_name,
+      msar.get_relation_name((joins->1->>0)::oid) AS right_tab_name,
+      msar.get_column_name((joins->1->>0)::oid, (joins->1->>1)::int) AS right_col_name
+    FROM jsonb_array_elements(join_path) AS joins
+  ), cte_2 AS (
+    SELECT format(
+      'LEFT JOIN %I.%I ON %I.%I = %I.%I',
+      cte.right_tab_sch_name,
+      cte.right_tab_name,
+      cte.left_tab_name,
+      cte.left_col_name,
+      cte.right_tab_name,
+      cte.right_col_name
+    ) AS col FROM cte
+  ) SELECT string_agg(cte_2.col , E'\n') FROM cte_2
+$$ LANGUAGE SQL RETURNS NULL ON NULL INPUT;
+
+
+CREATE OR REPLACE FUNCTION msar.get_join_column_expr_json(joinable_columns jsonb)
+RETURNS jsonb AS $$
+  WITH cte AS (
+    SELECT
+      t.alias AS alias,
+      msar.get_relation_name((t.join_path->0->0->>0)::oid) AS base_table_name,
+      msar.get_column_name((t.join_path->0->0->>0)::oid, (t.join_path->0->0->>1)::int) AS base_tab_col_name,
+      msar.get_relation_name((t.join_path->-1->-1->>0)::oid) AS target_table_name,
+      msar.get_column_name((t.join_path->-1->-1->>0)::oid, (t.join_path->-1->-1->>1)::int) AS selectable_pkey_col_name,
+      msar.build_join_expr(t.join_path) AS join_expr
+    FROM ROWS FROM (
+      jsonb_to_recordset(joinable_columns) AS (
+        alias text,
+        join_path jsonb
+    )) WITH ORDINALITY AS t(alias, join_path, position)
+    ORDER BY t.position ASC
+  ), sel_join_expr_cte AS (
+    SELECT jsonb_build_object(
+      'selectable_joined_columns_expr', string_agg(
+        format(
+          'msar.format_data(jsonb_agg(%I.%I)) AS %I',
+          cte.target_table_name,
+          cte.selectable_pkey_col_name,
+          cte.alias
+        ),
+        ', '
+      ),
+      'join_sql_expr', string_agg(
+        cte.join_expr,
+        ', '
+      )
+    ) AS sje FROM cte
+  ), group_by_expr_cte AS (
+    SELECT jsonb_build_object(
+      'join_group_by_expr', 'GROUP BY ' || string_agg(
+        format(
+          '%I.%I',
+          base_table_name,
+          base_tab_col_name
+        ),
+        ', '
+      )
+    ) AS gbe FROM cte GROUP BY base_table_name
+  ) SELECT sel_join_expr_cte.sje::jsonb || group_by_expr_cte.gbe::jsonb
+  FROM sel_join_expr_cte, group_by_expr_cte
+$$ LANGUAGE SQL STABLE RETURNS NULL ON NULL INPUT;
