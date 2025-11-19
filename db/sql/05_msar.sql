@@ -6119,7 +6119,7 @@ CREATE OR REPLACE FUNCTION msar.build_join_expr(join_path jsonb) RETURNS TEXT AS
       msar.get_relation_name((joins->1->>0)::oid) AS right_tab_name,
       msar.get_column_name((joins->1->>0)::oid, (joins->1->>1)::int) AS right_col_name
     FROM jsonb_array_elements(join_path) AS joins
-  ), cte_2 AS (
+  ), join_expr_cte AS (
     SELECT format(
       'LEFT JOIN %I.%I ON %I.%I = %I.%I',
       cte.right_tab_sch_name,
@@ -6128,8 +6128,8 @@ CREATE OR REPLACE FUNCTION msar.build_join_expr(join_path jsonb) RETURNS TEXT AS
       cte.left_col_name,
       cte.right_tab_name,
       cte.right_col_name
-    ) AS col FROM cte
-  ) SELECT string_agg(cte_2.col , E'\n') FROM cte_2
+    ) AS join_expr FROM cte
+  ) SELECT string_agg(join_expr_cte.join_expr , E'\n') FROM join_expr_cte
 $$ LANGUAGE SQL RETURNS NULL ON NULL INPUT;
 
 
@@ -6138,23 +6138,24 @@ RETURNS jsonb AS $$
   WITH cte AS (
     SELECT
       t.alias AS alias,
-      msar.get_relation_name((t.join_path->0->0->>0)::oid) AS base_table_name,
+      msar.get_relation_name((t.join_path->0->0->>0)::oid) AS base_tab_name,
       msar.get_column_name((t.join_path->0->0->>0)::oid, (t.join_path->0->0->>1)::int) AS base_tab_col_name,
-      msar.get_relation_name((t.join_path->-1->-1->>0)::oid) AS target_table_name,
-      msar.get_column_name((t.join_path->-1->-1->>0)::oid, (t.join_path->-1->-1->>1)::int) AS selectable_pkey_col_name,
+      msar.get_relation_name((t.join_path->-1->-1->>0)::oid) AS target_tab_name,
+      msar.get_column_name((t.join_path->-1->-1->>0)::oid, (t.join_path->-1->-1->>1)::int) AS target_tab_col_name,
       msar.build_join_expr(t.join_path) AS join_expr
     FROM ROWS FROM (
       jsonb_to_recordset(joinable_columns) AS (
         alias text,
         join_path jsonb
-    )) WITH ORDINALITY AS t(alias, join_path, position)
-    ORDER BY t.position ASC
+      )
+    ) WITH ORDINALITY AS t(alias, join_path)
+    ORDER BY ordinality
   ) SELECT jsonb_build_object(
       'selectable_joined_columns_expr', string_agg(
         format(
           'jsonb_agg(DISTINCT %I.%I) AS %I',
-          cte.target_table_name,
-          cte.selectable_pkey_col_name,
+          cte.target_tab_name,
+          cte.target_tab_col_name,
           cte.alias
         ),
         ', '
@@ -6166,7 +6167,7 @@ RETURNS jsonb AS $$
       'join_group_by_expr', 'GROUP BY ' || string_agg(
         DISTINCT format(
           '%I.%I',
-          base_table_name,
+          base_tab_name,
           base_tab_col_name
         ),
         ', '
