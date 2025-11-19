@@ -134,6 +134,24 @@ class GroupingResponse(TypedDict):
     groups: list[Group]
 
 
+class LinkedRecordPath(TypedDict):
+    """
+    Represents a path through a simple mapping table to a record on the
+    other side of a many-to-many link.
+
+    Attributes:
+        record_pkey: The primary key of the record linked to.
+        join_path: A path giving the route through a simple mapping table
+            to the table linked to.
+
+        join_path should have the structure:
+
+        [[[oid_1, attnum_1], [oid_2, attnum_2]], [[oid_3, attnum_3], [oid_4, attnum_4]]]
+    """
+    record_pkey: Any
+    join_path: list[list[list]]
+
+
 class RecordList(TypedDict):
     """
     Records from a table, along with some meta data
@@ -212,6 +230,22 @@ class SummarizedRecordReference(TypedDict):
     summary: str
 
 
+class RecordSummaryMapping(TypedDict):
+    """
+    Represents a mapping to simple mapping table primary keys, which can
+    be deleted to delink a linked record.
+
+    Attributes:
+        join_table: The OID of the simple mapping table referenced.
+        joined_values: A dict with each key being the key of a
+            `SummarizedRecordReference`, and each value being the pkey
+            of a row in the join table which references the summarized
+            row.
+    """
+    join_table: int
+    joined_values: dict[str, Any]
+
+
 class RecordSummaryList(TypedDict):
     """
     Response for listing record summaries.
@@ -222,7 +256,7 @@ class RecordSummaryList(TypedDict):
     """
     count: int
     results: list[SummarizedRecordReference]
-    mapping: dict
+    mapping: RecordSummaryMapping
 
     @classmethod
     def from_dict(cls, d):
@@ -513,7 +547,7 @@ def list_summaries(
         limit: Optional[int] = None,
         offset: Optional[int] = None,
         search: Optional[str] = None,
-        linked_record_path: Optional[dict] = None,
+        linked_record_path: Optional[LinkedRecordPath] = None,
         **kwargs,
 ) -> RecordSummaryList:
     """
@@ -525,6 +559,8 @@ def list_summaries(
         limit: Optional limit on the number of records to return.
         offset: Optional offset for pagination.
         search: Optional search term to filter records.
+        linked_record_path: Optional blob representing linkages to a
+            record for determining many-to-many inclusion.
 
     Returns:
         A list of objects, each containing a record summary and key pertaining to a record.
