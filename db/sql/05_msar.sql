@@ -6151,7 +6151,7 @@ RETURNS jsonb AS $$
     SELECT jsonb_build_object(
       'selectable_joined_columns_expr', string_agg(
         format(
-          'msar.format_data(jsonb_agg(%I.%I)) AS %I',
+          'msar.format_data(jsonb_agg(DISTINCT %I.%I)) AS %I',
           cte.target_table_name,
           cte.selectable_pkey_col_name,
           cte.alias
@@ -6160,7 +6160,7 @@ RETURNS jsonb AS $$
       ),
       'join_sql_expr', string_agg(
         cte.join_expr,
-        ', '
+        E'\n'
       )
     ) AS sje FROM cte
   ), group_by_expr_cte AS (
