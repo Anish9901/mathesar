@@ -5249,7 +5249,7 @@ BEGIN
   ) INTO expr_object;
 
   CASE WHEN joinable_columns IS NOT NULL THEN
-    joinable_expr_object := msar.get_join_column_expr_json(joinable_columns);
+    joinable_expr_object := msar.get_joined_columns_expr_json(joinable_columns);
   END CASE;
 
   SELECT format(
@@ -6125,7 +6125,7 @@ CREATE OR REPLACE FUNCTION msar.build_join_expr(join_path jsonb) RETURNS TEXT AS
 $$ LANGUAGE SQL RETURNS NULL ON NULL INPUT;
 
 
-CREATE OR REPLACE FUNCTION msar.get_join_column_expr_json(joinable_columns jsonb)
+CREATE OR REPLACE FUNCTION msar.get_joined_columns_expr_json(joinable_columns jsonb)
 RETURNS jsonb AS $$
   WITH cte AS (
     SELECT
