@@ -7,6 +7,10 @@ def _json_or_none(value):
     return json.dumps(value) if value is not None else None
 
 
+def _str_or_none(value):
+    return str(value) if value is not None else None
+
+
 def list_records_from_table(
     conn,
     table_oid,
@@ -126,6 +130,7 @@ def list_by_record_summaries(
     offset=0,
     search=None,
     table_record_summary_templates=None,
+    linked_record_path=None,
 ):
     result = db_conn.exec_msar_func(
         conn,
@@ -135,6 +140,7 @@ def list_by_record_summaries(
         offset,
         search,
         _json_or_none(table_record_summary_templates),
+        _json_or_none(linked_record_path),
     ).fetchone()[0]
     return result
 

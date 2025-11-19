@@ -222,12 +222,14 @@ class RecordSummaryList(TypedDict):
     """
     count: int
     results: list[SummarizedRecordReference]
+    mapping: dict
 
     @classmethod
     def from_dict(cls, d):
         return cls(
             count=d["count"],
             results=d["results"],
+            mapping=d["mapping"],
         )
 
 
@@ -511,6 +513,7 @@ def list_summaries(
         limit: Optional[int] = None,
         offset: Optional[int] = None,
         search: Optional[str] = None,
+        linked_record_path: Optional[dict] = None,
         **kwargs,
 ) -> RecordSummaryList:
     """
@@ -535,5 +538,6 @@ def list_summaries(
             offset=offset,
             search=search,
             table_record_summary_templates=get_table_record_summary_templates(database_id),
+            linked_record_path=linked_record_path,
         )
     return RecordSummaryList.from_dict(record_info)
