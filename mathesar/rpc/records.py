@@ -137,19 +137,31 @@ class GroupingResponse(TypedDict):
 class LinkedRecordPath(TypedDict):
     """
     Represents a path through a simple mapping table to a record on the
-    other side of a many-to-many link.
+    other side of a many-to-many link. The near side of the link is the
+    last part of the path, to match what's returned by
+    `tables.list_joinable` in the context where this is used. So, if one
+    calls `tables.list_joinable` on the table page, one can simply put
+    a join path to a table whose summaries are aggregated and displayed
+    on the table page into this object.
+
+    join_path should thus have the structure:
+
+    [
+        [[oid_1, attnum_1], [oid_2, attnum_2]],
+        [[oid_2, attnum_3], [oid_3, attnum_4]]
+    ]
+
+    In particular, it should be of length 2, representing a many-to-many
+    through a simple mapping table, and the OID of the right side of the
+    first join must bequal the OID on the left side of the second join.
 
     Attributes:
         record_pkey: The primary key of the record linked to.
         join_path: A path giving the route through a simple mapping table
             to the table linked to.
-
-        join_path should have the structure:
-
-        [[[oid_1, attnum_1], [oid_2, attnum_2]], [[oid_3, attnum_3], [oid_4, attnum_4]]]
     """
     record_pkey: Any
-    join_path: list[list[list]]
+    join_path: list[list[list[int]]]
 
 
 class RecordList(TypedDict):
@@ -233,7 +245,7 @@ class SummarizedRecordReference(TypedDict):
 class RecordSummaryMapping(TypedDict):
     """
     Represents a mapping to simple mapping table primary keys, which can
-    be deleted to delink a linked record.
+    be deleted to unlink a linked record.
 
     Attributes:
         join_table: The OID of the simple mapping table referenced.

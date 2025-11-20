@@ -5824,6 +5824,10 @@ Args:
     term (case insensitive) in their text will be returned.
   table_record_summary_templates: (optional) A JSON object that maps table OIDs to record summary
     templates.
+  linked_record_path: (optional) A JSON object that represents linkages via a simple many-to-many
+    mapping to a record in another table. This can be used to determine whether the listed
+    summaries are derived from records which are linked from the other table.
+
 */
 DECLARE
   search_where_clause text := '';
