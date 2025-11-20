@@ -103,8 +103,9 @@ def test_records_get(rf, monkeypatch, mocked_exec_msar_func):
     assert actual_record == expect_record
     assert call_args[2] == table_oid
     assert call_args[3] == record_id
-    assert call_args[4] is True  # return_record_summaries
-    assert call_args[5] == json.dumps({})  # table_record_summary_templates
+    assert call_args[4] is None  # joined_columns
+    assert call_args[5] is True  # return_record_summaries
+    assert call_args[6] == json.dumps({})  # table_record_summary_templates
 
 
 def test_records_add(rf, monkeypatch, mocked_exec_msar_func):

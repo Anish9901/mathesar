@@ -5248,8 +5248,8 @@ BEGIN
     'where_clause', msar.build_where_clause(tab_id, filter_)
   ) INTO expr_object;
 
-  joinable_expr_object := 
-    CASE 
+  joinable_expr_object :=
+    CASE
       WHEN joinable_columns IS NOT NULL THEN
         msar.get_joined_columns_expr_json(joinable_columns)
       ELSE NULL
