@@ -4145,7 +4145,7 @@ BEGIN
         'type', 'equal', 'args', jsonb_build_array(
           jsonb_build_object('type', 'attnum', 'value', 2),
           jsonb_build_object('type', 'literal', 'value', 500)))),
-    '(col1) = (''500'')'
+    '(atable.col1) = (''500'')'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4154,7 +4154,7 @@ BEGIN
         'type', 'lesser', 'args', jsonb_build_array(
           jsonb_build_object('type', 'attnum', 'value', 2),
           jsonb_build_object('type', 'literal', 'value', 500)))),
-    '(col1) < (''500'')'
+    '(atable.col1) < (''500'')'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4163,7 +4163,7 @@ BEGIN
         'type', 'greater', 'args', jsonb_build_array(
           jsonb_build_object('type', 'attnum', 'value', 2),
           jsonb_build_object('type', 'literal', 'value', 500)))),
-    '(col1) > (''500'')'
+    '(atable.col1) > (''500'')'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4172,7 +4172,7 @@ BEGIN
         'type', 'lesser_or_equal', 'args', jsonb_build_array(
           jsonb_build_object('type', 'attnum', 'value', 2),
           jsonb_build_object('type', 'literal', 'value', 500)))),
-    '(col1) <= (''500'')'
+    '(atable.col1) <= (''500'')'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4181,7 +4181,7 @@ BEGIN
         'type', 'greater_or_equal', 'args', jsonb_build_array(
           jsonb_build_object('type', 'attnum', 'value', 2),
           jsonb_build_object('type', 'literal', 'value', 500)))),
-    '(col1) >= (''500'')'
+    '(atable.col1) >= (''500'')'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4189,7 +4189,7 @@ BEGIN
       jsonb_build_object(
         'type', 'null', 'args', jsonb_build_array(
           jsonb_build_object('type', 'attnum', 'value', 2)))),
-    '(col1) IS NULL'
+    '(atable.col1) IS NULL'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4197,7 +4197,7 @@ BEGIN
       jsonb_build_object(
         'type', 'not_null', 'args', jsonb_build_array(
           jsonb_build_object('type', 'attnum', 'value', 2)))),
-    '(col1) IS NOT NULL'
+    '(atable.col1) IS NOT NULL'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4206,7 +4206,7 @@ BEGIN
         'type', 'contains_case_insensitive', 'args', jsonb_build_array(
           jsonb_build_object('type', 'attnum', 'value', 2),
           jsonb_build_object('type', 'literal', 'value', 'ABc')))),
-    'strpos(lower(col1), lower(''ABc''))::boolean'
+    'strpos(lower(atable.col1), lower(''ABc''))::boolean'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4215,7 +4215,7 @@ BEGIN
         'type', 'starts_with_case_insensitive', 'args', jsonb_build_array(
           jsonb_build_object('type', 'attnum', 'value', 2),
           jsonb_build_object('type', 'literal', 'value', 'a''bc')))),
-    'starts_with(lower(col1), lower(''a''''bc''))'
+    'starts_with(lower(atable.col1), lower(''a''''bc''))'
   );
   RETURN NEXT is(
     -- composition for json_array_length_equals
@@ -4229,7 +4229,7 @@ BEGIN
             )
           ),
           jsonb_build_object('type', 'literal', 'value', 500)))),
-    '(jsonb_array_length((col1)::jsonb)) = (''500'')'
+    '(jsonb_array_length((atable.col1)::jsonb)) = (''500'')'
   );
   RETURN NEXT is(
     -- composition for json_array_length_greater_than
@@ -4243,7 +4243,7 @@ BEGIN
             )
           ),
           jsonb_build_object('type', 'literal', 'value', 500)))),
-    '(jsonb_array_length((col1)::jsonb)) > (''500'')'
+    '(jsonb_array_length((atable.col1)::jsonb)) > (''500'')'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4257,7 +4257,7 @@ BEGIN
             )
           ),
           jsonb_build_object('type', 'literal', 'value', 500)))),
-    '(jsonb_array_length((col1)::jsonb)) >= (''500'')'
+    '(jsonb_array_length((atable.col1)::jsonb)) >= (''500'')'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4271,7 +4271,7 @@ BEGIN
             )
           ),
           jsonb_build_object('type', 'literal', 'value', 500)))),
-    '(jsonb_array_length((col1)::jsonb)) < (''500'')'
+    '(jsonb_array_length((atable.col1)::jsonb)) < (''500'')'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4285,7 +4285,7 @@ BEGIN
             )
           ),
           jsonb_build_object('type', 'literal', 'value', 500)))),
-    '(jsonb_array_length((col1)::jsonb)) <= (''500'')'
+    '(jsonb_array_length((atable.col1)::jsonb)) <= (''500'')'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4299,7 +4299,7 @@ BEGIN
             )
           ),
           jsonb_build_object('type', 'literal', 'value', 0)))),
-    '(jsonb_array_length((col1)::jsonb)) > (''0'')'
+    '(jsonb_array_length((atable.col1)::jsonb)) > (''0'')'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4308,7 +4308,7 @@ BEGIN
         'type', 'json_array_contains', 'args', jsonb_build_array(
           jsonb_build_object('type', 'attnum', 'value', 2),
           jsonb_build_object('type', 'literal', 'value', '"500"')))),
-    '(col1)::jsonb @> (''"500"'')::jsonb'
+    '(atable.col1)::jsonb @> (''"500"'')::jsonb'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4322,7 +4322,7 @@ BEGIN
             )
           ),
           jsonb_build_object('type', 'literal', 'value', 'https')))),
-    '(msar.uri_scheme(col1)) = (''https'')'
+    '(msar.uri_scheme(atable.col1)) = (''https'')'
   );
   RETURN NEXT is(
     -- composition for uri_authority_contains
@@ -4336,7 +4336,7 @@ BEGIN
             )
           ),
           jsonb_build_object('type', 'literal', 'value', 'google')))),
-    'strpos((msar.uri_authority(col1)), (''google''))::boolean'
+    'strpos((msar.uri_authority(atable.col1)), (''google''))::boolean'
   );
   RETURN NEXT is(
     -- composition for email_domain_equals
@@ -4350,7 +4350,7 @@ BEGIN
             )
           ),
           jsonb_build_object('type', 'literal', 'value', 'gmail.com')))),
-    '(msar.email_domain_name(col1)) = (''gmail.com'')'
+    '(msar.email_domain_name(atable.col1)) = (''gmail.com'')'
   );
   RETURN NEXT is(
     -- composition for email_domain_contains
@@ -4364,7 +4364,7 @@ BEGIN
             )
           ),
           jsonb_build_object('type', 'literal', 'value', 'mail')))),
-    'strpos((msar.email_domain_name(col1)), (''mail''))::boolean'
+    'strpos((msar.email_domain_name(atable.col1)), (''mail''))::boolean'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4388,7 +4388,7 @@ BEGIN
         )
       )
     ),
-    '(strpos((msar.email_domain_name(col1)), (''mail''))::boolean) OR ((col2) = (''500''))'
+    '(strpos((msar.email_domain_name(atable.col1)), (''mail''))::boolean) OR ((atable.col2) = (''500''))'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4417,7 +4417,7 @@ BEGIN
         )
       )
     ),
-    '(((col2) = (''500'')) AND ((col3) < (''abcde''))) OR ((id) > (''20''))'
+    '(((atable.col2) = (''500'')) AND ((atable.col3) < (''abcde''))) OR ((atable.id) > (''20''))'
   );
 END;
 $$ LANGUAGE plpgsql;
