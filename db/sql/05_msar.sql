@@ -6159,7 +6159,7 @@ RETURNS jsonb AS $$/*
         format(
           $q$
           jsonb_build_object(
-            'count', jsonb_array_length(jsonb_agg(DISTINCT %1$I.%2$I)),
+            'count', COUNT(DISTINCT %1$I.%2$I),
             'result', jsonb_path_query_array(
               jsonb_agg(DISTINCT %1$I.%2$I), '$[0 to 24]'
             ) -- limit results to 25
