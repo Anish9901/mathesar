@@ -6859,7 +6859,7 @@ BEGIN
   -- Empty table behavior
   RETURN NEXT is(
     msar.list_by_record_summaries('vehicles'::regclass, 10, 0),
-    '{"count": 0, "results": []}'
+    '{"count": 0, "mapping": null, "results": []}'::jsonb
   );
 
   INSERT INTO vehicles VALUES
@@ -6877,11 +6877,12 @@ BEGIN
     msar.list_by_record_summaries('vehicles'::regclass, 2, 0),
     '{
       "count": 8,
+      "mapping": null,
       "results": [
         {"key": 8, "summary": "Airplane"},
         {"key": 4, "summary": "Bicycle"}
       ]
-    }'
+    }'::jsonb
   );
 
   -- Pagination
@@ -6889,6 +6890,7 @@ BEGIN
     msar.list_by_record_summaries('vehicles'::regclass, 3, 3),
     '{
       "count": 8,
+      "mapping": null,
       "results": [
         {"key": 1, "summary": "Car"},
         {"key": 7, "summary": "Semi"},
@@ -6902,6 +6904,7 @@ BEGIN
     msar.list_by_record_summaries('vehicles'::regclass, 2, 0, 'cycle'),
     '{
       "count": 3,
+      "mapping": null,
       "results": [
         {"key": 4, "summary": "Bicycle"},
         {"key": 5, "summary": "Tricycle"}
@@ -6912,7 +6915,7 @@ BEGIN
   -- Empty search query
   RETURN NEXT is(
     msar.list_by_record_summaries('vehicles'::regclass, 2, 0, 'NOPE'),
-    '{"count": 0, "results": []}'
+    '{"count": 0, "mapping": null, "results": []}'
   );
 
   -- Search in custom record summary template
@@ -6924,7 +6927,7 @@ BEGIN
       '18 wheels',
       format('{ "%s": [ [2], " with ", [3], " wheels" ] }', 'vehicles'::regclass::oid)::jsonb
     ),
-    '{"count": 1, "results": [{"key": 7, "summary": "Semi with 18 wheels"}]}'
+    '{"count": 1, "mapping": null, "results": [{"key": 7, "summary": "Semi with 18 wheels"}]}'
   );
 END;
 $$ LANGUAGE plpgsql;
