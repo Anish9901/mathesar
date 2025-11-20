@@ -89,6 +89,7 @@
   description={table.description ?? undefined}
   icon={tableIcon}
   {pendingMessage}
+  tags={isView ? [$_('view')] : undefined}
   primary
   cssVariables={{
     '--EntityListItem__accent-color': accentColor,

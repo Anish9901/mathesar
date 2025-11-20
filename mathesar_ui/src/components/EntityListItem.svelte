@@ -21,6 +21,7 @@
    * (e.g. an unconfirmed table import).
    */
   export let pendingMessage: string | undefined = undefined;
+  export let tags: string[] | undefined = undefined;
   export let primary = false;
   export let cssVariables: CssVariablesObj | undefined = undefined;
 
@@ -54,6 +55,15 @@
       {#if pendingMessage}
         <div class="pending-message">
           {pendingMessage}
+        </div>
+      {/if}
+      {#if tags && tags.length > 0}
+        <div class="tags">
+          {#each tags as tag (tag)}
+            <div class="tag">
+              {tag}
+            </div>
+          {/each}
         </div>
       {/if}
     </div>
@@ -214,6 +224,21 @@
     border-radius: var(--border-radius-l);
     background: var(--color-bg-warning);
     color: var(--color-fg-warning);
+  }
+
+  .tags {
+    display: flex;
+    gap: var(--sm4);
+    align-items: center;
+
+    .tag {
+      font-size: var(--sm1);
+      padding: 0 var(--sm4);
+      border: 1px solid var(--color-border-tip);
+      border-radius: var(--border-radius-xl);
+      background: var(--color-bg-tip);
+      color: var(--color-fg-tip);
+    }
   }
 
   .actions {

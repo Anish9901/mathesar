@@ -889,6 +889,7 @@
   "value_upperbound_error": "Value must be at most {upperBound}.",
   "via_column": "via {columnName}",
   "via_column_component": "via [columnComponent]",
+  "view": "View",
   "view_details": "View details",
   "view_permissions": "View Permissions",
   "view_permissions_help": "Use this screen to configure the view's owner and granted privileges in PostgreSQL.",
