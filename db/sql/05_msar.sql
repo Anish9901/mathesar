@@ -5851,7 +5851,7 @@ BEGIN
       agg_mapping_cte AS (
         SELECT NULLIF(pg_catalog.jsonb_strip_nulls(pg_catalog.jsonb_build_object(
           'join_table', %6$L::bigint,
-          'joined_values', pg_catalog.jsonb_object_agg_strict(m.join_key, m.mapping_key)
+          'joined_values', pg_catalog.jsonb_object_agg(m.join_key, m.mapping_key)
         )), '{}'::jsonb) AS mapping
         FROM mapping_cte m INNER JOIN sorted s ON m.join_key::text = s.key::text
       )
