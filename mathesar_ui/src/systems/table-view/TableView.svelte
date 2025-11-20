@@ -114,6 +114,7 @@
 <div class="table-view">
   <WithTableInspector
     {context}
+    {table}
     {showTableInspector}
     bind:activeTabId={tableInspectorTab}
   >

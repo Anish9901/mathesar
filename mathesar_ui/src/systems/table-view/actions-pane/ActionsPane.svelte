@@ -7,7 +7,11 @@
   import { iconRequiresAttention } from '@mathesar/icons';
   import { tableInspectorVisible } from '@mathesar/stores/localStorage';
   import { getTabularDataStoreFromContext } from '@mathesar/stores/table-data';
-  import { getTableIcon, getTableIconFillColor } from '@mathesar/utils/tables';
+  import {
+    getTableIcon,
+    getTableIconFillColor,
+    isTableView,
+  } from '@mathesar/utils/tables';
   import { Icon, Tooltip } from '@mathesar-component-library';
 
   import FilterDropdown from './record-operations/filter/FilterDropdown.svelte';
@@ -21,6 +25,7 @@
   $: ({ filtering, sorting, grouping, sheetState } = meta);
 
   $: isSelectable = $currentRolePrivileges.has('SELECT');
+  $: isView = isTableView(table);
   $: tableIcon = getTableIcon(table);
   $: iconFillColor = getTableIconFillColor(table);
 
@@ -57,7 +62,11 @@
           <Icon size="1.3em" {...iconRequiresAttention} />
         </div>
         <span slot="content">
-          {$_('no_row_op_support_table_without_pk')}
+          {#if isView}
+            {$_('no_support_editing_views')}
+          {:else}
+            {$_('no_row_op_support_table_without_pk')}
+          {/if}
         </span>
       </Tooltip>
     </div>

@@ -18,6 +18,7 @@
     createDataExplorerUrlToExploreATable,
   } from '@mathesar/systems/data-explorer';
   import { importModalContext } from '@mathesar/systems/table-view/import/ImportController';
+  import { isTableView } from '@mathesar/utils/tables';
   import {
     AnchorButton,
     Button,
@@ -34,6 +35,7 @@
   $: ({ table, columnsDataStore, meta, canInsertRecords, canSelectRecords } =
     $tabularData);
 
+  $: isView = isTableView(table);
   $: ({ filtering, sorting, grouping } = meta);
   $: ({ columns } = columnsDataStore);
   $: explorationPageUrl = createDataExplorerUrlToExploreATable(
@@ -63,7 +65,7 @@
 
   function handleDeleteTable() {
     void confirmDelete({
-      identifierType: $_('table'),
+      identifierType: isView ? $_('view') : $_('table'),
       body: {
         component: TableDeleteConfirmationBody,
         props: {
@@ -146,7 +148,7 @@
     disabled={!$currentRoleOwns}
   >
     <Icon {...iconDeleteMajor} />
-    <span>{$_('delete_table')}</span>
+    <span>{isView ? $_('delete_view') : $_('delete_table')}</span>
   </Button>
 </div>
 

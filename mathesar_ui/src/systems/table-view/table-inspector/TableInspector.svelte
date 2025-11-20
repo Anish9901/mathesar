@@ -3,6 +3,8 @@
 
   import type { Tab } from '@mathesar/component-library/types';
   import InspectorTabContent from '@mathesar/components/InspectorTabContent.svelte';
+  import type { Table } from '@mathesar/models/Table';
+  import { isTableView } from '@mathesar/utils/tables';
   import { TabContainer, defined } from '@mathesar-component-library';
 
   import CellMode from './cell/CellMode.svelte';
@@ -10,16 +12,20 @@
   import RecordMode from './record/RecordMode.svelte';
   import TableMode from './table/TableMode.svelte';
 
-  const tabMap = {
-    table: { label: $_('table'), component: TableMode },
+  export let activeTabId: TableInspectorTabId | undefined;
+  export let table: Table;
+
+  $: tabMap = {
+    table: {
+      label: isTableView(table) ? $_('view') : $_('table'),
+      component: TableMode,
+    },
     column: { label: $_('column'), component: ColumnMode },
     record: { label: $_('record'), component: RecordMode },
     cell: { label: $_('cell'), component: CellMode },
   };
 
   type TableInspectorTabId = keyof typeof tabMap;
-
-  export let activeTabId: TableInspectorTabId | undefined;
 
   $: tabs = Object.entries(tabMap).map(([id, tab]) => ({ id, ...tab }));
   $: activeTab = defined(activeTabId, (id) => ({ id, ...tabMap[id] }));
