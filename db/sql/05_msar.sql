@@ -6110,7 +6110,9 @@ END;
 $$ LANGUAGE plpgsql RETURNS NULL ON NULL INPUT;
 
 
-CREATE OR REPLACE FUNCTION msar.build_join_expr(join_path jsonb) RETURNS TEXT AS $$
+CREATE OR REPLACE FUNCTION msar.build_join_expr(join_path jsonb) RETURNS TEXT AS $$/* 
+
+*/
   WITH cte AS (
     SELECT
       msar.get_relation_name((joins->0->>0)::oid) AS left_tab_name,
@@ -6134,7 +6136,9 @@ $$ LANGUAGE SQL RETURNS NULL ON NULL INPUT;
 
 
 CREATE OR REPLACE FUNCTION msar.get_joined_columns_expr_json(joinable_columns jsonb)
-RETURNS jsonb AS $$
+RETURNS jsonb AS $$/* 
+
+*/
   WITH cte AS (
     SELECT
       t.alias AS alias,
@@ -6153,7 +6157,14 @@ RETURNS jsonb AS $$
   ) SELECT jsonb_build_object(
       'selectable_joined_columns_expr', string_agg(
         format(
-          'jsonb_agg(DISTINCT %I.%I) AS %I',
+          $q$
+          jsonb_build_object(
+            'count', jsonb_array_length(jsonb_agg(DISTINCT %1$I.%2$I)),
+            'result', jsonb_path_query_array(
+              jsonb_agg(DISTINCT %1$I.%2$I), '$[0 to 24]'
+            ) -- limit results to 25
+          ) AS %3$I
+          $q$,
           cte.target_tab_name,
           cte.target_tab_col_name,
           cte.alias
