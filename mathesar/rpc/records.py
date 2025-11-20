@@ -241,7 +241,7 @@ def list_(
         order: list[OrderBy] = None,
         filter: Filter = None,
         grouping: Grouping = None,
-        joined_columns: list = None,
+        joined_columns: list[list[list]] = None,
         return_record_summaries: bool = False,
         **kwargs
 ) -> RecordList:
@@ -294,6 +294,7 @@ def get(
         record_id: Any,
         table_oid: int,
         database_id: int,
+        joined_columns: list[list[list]] = None,
         return_record_summaries: bool = False,
         table_record_summary_templates: dict[str, Any] = None,
         **kwargs
@@ -305,6 +306,7 @@ def get(
         record_id: The primary key value of the record to be gotten.
         table_oid: Identity of the table in the user's database.
         database_id: The Django id of the database containing the table.
+        joined_columns: TODO
         return_record_summaries: Whether to return summaries of the
             retrieved record.
         table_record_summary_templates: A dict of record summary templates.
@@ -323,6 +325,7 @@ def get(
             conn,
             record_id,
             table_oid,
+            joined_columns,
             return_record_summaries=return_record_summaries,
             table_record_summary_templates={
                 **get_table_record_summary_templates(database_id),

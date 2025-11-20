@@ -4506,7 +4506,7 @@ INSERT INTO msar.expr_templates VALUES
 CREATE OR REPLACE FUNCTION msar.build_expr(rel_id oid, tree jsonb) RETURNS text AS $$
 SELECT CASE tree ->> 'type'
   WHEN 'literal' THEN format('%L', tree ->> 'value')
-  WHEN 'attnum' THEN format('%I', msar.get_column_name(rel_id, (tree ->> 'value')::smallint))
+  WHEN 'attnum' THEN format('%I.%I', msar.get_relation_name(rel_id), msar.get_column_name(rel_id, (tree ->> 'value')::smallint))
   ELSE
     format(max(expr_template), VARIADIC array_agg(msar.build_expr(rel_id, inner_tree)))
 END
@@ -5266,8 +5266,8 @@ BEGIN
     /* %3 */ expr_object ->> 'relation_schema_name',
     /* %4 */ expr_object ->> 'relation_name',
     /* %5 */ joinable_expr_object ->> 'join_sql_expr',
-    /* %6 */ joinable_expr_object ->> 'join_group_by_expr',
-    /* %7 */ expr_object ->> 'where_clause',
+    /* %6 */ expr_object ->> 'where_clause',
+    /* %7 */ joinable_expr_object ->> 'join_group_by_expr',
     /* %8 */ expr_object ->> 'order_by_expr',
     /* %9 */ limit_,
     /* %10 */ offset_

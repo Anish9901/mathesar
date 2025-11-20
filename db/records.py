@@ -59,6 +59,7 @@ def get_record_from_table(
     conn,
     record_id,
     table_oid,
+    joined_columns=None,
     return_record_summaries=False,
     table_record_summary_templates=None,
 ):
@@ -70,6 +71,7 @@ def get_record_from_table(
     Args:
         record_id: The primary key value of the record.
         table_id: The OID of the table whose record we'll get.
+        joined_columns: TODO
         return_record_summaries: Whether to return self record summaries.
         table_record_summary_templates: A dict of record summary templates, per table.
     """
@@ -78,6 +80,7 @@ def get_record_from_table(
         'get_record_from_table',
         table_oid,
         record_id,
+        _json_or_none(joined_columns),
         return_record_summaries,
         _json_or_none(table_record_summary_templates),
     ).fetchone()[0]
