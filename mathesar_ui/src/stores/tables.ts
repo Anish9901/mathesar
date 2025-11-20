@@ -27,7 +27,7 @@ import type { Schema } from '@mathesar/models/Schema';
 import { Table } from '@mathesar/models/Table';
 import {
   type RpcRequest,
-  batchSend,
+  batchRun,
 } from '@mathesar/packages/json-rpc-client-builder';
 import { getErrorMessage } from '@mathesar/utils/errors';
 import { preloadCommonData } from '@mathesar/utils/preloadData';
@@ -275,7 +275,7 @@ export async function updateTable({
       }),
     );
   }
-  await batchSend(requests);
+  await batchRun(requests);
 
   // TODO: Remove once tables.patch_with_metadata response provides RawTableWithMetadata
   const rawTableWithMetadata = await api.tables
