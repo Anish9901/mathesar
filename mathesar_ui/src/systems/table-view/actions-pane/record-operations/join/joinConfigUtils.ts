@@ -1,4 +1,5 @@
 import type {
+  JoinPath,
   JoinableTable,
   JoinableTablesResult,
 } from '@mathesar/api/rpc/tables';
@@ -8,23 +9,13 @@ import type {
  * table only contains FK columns for the mapping and does not contain any other
  * data. A common use case would be tagging.
  *
- * The relationship is taken from the context of the "current" table, which is
- * not represented in this data structure.
- *
  * For example, if the current table is "movies", the target table could be
  * "genres" and the intermediate table could be "movie_genres".
  */
 export interface SimpleManyToManyRelationship {
-  targetTable: {
+  currentTable: {
     oid: number;
-    name: string;
-    /** Keys are stringified column attnum values */
-    columns: {
-      [key: string]: {
-        name: string;
-        type: string;
-      };
-    };
+    pkColumnAttnum: number;
   };
   intermediateTable: {
     oid: number;
@@ -43,6 +34,18 @@ export interface SimpleManyToManyRelationship {
     fkToTargetTable: {
       constraintOid: number;
       columnAttnum: number;
+    };
+  };
+  targetTable: {
+    oid: number;
+    name: string;
+    /** Keys are stringified column attnum values */
+    columns: {
+      [key: string]: {
+        name: string;
+        type: string;
+        primary_key: boolean;
+      };
     };
   };
 }
@@ -78,6 +81,10 @@ function buildSimpleManyToManyRelationship(
   if (countIntermediatePkColumns !== 1) return undefined;
 
   return {
+    currentTable: {
+      oid: joinableTable.join_path[0][0][0],
+      pkColumnAttnum: joinableTable.join_path[0][0][1],
+    },
     targetTable: { oid: targetOid, ...targetInfo },
     intermediateTable: {
       oid: intermediateOid,
@@ -112,4 +119,39 @@ export function getSimpleManyToManyRelationships(
   return [...generateSimpleManyToManyRelationships(joinableTablesResult)].sort(
     (a, b) => a.targetTable.name.localeCompare(b.targetTable.name),
   );
+}
+
+export function getSimpleManyToManyJoinPath(
+  relationship: SimpleManyToManyRelationship,
+): JoinPath {
+  const currentTableOid = relationship.currentTable.oid;
+  const currentTablePkColumn = relationship.currentTable.pkColumnAttnum;
+  const intermediateTableOid = relationship.intermediateTable.oid;
+  const intermediateTableFkToCurrentColumn =
+    relationship.intermediateTable.fkToCurrentTable.columnAttnum;
+  const intermediateTableFkToTargetColumn =
+    relationship.intermediateTable.fkToTargetTable.columnAttnum;
+  const targetTableOid = relationship.targetTable.oid;
+
+  // Find the primary key column in the target table
+  const targetTablePkColumn = Object.entries(
+    relationship.targetTable.columns,
+  ).find(([, column]) => column.primary_key)?.[0];
+
+  if (!targetTablePkColumn) {
+    throw new Error(
+      `Target table ${targetTableOid} does not have a primary key column`,
+    );
+  }
+
+  return [
+    [
+      [currentTableOid, currentTablePkColumn],
+      [intermediateTableOid, intermediateTableFkToCurrentColumn],
+    ],
+    [
+      [intermediateTableOid, intermediateTableFkToTargetColumn],
+      [targetTableOid, Number(targetTablePkColumn)],
+    ],
+  ];
 }

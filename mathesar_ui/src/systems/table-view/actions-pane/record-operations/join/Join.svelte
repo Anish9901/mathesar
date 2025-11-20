@@ -3,6 +3,7 @@
   import { Spinner } from '@mathesar/component-library';
   import ErrorBox from '@mathesar/components/message-boxes/ErrorBox.svelte';
   import type { Table } from '@mathesar/models/Table';
+  import { getTabularDataStoreFromContext } from '@mathesar/stores/table-data';
   import { getErrorMessage } from '@mathesar/utils/errors';
 
   import JoinConfig from './JoinConfig.svelte';
@@ -10,6 +11,10 @@
 
   export let table: Table;
 
+  const tabularData = getTabularDataStoreFromContext();
+
+  $: ({ meta } = $tabularData);
+  $: joining = meta.joining;
   $: joinableTablesPromise = api.tables
     .list_joinable({
       database_id: table.schema.database.id,
@@ -23,7 +28,7 @@
   <div class="loading"><Spinner /></div>
 {:then r}
   {@const simpleManyToManyRelationships = getSimpleManyToManyRelationships(r)}
-  <JoinConfig {simpleManyToManyRelationships} />
+  <JoinConfig {simpleManyToManyRelationships} {joining} />
 {:catch error}
   <ErrorBox>{getErrorMessage(error)}</ErrorBox>
 {/await}
