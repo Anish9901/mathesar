@@ -255,7 +255,7 @@ class RecordSummaryMapping(TypedDict):
             row.
     """
     join_table: int
-    joined_values: dict[str, Any]
+    joined_values: dict[str, list[Any]]
 
 
 class RecordSummaryList(TypedDict):
