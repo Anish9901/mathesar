@@ -6896,7 +6896,8 @@ BEGIN
     (9, 7, 3),
     (10, 8, 1),
     (11, 8, 2),
-    (12, 8, 3);
+    (12, 8, 3),
+    (13, 5, 2);
   
   -- Basic test
   RETURN NEXT is(
@@ -6932,7 +6933,7 @@ BEGIN
       'count', 8,
       'mapping', jsonb_build_object(
         'join_table', 'vehicles_colors'::regclass::oid::bigint,
-        'joined_values', jsonb_build_object('4', 5, '8', 11)
+        'joined_values', jsonb_build_object('4', '[5]'::jsonb, '8', '[11]'::jsonb)
       ),
       'results', '[{"key": 8, "summary": "Airplane"}, {"key": 4, "summary": "Bicycle"}]'::jsonb
     )
@@ -6960,7 +6961,7 @@ BEGIN
       'count', 8,
       'mapping', jsonb_build_object(
         'join_table', 'vehicles_colors'::regclass::oid::bigint,
-        'joined_values', jsonb_build_object('5', 6)
+        'joined_values', jsonb_build_object('5', '[6, 13]'::jsonb)
       ),
       'results',
       '[

@@ -5784,19 +5784,22 @@ BEGIN
   ELSIF join_path -> 0 -> 1 -> 0 <> join_path -> 1 -> 0 -> 0 THEN
     RAISE EXCEPTION 'Inconsistent mapping table OID';
   ELSIF join_path IS NULL OR record_pkey IS NULL THEN
-    RETURN 'SELECT NULL AS join_key, NULL AS mapping_key';
+    RETURN 'SELECT NULL AS join_key, NULL AS mapping_keys';
   ELSE
     mapping_rel := msar.get_simple_mapping_regclass(join_path);
     filter_col_attnum := join_path -> 0 -> 1 ->> 1;
     join_col_attnum := join_path -> 1 -> 0 ->> 1;
     RETURN format(
-      'SELECT %I AS join_key, %I as mapping_key FROM %I.%I WHERE %I = %L',
-      msar.get_column_name(mapping_rel, join_col_attnum),
-      msar.get_column_name(mapping_rel, msar.get_selectable_pkey_attnum(mapping_rel)),
-      msar.get_relation_schema_name(mapping_rel),
-      msar.get_relation_name(mapping_rel),
-      msar.get_column_name(mapping_rel, filter_col_attnum),
-      record_pkey
+      $c$
+        SELECT %1$I AS join_key, jsonb_agg(%2$I) AS mapping_keys
+        FROM %3$I.%4$I WHERE %5$I = %6$L GROUP BY join_key
+      $c$,
+      /* 1 */ msar.get_column_name(mapping_rel, join_col_attnum),
+      /* 2 */ msar.get_column_name(mapping_rel, msar.get_selectable_pkey_attnum(mapping_rel)),
+      /* 3 */ msar.get_relation_schema_name(mapping_rel),
+      /* 4 */ msar.get_relation_name(mapping_rel),
+      /* 5 */ msar.get_column_name(mapping_rel, filter_col_attnum),
+      /* 6 */ record_pkey
     );
   END IF;
 END;
@@ -5855,7 +5858,7 @@ BEGIN
       agg_mapping_cte AS (
         SELECT NULLIF(pg_catalog.jsonb_strip_nulls(pg_catalog.jsonb_build_object(
           'join_table', %6$L::bigint,
-          'joined_values', pg_catalog.jsonb_object_agg(m.join_key, m.mapping_key)
+          'joined_values', pg_catalog.jsonb_object_agg(m.join_key, m.mapping_keys)
         )), '{}'::jsonb) AS mapping
         FROM mapping_cte m INNER JOIN sorted s ON m.join_key::text = s.key::text
       )
