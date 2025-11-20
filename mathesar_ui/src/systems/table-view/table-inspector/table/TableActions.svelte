@@ -68,6 +68,7 @@
         component: TableDeleteConfirmationBody,
         props: {
           tableName: table.name,
+          type: table.type,
         },
       },
       onProceed: async () => {

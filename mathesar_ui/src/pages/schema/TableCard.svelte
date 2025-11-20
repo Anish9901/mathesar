@@ -65,11 +65,12 @@
 
   function handleDeleteTable() {
     void confirmDelete({
-      identifierType: $_('table'),
+      identifierType: isView ? $_('view') : $_('table'),
       body: {
         component: TableDeleteConfirmationBody,
         props: {
           tableName: table.name,
+          type: table.type,
         },
       },
       onProceed: async () => {
