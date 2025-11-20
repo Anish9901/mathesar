@@ -7,10 +7,6 @@ def _json_or_none(value):
     return json.dumps(value) if value is not None else None
 
 
-def _str_or_none(value):
-    return str(value) if value is not None else None
-
-
 def list_records_from_table(
     conn,
     table_oid,
