@@ -6628,7 +6628,7 @@ BEGIN
   );
   RETURN NEXT throws_ok(
     format(
-      'SELECT msar.get_record_from_table(%s, 1, true);',
+      'SELECT msar.get_record_from_table(%s, 1, null, true);',
       rel_id
     ),
     '42501',

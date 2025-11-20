@@ -1121,6 +1121,7 @@ INSERT INTO msar.all_mathesar_objects VALUES
   ('msar', 'msar.get_preview(oid,jsonb,integer)', 'FUNCTION', NULL),
   ('msar', 'msar.get_record_from_table(oid,anycompatible,boolean)', 'FUNCTION', NULL),
   ('msar', 'msar.get_record_from_table(oid,anycompatible,boolean,jsonb)', 'FUNCTION', NULL),
+  ('msar', 'msar.get_record_from_table(oid,anycompatible,jsonb,boolean,jsonb)', 'FUNCTION', NULL),
   ('msar', 'msar.get_relation_name(oid)', 'FUNCTION', NULL),
   ('msar', 'msar.get_relation_namespace_oid(oid)', 'FUNCTION', NULL),
   ('msar', 'msar.get_relation_oid(text,text)', 'FUNCTION', NULL),

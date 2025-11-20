@@ -5593,6 +5593,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION msar.get_record_from_table(
   tab_id oid,
   rec_id anycompatible,
+  joined_columns jsonb DEFAULT NULL,
   return_record_summaries boolean DEFAULT false,
   table_record_summary_templates jsonb DEFAULT NULL
 ) RETURNS jsonb AS $$/*
@@ -5601,6 +5602,10 @@ Get single record from a table. Only columns to which the user has access are re
 Args:
   tab_id: The OID of the table whose record we'll get.
   rec_id: The id value of the record.
+  joined_columns: TODO
+  return_record_summaries : Whether to return a summary for the record listed.
+  table_record_summary_templates: A JSON object that maps table OIDs to record summary
+    templates.
 
 The table must have a single primary key column.
 */
@@ -5617,7 +5622,7 @@ SELECT msar.list_records_from_table(
     )
   ),
   null,
-  null,
+  joined_columns,
   return_record_summaries,
   table_record_summary_templates
 )
@@ -5723,6 +5728,7 @@ BEGIN
   rec_created := msar.get_record_from_table(
     tab_id,
     rec_created_id,
+    null,
     return_record_summaries,
     table_record_summary_templates
   );
@@ -5792,6 +5798,7 @@ BEGIN
   rec_modified := msar.get_record_from_table(
     tab_id,
     rec_id,
+    null,
     return_record_summaries,
     table_record_summary_templates
   );
