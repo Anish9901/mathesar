@@ -37,6 +37,10 @@ import type { AssociatedCellValuesForSheet } from '../AssociatedCellData';
 import { ColumnsDataStore } from './columns';
 import { ConstraintsDataStore } from './constraints';
 import { Display } from './display';
+import {
+  type JoinedColumn,
+  SimpleManyToManyJoinedColumn,
+} from './joinedColumns';
 import { Meta } from './meta';
 import {
   ProcessedColumn,
@@ -141,6 +145,7 @@ export class TabularData {
 
   joinableTables: AsyncRpcApiStoreFromMethod<typeof api.tables.list_joinable>;
 
+  joinedColumns: Readable<Map<string, JoinedColumn>>;
 
   /**
    * In the future, this will be set dynamically in for publicly shared links
@@ -236,6 +241,7 @@ export class TabularData {
       ([hasPrimaryKey, tableCurrentRolePrivileges]) =>
         hasPrimaryKey && tableCurrentRolePrivileges.has('DELETE'),
     );
+
     this.joinableTables = new AsyncRpcApiStore(api.tables.list_joinable, {
       staticProps: {
         database_id: this.database.id,
@@ -245,6 +251,20 @@ export class TabularData {
     });
     void this.joinableTables.run();
 
+    this.joinedColumns = derived(
+      [this.meta.joining, this.joinableTables],
+      ([joining, joinableTables]) => {
+        if (!joinableTables.resolvedValue) {
+          return new Map<string, JoinedColumn>();
+        }
+        const manyToManyJoinedColumns =
+          SimpleManyToManyJoinedColumn.createFromJoining(
+            joining,
+            joinableTables.resolvedValue,
+          );
+        return new Map(manyToManyJoinedColumns.map((col) => [col.id, col]));
+      },
+    );
 
     const plane = derived(
       [

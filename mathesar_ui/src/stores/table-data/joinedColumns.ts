@@ -1,0 +1,103 @@
+import type { RawColumnWithMetadata } from '@mathesar/api/rpc/columns';
+import type { JoinPath, JoinableTablesResult } from '@mathesar/api/rpc/tables';
+import { getCellCap } from '@mathesar/components/cell-fabric/utils';
+import type { ComponentAndProps } from '@mathesar-component-library/types';
+
+import type { Joining } from './joining';
+
+type TargetTablePkColumn = Pick<
+  RawColumnWithMetadata,
+  'id' | 'primary_key' | 'type' | 'type_options' | 'metadata'
+>;
+
+function createTargetTablePkColumn(
+  columns: JoinableTablesResult['target_table_info'][string]['columns'],
+): TargetTablePkColumn | null {
+  const pkEntry = Object.entries(columns).find(([, col]) => col.primary_key);
+  if (!pkEntry) return null;
+  const [attnum, info] = pkEntry;
+  return {
+    id: Number(attnum),
+    type: info.type,
+    type_options: null,
+    metadata: null,
+    primary_key: true,
+  };
+}
+
+export class SimpleManyToManyJoinedColumn {
+  readonly type = 'simple-many-to-many' as const;
+
+  readonly id: string;
+
+  readonly displayName: string;
+
+  readonly targetTableOid: number;
+
+  readonly intermediateTableOid: number;
+
+  readonly joinPath: JoinPath;
+
+  readonly column: TargetTablePkColumn;
+
+  readonly cellComponentAndProps: ComponentAndProps;
+
+  constructor(props: {
+    targetTableOid: number;
+    intermediateTableOid: number;
+    joinPath: JoinPath;
+    targetTableName: string;
+    targetTablePkColumn: TargetTablePkColumn;
+  }) {
+    this.targetTableOid = props.targetTableOid;
+    this.intermediateTableOid = props.intermediateTableOid;
+    this.joinPath = props.joinPath;
+    this.id = `joined-${props.intermediateTableOid}`;
+    this.displayName = props.targetTableName;
+    this.column = props.targetTablePkColumn;
+    this.cellComponentAndProps = getCellCap({
+      cellInfo: { type: 'string' },
+      column: this.column,
+    });
+  }
+
+  static getTargetTableOid(joinPath: JoinPath): number | undefined {
+    return joinPath[1]?.[1]?.[0];
+  }
+
+  static createFromJoining(
+    joining: Joining,
+    joinableTablesResult: JoinableTablesResult,
+  ): SimpleManyToManyJoinedColumn[] {
+    return [...joining.simpleManyToMany]
+      .map(([intermediateTableOid, joinPath]) => {
+        const targetTableOid = this.getTargetTableOid(joinPath);
+        if (!targetTableOid) return null;
+
+        const tableInfo =
+          joinableTablesResult.target_table_info[String(targetTableOid)];
+        if (!tableInfo) {
+          console.warn(`Table info not found for table ${targetTableOid}`);
+          return null;
+        }
+
+        const pkColumn = createTargetTablePkColumn(tableInfo.columns);
+        if (!pkColumn) {
+          console.warn(`No primary key found for table ${targetTableOid}`);
+          return null;
+        }
+
+        return new SimpleManyToManyJoinedColumn({
+          targetTableOid,
+          intermediateTableOid,
+          joinPath,
+          targetTableName: tableInfo.name,
+          targetTablePkColumn: pkColumn,
+        });
+      })
+      .filter((col): col is SimpleManyToManyJoinedColumn => col !== null);
+  }
+}
+
+// This would be a union type when we have more joined column types.
+export type JoinedColumn = SimpleManyToManyJoinedColumn;
