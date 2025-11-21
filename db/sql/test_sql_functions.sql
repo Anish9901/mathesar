@@ -3694,6 +3694,7 @@ BEGIN
       "count": 0,
       "results": [],
       "grouping": null,
+      "joined_record_summaries": null,
       "linked_record_summaries": null,
       "record_summaries": null
     }$j$
@@ -3713,6 +3714,7 @@ BEGIN
         {"1": 1, "2": 5, "3": "sdflkj", "4": "\"s\"", "5": "{\"a\": \"val\"}"}
       ],
       "grouping": null,
+      "joined_record_summaries": null,
       "linked_record_summaries": null,
       "record_summaries": null
     }$j$
@@ -3730,6 +3732,7 @@ BEGIN
       "count": 0,
       "results": [],
       "grouping": null,
+      "joined_record_summaries": null,
       "linked_record_summaries": null,
       "record_summaries": null
     }$j$
@@ -3762,6 +3765,7 @@ BEGIN
       ],
       "grouping": null,
       "record_summaries": null,
+      "joined_record_summaries": null,
       "linked_record_summaries": null
     }$j$
   );
@@ -3781,6 +3785,7 @@ BEGIN
       ],
       "grouping":null,
       "linked_record_summaries":null,
+      "joined_record_summaries": null,
       "record_summaries":null
     }$j$
   );
@@ -3800,6 +3805,7 @@ BEGIN
       ],
       "grouping": null,
       "linked_record_summaries": null,
+      "joined_record_summaries": null,
       "record_summaries": null
     }$j$
   );
@@ -3821,6 +3827,7 @@ BEGIN
       ],
       "grouping": null,
       "linked_record_summaries": null,
+      "joined_record_summaries": null,
       "record_summaries": null
     }$j$
   );
@@ -3841,6 +3848,7 @@ BEGIN
       ],
       "grouping": null,
       "linked_record_summaries": null,
+      "joined_record_summaries": null,
       "record_summaries": null
     }$j$
   );
@@ -4039,6 +4047,7 @@ BEGIN
       ],
       "grouping":null,
       "linked_record_summaries":null,
+      "joined_record_summaries": null,
       "record_summaries":null
     }$j$
   );
@@ -4094,6 +4103,7 @@ BEGIN
         ]
       },
       "linked_record_summaries":null,
+      "joined_record_summaries": null,
       "record_summaries":null
     }$j$
   );
@@ -4177,6 +4187,7 @@ BEGIN
           "1":"Tools"
         }
       },
+      "joined_record_summaries": null,
       "record_summaries":null
     }$j$
   );
