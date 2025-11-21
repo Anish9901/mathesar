@@ -51,8 +51,14 @@
   $: ({ currentRoleOwns } = table.currentAccess);
   $: usesVirtualList = context !== 'widget';
   $: sheetHasBorder = context === 'widget';
-  $: ({ processedColumns, display, isLoading, selection, recordsData } =
-    $tabularData);
+  $: ({
+    processedColumns,
+    joinedColumns,
+    display,
+    isLoading,
+    selection,
+    recordsData,
+  } = $tabularData);
   $: clipboardHandler = new SheetClipboardHandler({
     copyingContext: {
       getRows: () =>
@@ -97,6 +103,9 @@
       ...[...$processedColumns.values()].map((pc) => ({
         column: { id: pc.id, name: pc.column.name },
       })),
+      ...[...$joinedColumns.values()].map((jc) => ({
+        column: { id: jc.id, name: jc.displayName },
+      })),
     ];
     if (hasNewColumnButton) {
       columns.push({ column: { id: ID_ADD_NEW_COLUMN, name: 'ADD_NEW' } });
@@ -108,6 +117,7 @@
     [ID_ROW_CONTROL_COLUMN, ROW_HEADER_WIDTH_PX],
     [ID_ADD_NEW_COLUMN, 32],
     ...getCustomizedColumnWidths($processedColumns.values()),
+    ...[...$joinedColumns.keys()].map((id): [string, number] => [id, 200]),
   ]);
   $: showTableInspector = $tableInspectorVisible && supportsTableInspector;
 </script>

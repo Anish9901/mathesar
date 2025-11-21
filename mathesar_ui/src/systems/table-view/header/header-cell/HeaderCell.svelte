@@ -5,6 +5,7 @@
 -->
 <script lang="ts">
   import CellBackground from '@mathesar/components/CellBackground.svelte';
+  import ColumnName from '@mathesar/components/column/ColumnName.svelte';
   import ProcessedColumnName from '@mathesar/components/column/ProcessedColumnName.svelte';
   import { getSheetColumnPosition } from '@mathesar/components/sheet';
   import {
@@ -15,29 +16,33 @@
     iconSortDescending,
   } from '@mathesar/icons';
   import {
+    type JoinedColumn,
     type ProcessedColumn,
     getTabularDataStoreFromContext,
+    isJoinedColumn,
   } from '@mathesar/stores/table-data';
   import { Icon, Tooltip } from '@mathesar-component-library';
 
   const tabularData = getTabularDataStoreFromContext();
   const widthThresholdForIcon = 72;
 
-  export let processedColumn: ProcessedColumn;
+  export let columnFabric: ProcessedColumn | JoinedColumn;
   export let isSelected = false;
 
-  $: ({ column } = processedColumn);
-  $: ({ description } = column);
-  $: id = processedColumn.id;
+  $: id = columnFabric.id;
   $: ({ meta } = $tabularData);
   $: ({ filtering, sorting, grouping } = meta);
   $: hasFilter = $filtering.entries.some((entry) => entry.columnId === id);
   $: sorter = $sorting.get(id);
   $: grouped = $grouping.entries.some((entry) => entry.columnId === id);
-  $: columnPosition = getSheetColumnPosition(String(column.id));
+  $: columnPosition = getSheetColumnPosition(id);
   $: hideIcon = (() => {
     if (!$columnPosition) return false;
     return $columnPosition.width < widthThresholdForIcon;
+  })();
+  $: description = (() => {
+    const col = columnFabric.column;
+    return 'description' in col ? col.description : undefined;
   })();
 </script>
 
@@ -50,7 +55,14 @@
     on:mousedown
     on:mouseenter
   >
-    <ProcessedColumnName {hideIcon} {processedColumn} />
+    {#if isJoinedColumn(columnFabric)}
+      <ColumnName
+        column={{ ...columnFabric.column, name: columnFabric.displayName }}
+        {hideIcon}
+      />
+    {:else}
+      <ProcessedColumnName {hideIcon} processedColumn={columnFabric} />
+    {/if}
     {#if sorter || hasFilter || grouped || description}
       <div class="indicator-icons">
         {#if sorter}

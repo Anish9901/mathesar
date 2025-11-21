@@ -4,6 +4,7 @@ import { getCellCap } from '@mathesar/components/cell-fabric/utils';
 import type { ComponentAndProps } from '@mathesar-component-library/types';
 
 import type { Joining } from './joining';
+import type { ProcessedColumn } from './processedColumns';
 
 type TargetTablePkColumn = Pick<
   RawColumnWithMetadata,
@@ -41,6 +42,8 @@ export class SimpleManyToManyJoinedColumn {
   readonly column: TargetTablePkColumn;
 
   readonly cellComponentAndProps: ComponentAndProps;
+
+  readonly isEditable: boolean = true;
 
   constructor(props: {
     targetTableOid: number;
@@ -107,3 +110,9 @@ export class SimpleManyToManyJoinedColumn {
 
 // This would be a union type when we have more joined column types.
 export type JoinedColumn = SimpleManyToManyJoinedColumn;
+
+export function isJoinedColumn(
+  col: ProcessedColumn | JoinedColumn,
+): col is JoinedColumn {
+  return 'type' in col && col.type === 'simple-many-to-many';
+}

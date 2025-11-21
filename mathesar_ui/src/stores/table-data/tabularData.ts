@@ -147,6 +147,8 @@ export class TabularData {
 
   joinedColumns: Readable<Map<string, JoinedColumn>>;
 
+  allColumns: Readable<Map<string, ProcessedColumn | JoinedColumn>>;
+
   /**
    * In the future, this will be set dynamically in for publicly shared links
    * where user should not be able to (for example) open the record page for
@@ -264,6 +266,15 @@ export class TabularData {
           );
         return new Map(manyToManyJoinedColumns.map((col) => [col.id, col]));
       },
+    );
+
+    this.allColumns = derived(
+      [this.processedColumns, this.joinedColumns],
+      ([processedColumns, joinedColumns]) =>
+        new Map<string, ProcessedColumn | JoinedColumn>([
+          ...processedColumns,
+          ...joinedColumns,
+        ]),
     );
 
     const plane = derived(

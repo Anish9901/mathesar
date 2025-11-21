@@ -12,8 +12,10 @@
   import {
     ID_ADD_NEW_COLUMN,
     ID_ROW_CONTROL_COLUMN,
+    type JoinedColumn,
     type ProcessedColumn,
     getTabularDataStoreFromContext,
+    isJoinedColumn,
   } from '@mathesar/stores/table-data';
   import { updateTable } from '@mathesar/stores/tables';
 
@@ -28,7 +30,8 @@
   export let table: Table;
 
   $: columnOrder = columnOrder ?? [];
-  $: ({ selection, processedColumns, columnsDataStore } = $tabularData);
+  $: ({ selection, processedColumns, allColumns, columnsDataStore } =
+    $tabularData);
 
   let locationOfFirstDraggedColumn: number | undefined = undefined;
   let selectedColumnIdsOrdered: string[] = [];
@@ -97,7 +100,14 @@
     newColumnOrder = [];
   }
 
-  function saveColumnWidth(column: ProcessedColumn, width: number | null) {
+  function saveColumnWidth(
+    column: ProcessedColumn | JoinedColumn,
+    width: number | null,
+  ) {
+    // Joined columns do not persist width to the database
+    if (isJoinedColumn(column)) {
+      return;
+    }
     void columnsDataStore.setDisplayOptions(column.column, {
       display_width: width,
     });
@@ -114,28 +124,33 @@
     />
   </SheetOriginCell>
 
-  {#each [...$processedColumns] as [columnId, processedColumn] (columnId)}
+  {#each [...$allColumns] as [columnId, columnFabric] (columnId)}
     {@const isSelected = $selection.columnIds.has(columnId)}
+    {@const isJoined = isJoinedColumn(columnFabric)}
     <SheetColumnHeaderCell columnIdentifierKey={columnId}>
-      <Draggable
-        on:dragstart={() => dragColumn()}
-        column={processedColumn}
-        {selection}
-      >
-        <Droppable
-          on:drop={() => dropColumn(processedColumn)}
-          on:dragover={(e) => e.preventDefault()}
-          {locationOfFirstDraggedColumn}
-          columnLocation={columnOrder.indexOf(columnId)}
-          {isSelected}
+      {#if isJoined}
+        <HeaderCell {columnFabric} {isSelected} />
+      {:else}
+        <Draggable
+          on:dragstart={() => dragColumn()}
+          column={columnFabric}
+          {selection}
         >
-          <HeaderCell {processedColumn} {isSelected} />
-        </Droppable>
-      </Draggable>
+          <Droppable
+            on:drop={() => dropColumn(columnFabric)}
+            on:dragover={(e) => e.preventDefault()}
+            {locationOfFirstDraggedColumn}
+            columnLocation={columnOrder.indexOf(columnId)}
+            {isSelected}
+          >
+            <HeaderCell {columnFabric} {isSelected} />
+          </Droppable>
+        </Draggable>
+      {/if}
       <SheetCellResizer
         columnIdentifierKey={columnId}
-        afterResize={(width) => saveColumnWidth(processedColumn, width)}
-        onReset={() => saveColumnWidth(processedColumn, null)}
+        afterResize={(width) => saveColumnWidth(columnFabric, width)}
+        onReset={() => saveColumnWidth(columnFabric, null)}
       />
     </SheetColumnHeaderCell>
   {/each}
