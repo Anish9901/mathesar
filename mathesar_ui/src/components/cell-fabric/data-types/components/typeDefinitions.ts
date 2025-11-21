@@ -1,6 +1,7 @@
 import type { ColumnMetadata } from '@mathesar/api/rpc/_common/columnDisplayOptions';
 import type { ColumnTypeOptions } from '@mathesar/api/rpc/columns';
 import type { FkConstraint } from '@mathesar/api/rpc/constraints';
+import type { JoinPath } from '@mathesar/api/rpc/tables';
 import type { DBObjectEntry } from '@mathesar/AppTypes';
 import type { RecordSelectionOrchestratorFactory } from '@mathesar/systems/record-selection-orchestrator/RecordSelectionOrchestrator';
 import type { DateTimeFormatter } from '@mathesar/utils/date-time/types';
@@ -85,6 +86,20 @@ export interface LinkedRecordInputProps
   recordSummary?: string;
   setRecordSummary?: (recordId: string, recordSummary: string) => void;
 }
+
+// Many-to-many
+
+export type SimpleManyToManyJoinCellValue = string | number;
+
+export interface SimpleManyToManyJoinCellExternalProps {
+  tableId: DBObjectEntry['id'];
+  columnAlias: string;
+  joinPath: JoinPath;
+}
+
+export interface SimpleManyToManyJoinCellProps
+  extends CellTypeProps<SimpleManyToManyJoinCellValue>,
+    SimpleManyToManyJoinCellExternalProps {}
 
 // TextBox
 

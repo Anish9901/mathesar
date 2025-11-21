@@ -56,8 +56,14 @@ export class SimpleManyToManyJoinedColumn {
     this.displayName = props.targetTableName;
     this.column = props.targetTablePkColumn;
     this.cellComponentAndProps = getCellCap({
-      cellInfo: { type: 'string' },
+      cellInfo: { type: 'array' },
       column: this.column,
+      joinedColumnInfo: {
+        alias: this.id,
+        joinPath: this.joinPath,
+        targetTableOid: this.targetTableOid,
+        type: this.type,
+      },
     });
   }
 
