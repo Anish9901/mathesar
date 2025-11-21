@@ -42,6 +42,7 @@ def test_records_list(rf, monkeypatch, mocked_exec_msar_func):
             ]
         },
         "linked_record_summaries": {"2": {"12345": "blkjdfslkj"}},
+        "joined_record_summaries": None,
         "record_summaries": {"3": "abcde"},
     }
     mocked_exec_msar_func.fetchone.return_value = [expect_records_list]
@@ -89,6 +90,7 @@ def test_records_get(rf, monkeypatch, mocked_exec_msar_func):
         "results": [{"1": "abcde", "2": 12345}, {"1": "fghij", "2": 67890}],
         "grouping": None,
         "linked_record_summaries": {"2": {"12345": "blkjdfslkj"}},
+        "joined_record_summaries": None,
         "record_summaries": {"3": "abcde"},
     }
     mocked_exec_msar_func.fetchone.return_value = [expect_record]
@@ -249,6 +251,7 @@ def test_records_search(rf, monkeypatch, mocked_exec_msar_func):
         "results": [{"1": "abcde", "2": 12345}, {"1": "fghij", "2": 67890}],
         "grouping": None,
         "linked_record_summaries": {"2": {"12345": "blkjdfslkj"}},
+        "joined_record_summaries": None,
         "record_summaries": {"3": "abcde"},
     }
     mocked_exec_msar_func.fetchone.return_value = [expect_records_list]

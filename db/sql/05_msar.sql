@@ -5133,6 +5133,61 @@ FROM msar.get_fkey_map_table(tab_id)
 $$ LANGUAGE SQL STABLE;
 
 
+CREATE OR REPLACE FUNCTION msar.build_joined_columns_summaries_ctes(
+  joined_columns jsonb DEFAULT NULL,
+  table_record_summary_templates jsonb DEFAULT NULL
+) RETURNS TEXT AS $$/*
+*/
+SELECT
+  ', ' ||
+  NULLIF(
+    string_agg(
+      format(
+        $q$ %1$I AS (%2$s)$q$,
+        alias || '_cte',
+        msar.build_record_summary_query_for_table(
+          (join_path->-1->-1->>0)::oid,
+          (join_path->-1->-1->>1)::smallint,
+          table_record_summary_templates
+        )
+      ),
+      ', '
+    ),
+    ''
+  )
+FROM jsonb_to_recordset(joined_columns) AS (
+  alias text,
+  join_path jsonb
+)
+$$ LANGUAGE SQL STABLE;
+
+
+CREATE OR REPLACE FUNCTION msar.build_joined_columns_summaries_expr(
+  joined_columns jsonb DEFAULT NULL
+) RETURNS TEXT AS $$/*
+*/
+SELECT 'SELECT '
+|| string_agg(
+  format(
+    $j$
+      COALESCE(
+        jsonb_object_agg(
+          %1$I.key, %1$I.summary
+        ) FILTER (WHERE %1$I.key IS NOT NULL), '{}'::jsonb
+      ) AS %2$I
+    $j$,
+    alias || '_cte',
+    alias
+  ), ', '
+)
+|| ' FROM ' || string_agg(format('%I', alias || '_cte'), ', ')
+FROM jsonb_to_recordset(joined_columns) AS (
+  alias text,
+  join_path jsonb
+)
+$$ LANGUAGE SQL STABLE;
+
+
 CREATE OR REPLACE FUNCTION
 msar.build_summary_join_expr_for_table(tab_id oid, cte_name text) RETURNS TEXT AS $$/*
 Build an SQL expression to join the summary CTEs to the main CTE along fkey values.
@@ -5205,7 +5260,7 @@ CREATE OR REPLACE FUNCTION msar.build_record_list_query_components_with_ctes(
   order_ jsonb,
   filter_ jsonb,
   group_ jsonb,
-  joinable_columns jsonb
+  joined_columns jsonb
 ) RETURNS jsonb AS $$/*
   Constructs the components necessary for generating enriched query results,
   including expressions, clauses, selectable_column list, and CTEs, for a table.
@@ -5243,8 +5298,8 @@ BEGIN
 
   joinable_expr_object :=
     CASE
-      WHEN joinable_columns IS NOT NULL THEN
-        msar.get_joined_columns_expr_json(joinable_columns)
+      WHEN joined_columns IS NOT NULL THEN
+        msar.get_joined_columns_expr_json(joined_columns)
       ELSE NULL
     END;
 
@@ -5338,7 +5393,9 @@ BEGIN
     groups_cte AS ( SELECT %6$s ),
     summary_cte_self AS (%7$s)
     %8$s,
-    summary_cte AS ( SELECT %10$s FROM enriched_results_cte %9$s ),
+    summary_cte AS ( SELECT %10$s FROM enriched_results_cte %9$s )
+    %12$s,
+    joined_columns_summary_cte AS (%13$s),
     summaries_json_cte AS ( 
       SELECT
         jsonb_build_object(
@@ -5351,10 +5408,14 @@ BEGIN
           NULLIF(
             to_jsonb(summary_cte) - 'count_hack' -> 'summary_self',
             '{}'::jsonb
+          ),
+          'joined_record_summaries', NULLIF(
+            to_jsonb(joined_columns_summary_cte) - 'count_hack',
+            '{}'::jsonb
           )
         )
       AS sj
-      FROM summary_cte
+      FROM summary_cte, joined_columns_summary_cte
     ),
     records_json_cte AS ( SELECT jsonb_build_object(
       'results', %4$s,
@@ -5408,7 +5469,15 @@ BEGIN
       -- count_hack ensures that summary_cte is not empty,
       -- which in turn helps to generate summaries_json_cte
     ),
-    /* %11 */ msar.build_results_eq_cte_expr(tab_id, 'results_ranked_cte', group_)
+    /* %11 */ msar.build_results_eq_cte_expr(tab_id, 'results_ranked_cte', group_),
+    /* %12 */ msar.build_joined_columns_summaries_ctes(
+      joined_columns,
+      table_record_summary_templates
+    ),
+    /* %13 */ COALESCE(
+      NULLIF(msar.build_joined_columns_summaries_expr(joined_columns), ''),
+      'SELECT COUNT(1) AS count_hack'
+    )
   ) INTO records;
   RETURN records;
 END;
@@ -6135,7 +6204,7 @@ CREATE OR REPLACE FUNCTION msar.build_join_expr(join_path jsonb) RETURNS TEXT AS
 $$ LANGUAGE SQL RETURNS NULL ON NULL INPUT;
 
 
-CREATE OR REPLACE FUNCTION msar.get_joined_columns_expr_json(joinable_columns jsonb)
+CREATE OR REPLACE FUNCTION msar.get_joined_columns_expr_json(joined_columns jsonb)
 RETURNS jsonb AS $$/* 
 
 */
@@ -6148,7 +6217,7 @@ RETURNS jsonb AS $$/*
       msar.get_column_name((t.join_path->-1->-1->>0)::oid, (t.join_path->-1->-1->>1)::int) AS target_tab_col_name,
       msar.build_join_expr(t.join_path) AS join_expr
     FROM ROWS FROM (
-      jsonb_to_recordset(joinable_columns) AS (
+      jsonb_to_recordset(joined_columns) AS (
         alias text,
         join_path jsonb
       )
