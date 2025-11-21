@@ -10,6 +10,7 @@ export {
 } from './filtering';
 export { Sorting } from './sorting';
 export { Grouping, type GroupEntry, type TerseGrouping } from './grouping';
+export { Joining, type TerseJoining } from './joining';
 export { type TableRecordsData } from './records';
 export {
   type GroupHeaderRow,
