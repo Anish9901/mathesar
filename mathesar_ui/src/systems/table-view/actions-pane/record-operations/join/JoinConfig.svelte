@@ -2,6 +2,7 @@
   import type { Writable } from 'svelte/store';
   import { _ } from 'svelte-i18n';
 
+  import type { JoinableTablesResult } from '@mathesar/api/rpc/tables';
   import TableName from '@mathesar/components/TableName.svelte';
   import type { Joining } from '@mathesar/stores/table-data';
   import {
@@ -14,10 +15,14 @@
   import {
     type SimpleManyToManyRelationship,
     getSimpleManyToManyJoinPath,
+    getSimpleManyToManyRelationships,
   } from './joinConfigUtils';
 
-  export let simpleManyToManyRelationships: SimpleManyToManyRelationship[];
+  export let joinableTables: JoinableTablesResult;
   export let joining: Writable<Joining>;
+
+  $: simpleManyToManyRelationships =
+    getSimpleManyToManyRelationships(joinableTables);
 
   function handleCheckboxChange(
     relationship: SimpleManyToManyRelationship,

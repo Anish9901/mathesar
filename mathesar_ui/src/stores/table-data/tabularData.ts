@@ -9,6 +9,7 @@ import {
 } from 'svelte/store';
 
 import { States } from '@mathesar/api/rest/utils/requestUtils';
+import { api } from '@mathesar/api/rpc';
 import type { RawColumnWithMetadata } from '@mathesar/api/rpc/columns';
 import type { FileManifest, ResultValue } from '@mathesar/api/rpc/records';
 import { parseFileReference } from '@mathesar/components/file-attachments/fileUtils';
@@ -20,6 +21,9 @@ import type SheetSelection from '@mathesar/components/sheet/selection/SheetSelec
 import SheetSelectionStore from '@mathesar/components/sheet/selection/SheetSelectionStore';
 import type { Database } from '@mathesar/models/Database';
 import type { Table } from '@mathesar/models/Table';
+import AsyncRpcApiStore, {
+  type AsyncRpcApiStoreFromMethod,
+} from '@mathesar/stores/AsyncRpcApiStore';
 import type {
   ProcessedColumns,
   RecordRow,
@@ -135,6 +139,9 @@ export class TabularData {
 
   canDeleteRecords: Readable<boolean>;
 
+  joinableTables: AsyncRpcApiStoreFromMethod<typeof api.tables.list_joinable>;
+
+
   /**
    * In the future, this will be set dynamically in for publicly shared links
    * where user should not be able to (for example) open the record page for
@@ -229,6 +236,15 @@ export class TabularData {
       ([hasPrimaryKey, tableCurrentRolePrivileges]) =>
         hasPrimaryKey && tableCurrentRolePrivileges.has('DELETE'),
     );
+    this.joinableTables = new AsyncRpcApiStore(api.tables.list_joinable, {
+      staticProps: {
+        database_id: this.database.id,
+        table_oid: this.table.oid,
+        max_depth: 2,
+      },
+    });
+    void this.joinableTables.run();
+
 
     const plane = derived(
       [
@@ -280,12 +296,17 @@ export class TabularData {
       this.meta.grouping.update((g) => g.withoutColumns([stringColumnId]));
       this.meta.filtering.update((f) => f.withoutColumns([stringColumnId]));
       await this.constraintsDataStore.fetch();
+      void this.joinableTables.run();
     });
     this.columnsDataStore.on('columnPatched', async () => {
       await this.recordsData.fetch();
     });
     this.constraintsDataStore.on('constraintAdded', async () => {
       await this.recordsData.fetch();
+      void this.joinableTables.run();
+    });
+    this.constraintsDataStore.on('constraintRemoved', async () => {
+      void this.joinableTables.run();
     });
   }
 
@@ -294,6 +315,7 @@ export class TabularData {
       this.columnsDataStore.fetch(),
       this.recordsData.fetch(),
       this.constraintsDataStore.fetch(),
+      this.joinableTables.run(),
     ]);
   }
 
@@ -360,6 +382,7 @@ export class TabularData {
     this.columnsDataStore.destroy();
     this.selection.destroy();
     this.meta.destroy();
+    this.joinableTables.cancel();
   }
 }
 
