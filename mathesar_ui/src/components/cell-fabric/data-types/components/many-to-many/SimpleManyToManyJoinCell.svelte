@@ -25,22 +25,21 @@
   let wasActiveBeforeClick = false;
   let cellWrapperElement: HTMLElement;
 
-  $: hasValue = value !== undefined && value !== null;
+  $: displayedItems = value?.result ?? [];
+  $: remainingCount = value ? value.count - displayedItems.length : 0;
 
   async function launchRecordSelector(event?: MouseEvent) {
     if (!recordSelector) return;
     if (disabled) return;
     event?.stopPropagation();
     try {
-      const result = await recordSelector.acquireUserInput({
+      // TODO: Implement editing for many-to-many joined columns
+      // eslint-disable-next-line no-console
+      console.log(columnAlias, joinPath, tableId);
+      await recordSelector.acquireUserInput({
         tableOid: tableId,
       });
-      if (result) {
-        value = result.recordId;
-      } else {
-        value = null;
-      }
-      dispatch('update', { value });
+      // do nothing for now
     } catch {
       // do nothing - record selector was closed
     }
@@ -81,10 +80,6 @@
       void launchRecordSelector();
     }
   }
-
-  // Reference the props to avoid unused export warnings
-  $: _unusedColumnAlias = columnAlias;
-  $: _unusedJoinPath = joinPath;
 </script>
 
 <CellWrapper
@@ -101,8 +96,15 @@
 >
   <div class="simple-many-to-many-join-cell" class:disabled>
     <div class="value">
-      {#if hasValue}
-        {value}
+      {#if value && value.result.length > 0}
+        <div class="pills-container">
+          {#each displayedItems as itemId}
+            <span class="pill">{itemId}</span>
+          {/each}
+          {#if remainingCount > 0}
+            <span class="pill pill-count">+ {remainingCount}</span>
+          {/if}
+        </div>
       {:else if value === null}
         <Null />
       {/if}
@@ -133,6 +135,25 @@
     width: max-content;
     max-width: 100%;
     color: var(--color-fg-base);
+  }
+  .pills-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    align-items: center;
+  }
+  .pill {
+    display: inline-block;
+    padding: 0.1rem 0.4rem;
+    background: var(--color-record-fk-20);
+    border: 1px solid var(--color-record-fk-25);
+    border-radius: 0.25rem;
+    white-space: nowrap;
+    font-size: inherit;
+    line-height: 1.2;
+  }
+  .pill-count {
+    color: var(--color-fg-base-muted);
   }
   .disabled .value {
     padding-right: var(--cell-padding);

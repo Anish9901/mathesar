@@ -51,11 +51,12 @@ export class SimpleManyToManyJoinedColumn {
     joinPath: JoinPath;
     targetTableName: string;
     targetTablePkColumn: TargetTablePkColumn;
+    id: string;
   }) {
     this.targetTableOid = props.targetTableOid;
     this.intermediateTableOid = props.intermediateTableOid;
     this.joinPath = props.joinPath;
-    this.id = `joined-${props.intermediateTableOid}`;
+    this.id = props.id;
     this.displayName = props.targetTableName;
     this.column = props.targetTablePkColumn;
     this.cellComponentAndProps = getCellCap({
@@ -70,17 +71,13 @@ export class SimpleManyToManyJoinedColumn {
     });
   }
 
-  static getTargetTableOid(joinPath: JoinPath): number | undefined {
-    return joinPath[1]?.[1]?.[0];
-  }
-
   static createFromJoining(
     joining: Joining,
     joinableTablesResult: JoinableTablesResult,
   ): SimpleManyToManyJoinedColumn[] {
-    return [...joining.simpleManyToMany]
-      .map(([intermediateTableOid, joinPath]) => {
-        const targetTableOid = this.getTargetTableOid(joinPath);
+    return joining
+      .getSimpleManyToManyJoins()
+      .map(({ alias, intermediateTableOid, targetTableOid, joinPath }) => {
         if (!targetTableOid) return null;
 
         const tableInfo =
@@ -102,6 +99,7 @@ export class SimpleManyToManyJoinedColumn {
           joinPath,
           targetTableName: tableInfo.name,
           targetTablePkColumn: pkColumn,
+          id: alias,
         });
       })
       .filter((col): col is SimpleManyToManyJoinedColumn => col !== null);

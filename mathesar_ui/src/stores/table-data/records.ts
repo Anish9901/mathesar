@@ -43,6 +43,7 @@ import AssociatedCellData, {
 import type { ColumnsDataStore } from './columns';
 import type { FilterEntry, Filtering } from './filtering';
 import type { Grouping as GroupingRequest } from './grouping';
+import type { Joining } from './joining';
 import type { Meta } from './meta';
 import {
   DraftRecordRow,
@@ -70,6 +71,7 @@ export interface RecordsRequestParamsData {
   grouping: GroupingRequest;
   filtering: Filtering;
   searchFuzzy: SearchFuzzy;
+  joining: Joining;
 }
 
 export interface TableRecordsData {
@@ -295,6 +297,13 @@ export class RecordsData {
         ...this.contextualFilters,
       ].map(([columnId, value]) => ({ columnId, conditionId: 'equal', value }));
 
+      const joinedColumns = params.joining
+        .getSimpleManyToManyJoins()
+        .map(({ alias, joinPath }) => ({
+          alias,
+          join_path: joinPath,
+        }));
+
       const recordsListParams: RecordsListParams = {
         ...this.apiContext,
         ...params.pagination.recordsRequestParams(),
@@ -306,6 +315,7 @@ export class RecordsData {
           .withEntries(contextualFilterEntries)
           .recordsRequestParams(),
         return_record_summaries: this.loadIntrinsicRecordSummaries,
+        ...(joinedColumns.length > 0 ? { joined_columns: joinedColumns } : {}),
       };
 
       const fuzzySearchParams = params.searchFuzzy.getSearchParams();

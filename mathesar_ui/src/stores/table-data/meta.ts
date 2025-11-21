@@ -255,13 +255,15 @@ export class Meta {
         this.grouping,
         this.filtering,
         this.searchFuzzy,
+        this.joining,
       ],
-      ([pagination, sorting, grouping, filtering, searchFuzzy]) => ({
+      ([pagination, sorting, grouping, filtering, searchFuzzy, joining]) => ({
         pagination,
         sorting,
         grouping,
         filtering,
         searchFuzzy,
+        joining,
       }),
     );
 

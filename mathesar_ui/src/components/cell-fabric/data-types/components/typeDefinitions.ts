@@ -89,7 +89,10 @@ export interface LinkedRecordInputProps
 
 // Many-to-many
 
-export type SimpleManyToManyJoinCellValue = string | number;
+export interface SimpleManyToManyJoinCellValue {
+  count: number;
+  result: number[];
+}
 
 export interface SimpleManyToManyJoinCellExternalProps {
   tableId: DBObjectEntry['id'];
