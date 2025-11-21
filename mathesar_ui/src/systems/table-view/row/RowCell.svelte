@@ -110,6 +110,7 @@
   cellSelectionId={cellId}
   selection={$selection}
   {isWithinPlaceholderRow}
+  isRangeRestricted={isJoinedColumn(columnFabric)}
   let:isActive
 >
   <CellBackground

@@ -127,7 +127,10 @@
   {#each [...$allColumns] as [columnId, columnFabric] (columnId)}
     {@const isSelected = $selection.columnIds.has(columnId)}
     {@const isJoined = isJoinedColumn(columnFabric)}
-    <SheetColumnHeaderCell columnIdentifierKey={columnId}>
+    <SheetColumnHeaderCell
+      columnIdentifierKey={columnId}
+      isRangeRestricted={isJoined}
+    >
       {#if isJoined}
         <HeaderCell {columnFabric} {isSelected} />
       {:else}

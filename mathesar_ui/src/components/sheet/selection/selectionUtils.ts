@@ -13,7 +13,8 @@ export type SheetCellDetails =
   | { type: 'column-header-cell'; columnId: string }
   | { type: 'row-header-cell'; rowId: string }
   | { type: 'placeholder-row-header-cell'; rowId: string }
-  | { type: 'placeholder-data-cell'; cellId: string };
+  | { type: 'placeholder-data-cell'; cellId: string }
+  | { type: 'range-restricted-data-cell'; cellId: string };
 
 export function findContainingSheetCell(
   element: HTMLElement,
@@ -26,12 +27,18 @@ export function findContainingSheetCell(
 
   if (elementType === 'data-cell') {
     const rowType = containingElement.getAttribute('data-sheet-row-type');
+    const columnSelection = containingElement.getAttribute(
+      'data-sheet-column-selection',
+    );
     const cellId = containingElement.getAttribute('data-cell-selection-id');
     if (!cellId) return undefined;
-    return {
-      type: rowType === 'placeholder' ? 'placeholder-data-cell' : 'data-cell',
-      cellId,
-    };
+    if (rowType === 'placeholder') {
+      return { type: 'placeholder-data-cell', cellId };
+    }
+    if (columnSelection === 'restrict-range') {
+      return { type: 'range-restricted-data-cell', cellId };
+    }
+    return { type: 'data-cell', cellId };
   }
 
   if (elementType === 'column-header-cell') {
@@ -106,6 +113,7 @@ export function selectCellRange(p: {
       'data-cell': ({ cellId }) => s.drawnToDataCell(cellId),
       'placeholder-data-cell': ({ cellId }) => s.ofOneCell(cellId),
       'placeholder-row-header-cell': () => s,
+      'range-restricted-data-cell': ({ cellId }) => s.ofOneCell(cellId),
     }),
   );
 }

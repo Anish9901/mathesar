@@ -30,7 +30,7 @@ import type {
   RecordSummariesForSheet,
 } from '@mathesar/stores/table-data';
 import { orderProcessedColumns } from '@mathesar/utils/tables';
-import { defined } from '@mathesar-component-library';
+import { ImmutableSet, defined } from '@mathesar-component-library';
 
 import type { AssociatedCellValuesForSheet } from '../AssociatedCellData';
 
@@ -280,14 +280,20 @@ export class TabularData {
     const plane = derived(
       [
         this.recordsData.selectableRowsMap,
-        this.processedColumns,
+        this.allColumns,
         this.display.placeholderRowId,
+        this.joinedColumns,
       ],
-      ([selectableRowsMap, processedColumns, placeholderRowId]) => {
+      ([selectableRowsMap, allColumns, placeholderRowId, joinedColumns]) => {
         const rowIds = new Series([...selectableRowsMap.keys()]);
-        const columns = [...processedColumns.values()];
-        const columnIds = new Series(columns.map((c) => c.id));
-        return new Plane(rowIds, columnIds, placeholderRowId);
+        const columnIds = new Series([...allColumns.keys()]);
+        const rangeRestrictedColumnIds = new ImmutableSet(joinedColumns.keys());
+        return new Plane(
+          rowIds,
+          columnIds,
+          placeholderRowId,
+          rangeRestrictedColumnIds,
+        );
       },
     );
     this.selection = new SheetSelectionStore(plane);
