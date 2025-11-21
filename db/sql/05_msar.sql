@@ -5146,6 +5146,7 @@ CREATE OR REPLACE FUNCTION msar.build_joined_columns_summaries_ctes(
 ) RETURNS TEXT AS $$/*
 */
 SELECT
+  ', ' ||
   NULLIF(
     string_agg(
       format(
@@ -5399,7 +5400,7 @@ BEGIN
     groups_cte AS ( SELECT %6$s ),
     summary_cte_self AS (%7$s)
     %8$s,
-    summary_cte AS ( SELECT %10$s FROM enriched_results_cte %9$s ),
+    summary_cte AS ( SELECT %10$s FROM enriched_results_cte %9$s )
     %12$s,
     joined_columns_summary_cte AS (%13$s),
     summaries_json_cte AS ( 

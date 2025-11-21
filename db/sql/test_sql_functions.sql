@@ -3620,6 +3620,7 @@ BEGIN
         }
       ],
       "grouping": null,
+      "joined_record_summaries": null,
       "linked_record_summaries": null,
       "record_summaries": null
     }$j$
@@ -3650,6 +3651,7 @@ BEGIN
         {"1": 3, "2": 2, "3": "abcde", "4": "{\"k\": 3242348}", "5": "true"}
       ],
       "grouping": null,
+      "joined_record_summaries": null,
       "linked_record_summaries": null,
       "record_summaries": null
     }$j$
@@ -3670,6 +3672,7 @@ BEGIN
         {"1": 1, "2": 5, "3": "sdflkj", "4": "\"s\"", "5": "{\"a\": \"val\"}"}
       ],
       "grouping": null,
+      "joined_record_summaries": null,
       "linked_record_summaries": null,
       "record_summaries": null
     }$j$
@@ -3690,6 +3693,7 @@ BEGIN
         {"1": 1, "2": 5, "3": "sdflkj", "4": "\"s\"", "5": "{\"a\": \"val\"}"}
       ],
       "grouping": null,
+      "joined_record_summaries": null,
       "linked_record_summaries": null,
       "record_summaries": null
     }$j$
@@ -3763,6 +3767,7 @@ BEGIN
           }
         ]
       },
+      "joined_record_summaries": null,
       "linked_record_summaries": null,
       "record_summaries": null
     }$j$
@@ -3795,6 +3800,7 @@ BEGIN
           }
         ]
       },
+      "joined_record_summaries": null,
       "linked_record_summaries": null,
       "record_summaries": null
     }$j$
@@ -3823,6 +3829,7 @@ BEGIN
           {"id": 2, "count": 2, "results_eq": {"4": "2020-04 AD"}, "result_indices": [1, 2]}
         ]
       },
+      "joined_record_summaries": null,
       "linked_record_summaries": null,
       "record_summaries": null
     }$j$
@@ -3852,6 +3859,7 @@ BEGIN
           {"id": 1, "count": 8, "results_eq": {"4": "2020 AD"}, "result_indices": [0, 1, 2, 3, 4]}
         ]
       },
+      "joined_record_summaries": null,
       "linked_record_summaries": null,
       "record_summaries": null
     }$j$
@@ -3887,6 +3895,7 @@ BEGIN
      ],
      "grouping": null,
      "record_summaries": null,
+     "joined_record_summaries": null,
      "linked_record_summaries": {
         "3": {
           "1": "Tools",
@@ -5187,6 +5196,7 @@ BEGIN
           "4": "Neil Smith"
         }
       },
+      "joined_record_summaries": null,
       "record_summaries":  {
         "1": "Fred Fredrickson",
         "2": "Gabby Gabberson",
@@ -5225,6 +5235,7 @@ BEGIN
           "2": "Dave Davidson"
         }
       },
+      "joined_record_summaries": null,
       "record_summaries": null
     }$j$
   );
@@ -5257,6 +5268,7 @@ BEGIN
           "2": "Dave Davidson"
         }
       },
+      "joined_record_summaries": null,
       "record_summaries": null
     }$j$
   );
