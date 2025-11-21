@@ -158,6 +158,7 @@ class RecordList(TypedDict):
     grouping: GroupingResponse
     linked_record_summaries: dict[str, dict[str, str]]
     record_summaries: dict[str, str]
+    joined_record_summaries: dict
     download_links: Optional[dict]
 
     @classmethod
@@ -168,6 +169,7 @@ class RecordList(TypedDict):
             grouping=d.get("grouping"),
             linked_record_summaries=d.get("linked_record_summaries"),
             record_summaries=d.get("record_summaries"),
+            joined_record_summaries=d.get("joined_record_summaries"),
             download_links=d.get("download_links") or None
         )
 
