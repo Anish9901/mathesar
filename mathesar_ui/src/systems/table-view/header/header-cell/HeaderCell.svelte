@@ -48,6 +48,10 @@
 
 <div class="header-cell-root">
   <CellBackground when={isSelected} color="var(--cell-bg-color-row-selected)" />
+  <CellBackground
+    when={isJoinedColumn(columnFabric)}
+    color="var(--cell-bg-color-joined-header)"
+  />
   <div
     class="header-cell-btn btn btn-ghost"
     style="cursor: inherit;"

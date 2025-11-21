@@ -113,6 +113,10 @@
   let:isActive
 >
   <CellBackground
+    when={isJoinedColumn(columnFabric)}
+    color="var(--cell-bg-color-joined-cell)"
+  />
+  <CellBackground
     when={hasServerError || (!isActive && hasClientError)}
     color="var(--cell-bg-color-error)"
   />
