@@ -1,7 +1,6 @@
 DROP EXTENSION IF EXISTS pgtap CASCADE;
 CREATE EXTENSION IF NOT EXISTS pgtap;
 
--- msar.drop_columns -------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION __setup_drop_columns() RETURNS SETOF TEXT AS $$
 BEGIN
@@ -46,7 +45,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 
--- msar.drop_table ---------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION __setup_drop_tables() RETURNS SETOF TEXT AS $$
 BEGIN
@@ -294,6 +292,103 @@ BEGIN
     );$s$,
     'invalid input value for enum%'
   );
+END;
+$f$ LANGUAGE plpgsql;
+
+
+
+CREATE OR REPLACE FUNCTION __setup_msar_prepare_temp_table() RETURNS SETOF TEXT AS $$
+BEGIN
+  DROP TABLE IF EXISTS tmp_src_prepare;
+  CREATE TABLE tmp_src_prepare(id text, other text);
+  INSERT INTO tmp_src_prepare VALUES ('1','a'), ('2','b');
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION test_msar_prepare_temp_table_for_import() RETURNS SETOF TEXT AS $f$
+DECLARE
+  r_json jsonb;
+  table_oid bigint;
+BEGIN
+  PERFORM __setup_msar_prepare_temp_table();
+
+  -- Test with generated table name
+  r_json := msar.prepare_temp_table_for_import(
+    tab_name := 'tmp_test_' || replace(clock_timestamp()::text, ' ', '_'),
+    col_names := ARRAY['id','other']
+  );
+  table_oid := (r_json->>'table_oid')::bigint;
+  RETURN NEXT ok(
+    table_oid IS NOT NULL,
+    'prepare_temp_table_for_import returns table_oid'
+  );
+
+  r_json := msar.prepare_temp_table_for_import(
+    tab_name := 'tmp_explicit_' || replace(clock_timestamp()::text, ' ', '_'),
+    col_names := ARRAY['id','other']
+  );
+  table_oid := (r_json->>'table_oid')::bigint;
+  RETURN NEXT ok(
+    (SELECT relpersistence = 't' FROM pg_class WHERE oid = table_oid),
+    'explicit tab_name created as temporary table'
+  );
+
+  r_json := msar.prepare_temp_table_for_import(
+    tab_name := 'tmp_copy_check_' || replace(clock_timestamp()::text, ' ', '_'),
+    col_names := ARRAY['id','other']
+  );
+  RETURN NEXT matches(
+    r_json->>'copy_sql',
+    '^COPY ',
+    'copy_sql returned and starts with COPY'
+  );
+END;
+$f$ LANGUAGE plpgsql;
+
+
+-- msar.insert_from_select -----------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION __setup_msar_insert_from_select() RETURNS SETOF TEXT AS $$
+BEGIN
+  DROP TABLE IF EXISTS tmp_src_insert;
+  DROP TABLE IF EXISTS tmp_dst_insert;
+  CREATE TABLE tmp_src_insert (text_col text, num_col text);
+  -- Only castable data for successful insert tests
+  INSERT INTO tmp_src_insert VALUES ('100','10'), ('200','20');
+  CREATE TABLE tmp_dst_insert (id integer, value integer);
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION test_msar_insert_from_select() RETURNS SETOF TEXT AS $f$
+BEGIN
+  PERFORM __setup_msar_insert_from_select();
+
+  RETURN NEXT lives_ok($$
+    SELECT msar.insert_from_select(
+      'tmp_src_insert'::regclass,
+      'tmp_dst_insert'::regclass,
+      jsonb_build_array(
+        jsonb_build_object('src_table_attnum', 2, 'dst_table_attnum', 2),
+        jsonb_build_object('src_table_attnum', 1, 'dst_table_attnum', 1)
+      )
+    );
+  $$, 'insert_from_select runs for castable mappings');
+
+  RETURN NEXT is((SELECT COUNT(*)::bigint FROM tmp_dst_insert WHERE id IN (100,200)), 2::bigint, 'two castable rows inserted');
+
+  -- Add uncastable row for error test
+  INSERT INTO tmp_src_insert VALUES ('x','30');
+
+  RETURN NEXT throws_like($$
+    SELECT msar.insert_from_select(
+      'tmp_src_insert'::regclass,
+      'tmp_dst_insert'::regclass,
+      jsonb_build_array(
+        jsonb_build_object('src_table_attnum', 1, 'dst_table_attnum', 1)
+      )
+    );
+  $$, '%invalid input syntax for%integer%', 'insert_from_select raises when uncastable text -> integer mapping exists');
+
 END;
 $f$ LANGUAGE plpgsql;
 
