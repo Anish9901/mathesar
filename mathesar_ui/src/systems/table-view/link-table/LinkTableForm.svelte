@@ -164,13 +164,18 @@
       await fetchTablesForCurrentSchema();
       return;
     }
+
     const tableWithNewColumn = $linkType === 'oneToMany' ? target : base;
+
     if (!tableWithNewColumn) {
       return;
     }
+
     if (tableWithNewColumn.oid === $tabularData.table.oid) {
       await $tabularData.refresh();
     }
+
+    await fetchTablesForCurrentSchema();
   }
 
   async function handleSave(values: FilledFormValues<typeof form>) {
