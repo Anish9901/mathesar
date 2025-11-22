@@ -42,7 +42,6 @@
     <p class="no-summary">{$_('no_summary_available_for_this_record')}</p>
   {/if}
 
-
   <div class="help">
     <RichText text={$_('record_summary_preview_help')} let:slotName>
       {#if slotName === 'tableName'}
