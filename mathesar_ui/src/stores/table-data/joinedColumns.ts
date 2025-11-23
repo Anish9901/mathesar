@@ -11,22 +11,6 @@ type TargetTableJoinedColumn = Pick<
   'id' | 'type' | 'type_options' | 'metadata'
 >;
 
-function createTargetTableJoinedColumn(
-  columns: JoinableTablesResult['target_table_info'][string]['columns'],
-): TargetTableJoinedColumn | null {
-  const pkEntry = Object.entries(columns).find(([, col]) => col.primary_key);
-  if (!pkEntry) return null;
-  const [attnum, info] = pkEntry;
-  return {
-    id: Number(attnum),
-    type: '_array',
-    type_options: {
-      item_type: info.type,
-    },
-    metadata: null,
-  };
-}
-
 export class SimpleManyToManyJoinedColumn {
   readonly type = 'simple-many-to-many' as const;
 
@@ -84,22 +68,34 @@ export class SimpleManyToManyJoinedColumn {
         const tableInfo =
           joinableTablesResult.target_table_info[String(targetTableOid)];
         if (!tableInfo) {
-          console.warn(`Table info not found for table ${targetTableOid}`);
+          console.error(`Table info not found for table ${targetTableOid}`);
           return null;
         }
 
-        const pkColumn = createTargetTableJoinedColumn(tableInfo.columns);
-        if (!pkColumn) {
-          console.warn(`No primary key found for table ${targetTableOid}`);
+        const pkColumnEntry = Object.entries(tableInfo.columns).find(
+          ([, col]) => col.primary_key,
+        );
+        if (!pkColumnEntry) {
+          console.error(`No primary key found for table ${targetTableOid}`);
           return null;
         }
+
+        const [attnum, info] = pkColumnEntry;
+        const joinedColumn = {
+          id: Number(attnum),
+          type: '_array',
+          type_options: {
+            item_type: info.type,
+          },
+          metadata: null,
+        };
 
         return new SimpleManyToManyJoinedColumn({
           targetTableOid,
           intermediateTableOid,
           joinPath,
           targetTableName: tableInfo.name,
-          targetTableJoinedColumn: pkColumn,
+          targetTableJoinedColumn: joinedColumn,
           id: alias,
         });
       })
