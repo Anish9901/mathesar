@@ -26,7 +26,7 @@
   let cellWrapperElement: HTMLElement;
 
   $: displayedItems = value?.result ?? [];
-  $: remainingCount = value ? value.count - displayedItems.length : 0;
+  $: totalCount = value?.count ?? 0;
 
   async function launchRecordSelector(event?: MouseEvent) {
     if (!recordSelector) return;
@@ -99,16 +99,25 @@
       {#if value && value.result.length > 0}
         <div class="pills-container">
           {#each displayedItems as itemId}
-            <span class="pill">{itemId}</span>
+            <span class="pill">
+              {itemId}
+            </span>
           {/each}
-          {#if remainingCount > 0}
-            <span class="pill pill-count">+ {remainingCount}</span>
-          {/if}
         </div>
       {:else if value === null}
         <Null />
       {/if}
     </div>
+    {#if totalCount > 0}
+      <div class="total-count">
+        <span class="count-number">{totalCount}</span>
+        <span class="count-label">
+          {$_('records_plural_without_count', {
+            values: { count: totalCount },
+          })}
+        </span>
+      </div>
+    {/if}
     {#if !disabled}
       <button
         class="dropdown-button passthrough"
@@ -126,34 +135,46 @@
   .simple-many-to-many-join-cell {
     flex: 1 0 auto;
     display: flex;
+    align-items: center;
     justify-content: space-between;
   }
   .value {
     padding: var(--cell-padding);
-    align-self: center;
     overflow: hidden;
-    width: max-content;
-    max-width: 100%;
-    color: var(--color-fg-base);
+    flex: 1;
+    min-width: 0;
   }
   .pills-container {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 0.25rem;
     align-items: center;
+    overflow: hidden;
   }
   .pill {
-    display: inline-block;
     padding: 0.1rem 0.4rem;
     background: var(--color-record-fk-20);
     border: 1px solid var(--color-record-fk-25);
     border-radius: 0.25rem;
     white-space: nowrap;
-    font-size: inherit;
-    line-height: 1.2;
+    flex-shrink: 0;
   }
-  .pill-count {
+  .total-count {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .count-number {
+    font-size: var(--sm1);
+    font-weight: var(--font-weight-bold);
+    white-space: nowrap;
+  }
+  .count-label {
+    font-size: var(--sm3);
     color: var(--color-fg-base-muted);
+    white-space: nowrap;
+    margin-top: 0.1rem;
   }
   .disabled .value {
     padding-right: var(--cell-padding);
