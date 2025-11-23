@@ -242,6 +242,7 @@
         word-wrap: break-word;
         word-break: break-word;
         overflow-wrap: break-word;
+        flex-shrink: unset;
       }
 
       .total-count {
