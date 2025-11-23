@@ -29,6 +29,7 @@
 
   $: items = value?.result ?? [];
   $: totalCount = value?.count ?? 0;
+  $: remainingCount = totalCount - items.length;
   $: itemsWithSummaries = items
     .filter((i) => i !== null)
     .map((itemId) => {
@@ -105,7 +106,11 @@
   hasPadding={false}
   bind:element={cellWrapperElement}
 >
-  <div class="simple-many-to-many-join-cell" class:disabled>
+  <div
+    class="simple-many-to-many-join-cell"
+    class:disabled
+    class:independent={isIndependentOfSheet}
+  >
     <div class="value">
       {#if value && value.result.length > 0}
         <div class="pills-container">
@@ -114,6 +119,9 @@
               {summary}
             </span>
           {/each}
+          {#if remainingCount > 0}
+            <span class="remaining-count">+{remainingCount}</span>
+          {/if}
         </div>
       {:else if value === null}
         <Null />
@@ -129,7 +137,7 @@
         </span>
       </div>
     {/if}
-    {#if !disabled}
+    {#if !disabled && !isIndependentOfSheet}
       <button
         class="dropdown-button passthrough"
         on:click={launchRecordSelector}
@@ -142,62 +150,117 @@
   </div>
 </CellWrapper>
 
-<style>
+<style lang="scss">
   .simple-many-to-many-join-cell {
     flex: 1 0 auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
-  }
-  .value {
-    padding: var(--cell-padding);
-    overflow: hidden;
-    flex: 1;
-    min-width: 0;
-  }
-  .pills-container {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 0.25rem;
-    align-items: center;
-    overflow: hidden;
-  }
-  .pill {
-    padding: 0.1rem 0.4rem;
-    background: var(--color-record-fk-20);
-    border: 1px solid var(--color-record-fk-25);
-    border-radius: 0.25rem;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-  .total-count {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    flex-shrink: 0;
-  }
-  .count-number {
-    font-size: var(--sm1);
-    font-weight: var(--font-weight-bold);
-    white-space: nowrap;
-  }
-  .count-label {
-    font-size: var(--sm3);
-    color: var(--color-fg-base-muted);
-    white-space: nowrap;
-    margin-top: 0.1rem;
-  }
-  .disabled .value {
-    padding-right: var(--cell-padding);
-  }
-  .dropdown-button {
-    cursor: pointer;
-    padding: 0 var(--cell-padding);
-    display: flex;
-    align-items: center;
-    color: var(--color-fg-base-disabled);
-  }
-  .dropdown-button:hover {
-    color: var(--color-fg-base);
+
+    .value {
+      padding: var(--cell-padding);
+      overflow: hidden;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .pills-container {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 0.25rem;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    .pill {
+      padding: 0.1rem 0.4rem;
+      background: var(--color-record-fk-20);
+      border: 1px solid var(--color-record-fk-25);
+      border-radius: 0.25rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .remaining-count {
+      color: var(--color-fg-base-muted);
+      font-size: var(--sm1);
+      white-space: nowrap;
+      align-self: center;
+    }
+
+    .total-count {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .count-number {
+      font-size: var(--sm1);
+      font-weight: var(--font-weight-bold);
+      white-space: nowrap;
+    }
+
+    .count-label {
+      font-size: var(--sm3);
+      color: var(--color-fg-base-muted);
+      white-space: nowrap;
+      margin-top: 0.1rem;
+    }
+
+    .dropdown-button {
+      cursor: pointer;
+      padding: 0 var(--cell-padding);
+      display: flex;
+      align-items: center;
+      color: var(--color-fg-base-disabled);
+
+      &:hover {
+        color: var(--color-fg-base);
+      }
+    }
+
+    &.independent {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--sm2);
+
+      .value {
+        padding: 0;
+        width: 100%;
+        overflow: visible;
+        order: 0;
+      }
+
+      .pills-container {
+        flex-wrap: wrap;
+        overflow: visible;
+      }
+
+      .pill {
+        white-space: normal;
+        word-wrap: break-word;
+        word-break: break-word;
+        overflow-wrap: break-word;
+      }
+
+      .total-count {
+        align-self: flex-start;
+        flex-direction: row;
+        align-items: baseline;
+        order: -1;
+        margin-top: 0;
+      }
+
+      .count-label {
+        font-size: var(--sm1);
+        margin-top: 0;
+        margin-left: 0.25rem;
+      }
+    }
+
+    &.disabled .value {
+      padding-right: var(--cell-padding);
+    }
   }
 </style>
