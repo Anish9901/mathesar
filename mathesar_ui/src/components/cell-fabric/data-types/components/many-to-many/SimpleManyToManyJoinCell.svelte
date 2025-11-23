@@ -4,7 +4,7 @@
 
   import Null from '@mathesar/components/Null.svelte';
   import { recordSelectorContext } from '@mathesar/systems/record-selector/RecordSelectorController';
-  import { Icon, iconExpandDown } from '@mathesar-component-library';
+  import { Badge, Icon, iconExpandDown } from '@mathesar-component-library';
 
   import CellWrapper from '../CellWrapper.svelte';
   import type { SimpleManyToManyJoinCellProps } from '../typeDefinitions';
@@ -127,14 +127,15 @@
         <Null />
       {/if}
     </div>
-    {#if totalCount > 0}
+    {#if isIndependentOfSheet}
       <div class="total-count">
-        <span class="count-number">{totalCount}</span>
-        <span class="count-label">
-          {$_('records_plural_without_count', {
-            values: { count: totalCount },
-          })}
-        </span>
+        {$_('count_records', { values: { count: totalCount } })}
+      </div>
+    {:else if totalCount > 0}
+      <div class="count-number">
+        <Badge>
+          {totalCount}
+        </Badge>
       </div>
     {/if}
     {#if !disabled && !isIndependentOfSheet}
@@ -188,24 +189,12 @@
       align-self: center;
     }
 
-    .total-count {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      flex-shrink: 0;
-    }
-
     .count-number {
       font-size: var(--sm1);
-      font-weight: var(--font-weight-bold);
       white-space: nowrap;
-    }
-
-    .count-label {
-      font-size: var(--sm3);
-      color: var(--color-fg-base-muted);
-      white-space: nowrap;
-      margin-top: 0.1rem;
+      --badge-font-size: var(--sm1);
+      --badge-text-color: var(--color-fg-subtle-1);
+      --badge-background-color: var(--cell-bg-color-joined-header);
     }
 
     .dropdown-button {
@@ -247,16 +236,8 @@
 
       .total-count {
         align-self: flex-start;
-        flex-direction: row;
-        align-items: baseline;
         order: -1;
         margin-top: 0;
-      }
-
-      .count-label {
-        font-size: var(--sm1);
-        margin-top: 0;
-        margin-left: 0.25rem;
       }
     }
 
