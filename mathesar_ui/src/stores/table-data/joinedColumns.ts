@@ -6,23 +6,24 @@ import type { ComponentAndProps } from '@mathesar-component-library/types';
 import type { Joining } from './joining';
 import type { ProcessedColumn } from './processedColumns';
 
-type TargetTablePkColumn = Pick<
+type TargetTableJoinedColumn = Pick<
   RawColumnWithMetadata,
-  'id' | 'primary_key' | 'type' | 'type_options' | 'metadata'
+  'id' | 'type' | 'type_options' | 'metadata'
 >;
 
-function createTargetTablePkColumn(
+function createTargetTableJoinedColumn(
   columns: JoinableTablesResult['target_table_info'][string]['columns'],
-): TargetTablePkColumn | null {
+): TargetTableJoinedColumn | null {
   const pkEntry = Object.entries(columns).find(([, col]) => col.primary_key);
   if (!pkEntry) return null;
   const [attnum, info] = pkEntry;
   return {
     id: Number(attnum),
-    type: info.type,
-    type_options: null,
+    type: '_array',
+    type_options: {
+      item_type: info.type,
+    },
     metadata: null,
-    primary_key: true,
   };
 }
 
@@ -39,7 +40,7 @@ export class SimpleManyToManyJoinedColumn {
 
   readonly joinPath: JoinPath;
 
-  readonly column: TargetTablePkColumn;
+  readonly column: TargetTableJoinedColumn;
 
   readonly cellComponentAndProps: ComponentAndProps;
 
@@ -50,7 +51,7 @@ export class SimpleManyToManyJoinedColumn {
     intermediateTableOid: number;
     joinPath: JoinPath;
     targetTableName: string;
-    targetTablePkColumn: TargetTablePkColumn;
+    targetTableJoinedColumn: TargetTableJoinedColumn;
     id: string;
   }) {
     this.targetTableOid = props.targetTableOid;
@@ -58,7 +59,7 @@ export class SimpleManyToManyJoinedColumn {
     this.joinPath = props.joinPath;
     this.id = props.id;
     this.displayName = props.targetTableName;
-    this.column = props.targetTablePkColumn;
+    this.column = props.targetTableJoinedColumn;
     this.cellComponentAndProps = getCellCap({
       cellInfo: { type: 'array' },
       column: this.column,
@@ -87,7 +88,7 @@ export class SimpleManyToManyJoinedColumn {
           return null;
         }
 
-        const pkColumn = createTargetTablePkColumn(tableInfo.columns);
+        const pkColumn = createTargetTableJoinedColumn(tableInfo.columns);
         if (!pkColumn) {
           console.warn(`No primary key found for table ${targetTableOid}`);
           return null;
@@ -98,7 +99,7 @@ export class SimpleManyToManyJoinedColumn {
           intermediateTableOid,
           joinPath,
           targetTableName: tableInfo.name,
-          targetTablePkColumn: pkColumn,
+          targetTableJoinedColumn: pkColumn,
           id: alias,
         });
       })

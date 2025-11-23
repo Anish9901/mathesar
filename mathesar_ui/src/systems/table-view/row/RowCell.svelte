@@ -82,6 +82,7 @@
     if (!fileReference) return undefined;
     return $fileManifests.get(columnId)?.get(fileReference.mash);
   })();
+  $: isPrimaryKey = 'primary_key' in column && column.primary_key;
 
   async function setValue(newValue: unknown) {
     if (newValue === value) {
@@ -162,7 +163,7 @@
     on:movementKeyDown={({ detail }) =>
       handleKeyboardEventOnCell(detail.originalEvent, selection)}
     on:update={valueUpdated}
-    horizontalAlignment={column.primary_key ? 'left' : undefined}
+    horizontalAlignment={isPrimaryKey ? 'left' : undefined}
     lightText={hasError || isProcessing}
   />
 

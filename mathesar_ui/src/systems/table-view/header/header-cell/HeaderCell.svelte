@@ -4,6 +4,8 @@
   using table inspector
 -->
 <script lang="ts">
+  import { _ } from 'svelte-i18n';
+
   import CellBackground from '@mathesar/components/CellBackground.svelte';
   import ColumnName from '@mathesar/components/column/ColumnName.svelte';
   import ProcessedColumnName from '@mathesar/components/column/ProcessedColumnName.svelte';
@@ -14,6 +16,7 @@
     iconGrouping,
     iconSortAscending,
     iconSortDescending,
+    iconTableLink,
   } from '@mathesar/icons';
   import {
     type JoinedColumn,
@@ -67,8 +70,14 @@
     {:else}
       <ProcessedColumnName {hideIcon} processedColumn={columnFabric} />
     {/if}
-    {#if sorter || hasFilter || grouped || description}
+    {#if sorter || hasFilter || grouped || description || isJoinedColumn(columnFabric)}
       <div class="indicator-icons">
+        {#if isJoinedColumn(columnFabric)}
+          <Tooltip>
+            <Icon slot="trigger" {...iconTableLink} />
+            <span slot="content">{$_('joined_column_tooltip')}</span>
+          </Tooltip>
+        {/if}
         {#if sorter}
           <Icon
             {...sorter === 'ASCENDING' ? iconSortAscending : iconSortDescending}
