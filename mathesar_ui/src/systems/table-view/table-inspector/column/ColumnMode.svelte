@@ -2,6 +2,8 @@
   import { _ } from 'svelte-i18n';
 
   import InspectorSection from '@mathesar/components/InspectorSection.svelte';
+  import WarningBox from '@mathesar/components/message-boxes/WarningBox.svelte';
+  import TableLink from '@mathesar/components/TableLink.svelte';
   import {
     tableInspectorColumnActionsVisible,
     tableInspectorColumnDataTypeVisible,
@@ -10,7 +12,11 @@
     tableInspectorColumnPropertiesVisible,
     tableInspectorColumnRecordSummaryVisible,
   } from '@mathesar/stores/localStorage';
-  import { getTabularDataStoreFromContext } from '@mathesar/stores/table-data';
+  import {
+    type ProcessedColumn,
+    getTabularDataStoreFromContext,
+    isJoinedColumn,
+  } from '@mathesar/stores/table-data';
   import { currentTablesData } from '@mathesar/stores/tables';
   import FkRecordSummaryConfig from '@mathesar/systems/table-view/table-inspector/record-summary/FkRecordSummaryConfig.svelte';
   import { defined } from '@mathesar-component-library';
@@ -25,13 +31,13 @@
 
   const tabularData = getTabularDataStoreFromContext();
 
-  $: ({ table, processedColumns, selection, selectedCellData } = $tabularData);
+  $: ({ table, allColumns, selection, selectedCellData } = $tabularData);
   $: ({ currentRoleOwns } = table.currentAccess);
   $: selectedColumns = (() => {
     const ids = $selection.columnIds;
     const columns = [];
     for (const id of ids) {
-      const column = $processedColumns.get(id);
+      const column = $allColumns.get(id);
       if (column !== undefined) {
         columns.push(column);
       }
@@ -39,10 +45,37 @@
     return columns;
   })();
   /** When only one column is selected */
-  $: column = selectedColumns.length === 1 ? selectedColumns[0] : undefined;
+  $: singleSelectedColumn =
+    selectedColumns.length === 1 ? selectedColumns[0] : undefined;
+  $: column =
+    singleSelectedColumn && !isJoinedColumn(singleSelectedColumn)
+      ? singleSelectedColumn
+      : undefined;
+  $: joinedColumn =
+    singleSelectedColumn && isJoinedColumn(singleSelectedColumn)
+      ? singleSelectedColumn
+      : undefined;
+  $: selectedProcessedColumns = selectedColumns.filter(
+    (col): col is ProcessedColumn => !isJoinedColumn(col),
+  );
   $: linkedTable = defined(column?.linkFk?.referent_table_oid, (id) =>
     $currentTablesData.tablesMap.get(id),
   );
+  $: joinInfo = (() => {
+    if (!joinedColumn) return undefined;
+    const { targetTableOid, intermediateTableOid } = joinedColumn;
+    const { tablesMap } = $currentTablesData;
+
+    const targetTable = targetTableOid
+      ? tablesMap.get(targetTableOid)
+      : undefined;
+    const mappingTable = tablesMap.get(intermediateTableOid);
+
+    return {
+      targetTable,
+      mappingTable,
+    };
+  })();
 </script>
 
 {#if selectedColumns.length === 0}
@@ -56,6 +89,29 @@
         values: { count: selectedColumns.length },
       })}
     </span>
+  {/if}
+  {#if joinInfo}
+    <div class="joined-column-info">
+      <WarningBox>
+        {$_('joined_column_tooltip')}
+      </WarningBox>
+      {#if joinInfo.targetTable}
+        <div class="table-link-group">
+          <div class="table-link-header">
+            {$_('joined_table')}
+          </div>
+          <TableLink table={joinInfo.targetTable} />
+        </div>
+      {/if}
+      {#if joinInfo.mappingTable}
+        <div class="table-link-group">
+          <div class="table-link-header">
+            {$_('mapping_table')}
+          </div>
+          <TableLink table={joinInfo.mappingTable} />
+        </div>
+      {/if}
+    </div>
   {/if}
   {#if column}
     {#key column}
@@ -130,12 +186,14 @@
     </InspectorSection>
   {/if}
 
-  <InspectorSection
-    title={$_('actions')}
-    bind:isOpen={$tableInspectorColumnActionsVisible}
-  >
-    <ColumnActions columns={selectedColumns} />
-  </InspectorSection>
+  {#if selectedProcessedColumns.length > 0}
+    <InspectorSection
+      title={$_('actions')}
+      bind:isOpen={$tableInspectorColumnActionsVisible}
+    >
+      <ColumnActions columns={selectedProcessedColumns} />
+    </InspectorSection>
+  {/if}
 {/if}
 
 <style lang="scss">
@@ -145,5 +203,25 @@
 
   .columns-selected-count {
     padding: 1rem;
+  }
+
+  .joined-column-info {
+    padding: var(--sm1);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sm1);
+
+    .table-link-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sm5);
+      padding: var(--sm6);
+    }
+
+    .table-link-header {
+      color: var(--color-fg-subtle-1);
+      font-size: var(--sm1);
+      font-weight: var(--font-weight-medium);
+    }
   }
 </style>
