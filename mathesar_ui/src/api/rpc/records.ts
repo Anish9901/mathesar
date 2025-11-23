@@ -116,6 +116,7 @@ export interface RecordsResponse {
   record_summaries: Record<string, string> | null;
   /** Keys are attnums. */
   download_links: Record<string, FileManifestColumnData>;
+  joined_record_summaries: Record<string, RecordSummaryColumnData> | null;
 }
 
 export const records = {

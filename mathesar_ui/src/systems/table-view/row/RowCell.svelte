@@ -55,7 +55,8 @@
   const canViewLinkedEntities = true;
 
   $: recordsDataState = recordsData.state;
-  $: ({ linkedRecordSummaries, fileManifests } = recordsData);
+  $: ({ linkedRecordSummaries, joinedRecordSummaries, fileManifests } =
+    recordsData);
   $: ({ column } = effectiveColumnFabric);
   $: columnId = effectiveColumnFabric.id;
   $: isWithinPlaceholderRow = isPlaceholderRecordRow(row);
@@ -72,6 +73,9 @@
   // i.e. row is a placeholder row and record isn't saved yet
   $: isEditable = canUpdateRecords && effectiveColumnFabric.isEditable;
   $: recordSummary = $linkedRecordSummaries.get(columnId)?.get(String(value));
+  $: joinedRecordSummariesMap = isJoinedColumn(effectiveColumnFabric)
+    ? $joinedRecordSummaries.get(columnId)
+    : undefined;
   $: fileManifest = (() => {
     if (!column.metadata?.file_backend) return undefined;
     const fileReference = parseFileReference(value);
@@ -152,6 +156,7 @@
         key: recordId,
         value: rs,
       })}
+    {joinedRecordSummariesMap}
     showAsSkeleton={$recordsDataState === States.Loading}
     disabled={!isEditable}
     on:movementKeyDown={({ detail }) =>

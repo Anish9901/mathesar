@@ -185,6 +185,8 @@ export class RecordsData {
 
   linkedRecordSummaries = new AssociatedCellData<string>();
 
+  joinedRecordSummaries = new AssociatedCellData<string>();
+
   fileManifests = new AssociatedCellData<FileManifest>();
 
   grouping: Writable<RecordGrouping | undefined>;
@@ -338,6 +340,11 @@ export class RecordsData {
       if (response.linked_record_summaries) {
         this.linkedRecordSummaries.setFetchedValuesFromPrimitive(
           response.linked_record_summaries,
+        );
+      }
+      if (response.joined_record_summaries) {
+        this.joinedRecordSummaries.setFetchedValuesFromPrimitive(
+          response.joined_record_summaries,
         );
       }
       if (response.record_summaries) {

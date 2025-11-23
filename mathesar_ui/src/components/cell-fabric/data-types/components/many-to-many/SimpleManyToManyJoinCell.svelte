@@ -21,12 +21,21 @@
   export let columnAlias: $$Props['columnAlias'];
   export let joinPath: $$Props['joinPath'];
   export let isIndependentOfSheet: $$Props['isIndependentOfSheet'];
+  export let joinedRecordSummariesMap: $$Props['joinedRecordSummariesMap'] =
+    undefined;
 
   let wasActiveBeforeClick = false;
   let cellWrapperElement: HTMLElement;
 
-  $: displayedItems = value?.result ?? [];
+  $: items = value?.result ?? [];
   $: totalCount = value?.count ?? 0;
+  $: itemsWithSummaries = items.map((itemId) => {
+    const summary = joinedRecordSummariesMap?.get(String(itemId));
+    return {
+      id: itemId,
+      summary: summary ?? String(itemId),
+    };
+  });
 
   async function launchRecordSelector(event?: MouseEvent) {
     if (!recordSelector) return;
@@ -98,9 +107,9 @@
     <div class="value">
       {#if value && value.result.length > 0}
         <div class="pills-container">
-          {#each displayedItems as itemId}
+          {#each itemsWithSummaries as { id, summary } (id)}
             <span class="pill">
-              {itemId}
+              {summary}
             </span>
           {/each}
         </div>

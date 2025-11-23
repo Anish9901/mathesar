@@ -8,6 +8,7 @@ import type { DateTimeFormatter } from '@mathesar/utils/date-time/types';
 import type {
   ComponentAndProps,
   FormattedInputProps,
+  ImmutableMap,
   NumberFormatterOptions,
   SelectProps,
 } from '@mathesar-component-library/types';
@@ -102,7 +103,9 @@ export interface SimpleManyToManyJoinCellExternalProps {
 
 export interface SimpleManyToManyJoinCellProps
   extends CellTypeProps<SimpleManyToManyJoinCellValue>,
-    SimpleManyToManyJoinCellExternalProps {}
+    SimpleManyToManyJoinCellExternalProps {
+  joinedRecordSummariesMap?: ImmutableMap<string, string>;
+}
 
 // TextBox
 
