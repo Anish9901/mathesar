@@ -54,6 +54,8 @@ function getSelectedCellData(
   processedColumns: ProcessedColumns,
   linkedRecordSummaries: RecordSummariesForSheet,
   fileManifests: AssociatedCellValuesForSheet<FileManifest>,
+  joinedColumns: Map<string, JoinedColumn>,
+  joinedRecordSummaries: AssociatedCellValuesForSheet<string>,
 ): SelectedCellData {
   const { activeCellId } = selection;
   const selectionData = {
@@ -65,23 +67,27 @@ function getSelectedCellData(
   const { rowId, columnId } = parseCellId(activeCellId);
   const row = selectableRowsMap.get(rowId);
   const value = row?.record[columnId];
-  const column = processedColumns.get(columnId);
+  const normalColumn = processedColumns.get(columnId);
   const recordSummary = defined(
     value,
     (v) => linkedRecordSummaries.get(columnId)?.get(String(v)),
   );
   const fileManifest = (() => {
-    if (!column?.column.metadata?.file_backend) return undefined;
+    if (!normalColumn?.column.metadata?.file_backend) return undefined;
     const fileReference = parseFileReference(value);
     if (!fileReference) return undefined;
-    return fileManifests.get(String(column.id))?.get(fileReference.mash);
+    return fileManifests.get(normalColumn.id)?.get(fileReference.mash);
   })();
+  const joinedColumn = joinedColumns.get(columnId);
+  const joinedRecordSummariesMap = joinedRecordSummaries.get(columnId);
+  const column = normalColumn ?? joinedColumn;
   return {
     activeCellData: column && {
       column,
       value,
       recordSummary,
       fileManifest,
+      joinedRecordSummariesMap,
     },
     selectionData,
   };
@@ -317,6 +323,8 @@ export class TabularData {
         this.processedColumns,
         this.recordsData.linkedRecordSummaries,
         this.recordsData.fileManifests,
+        this.joinedColumns,
+        this.recordsData.joinedRecordSummaries,
       ],
       (args) => getSelectedCellData(...args),
     );

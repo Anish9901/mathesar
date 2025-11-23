@@ -3,7 +3,7 @@ import { rpcMethodTypeContainer } from '@mathesar/packages/json-rpc-client-build
 import type { RecordsSummaryListResponse } from './_common/commonTypes';
 import type { JoinPath, RecordSummaryTemplate } from './tables';
 
-export type ResultValue = string | number | boolean | null;
+export type ResultValue = string | number | boolean | number[] | null;
 
 export type SortDirection = 'asc' | 'desc';
 export interface SortingEntry {

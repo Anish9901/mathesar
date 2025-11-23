@@ -3,7 +3,11 @@ import type { Writable } from 'svelte/store';
 import type { FileManifest, ResultValue } from '@mathesar/api/rpc/records';
 import type { CellColumnFabric } from '@mathesar/components/cell-fabric/types';
 import { match } from '@mathesar/utils/patternMatching';
-import { type ImmutableSet, defined } from '@mathesar-component-library';
+import {
+  type ImmutableMap,
+  type ImmutableSet,
+  defined,
+} from '@mathesar-component-library';
 
 import type Series from './Series';
 import type SheetSelection from './SheetSelection';
@@ -160,6 +164,7 @@ export interface SelectedCellData {
     value: ResultValue | undefined;
     recordSummary?: string;
     fileManifest?: FileManifest;
+    joinedRecordSummariesMap?: ImmutableMap<string, string>;
   };
   selectionData: {
     cellCount: number;

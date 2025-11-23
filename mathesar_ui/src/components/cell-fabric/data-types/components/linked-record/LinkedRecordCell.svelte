@@ -47,7 +47,8 @@
       if (result) {
         const linkedFkColumnId = columnFabric.linkFk?.referent_columns[0];
         if (linkedFkColumnId) {
-          value = result.record[linkedFkColumnId];
+          const fkValue = result.record[linkedFkColumnId];
+          value = Array.isArray(fkValue) ? fkValue[0] : fkValue;
         } else {
           value = result.recordId;
         }

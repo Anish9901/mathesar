@@ -436,7 +436,7 @@ export class RecordsData {
           } else {
             // This can happen in the case of a failure due to RLS
             const msg = get(_)('row_deletion_ignored_by_pg', {
-              values: { rowId },
+              values: { rowId: String(rowId) },
             });
             rowsFailedToDelete.set(row.identifier, RpcError.fromAnything(msg));
           }
