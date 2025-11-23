@@ -14,16 +14,16 @@ import { emptyBasis } from './emptyBasis';
  * traversable via keyboard navigation.
  */
 export function basisFromRangeRestrictedCell(activeCellId: string): Basis {
+  const { rowId, columnId } = parseCellId(activeCellId);
   return {
     activeCellId,
     cellIds: new ImmutableSet([activeCellId]),
-    columnIds: new ImmutableSet([parseCellId(activeCellId).columnId]),
-    rowIds: new ImmutableSet(),
+    columnIds: new ImmutableSet([columnId]),
+    rowIds: new ImmutableSet([rowId]),
     pasteOperation: 'none',
     getFullySelectedColumnIds: () => new ImmutableSet(),
 
     adaptToModifiedPlane({ newPlane }) {
-      const { columnId, rowId } = parseCellId(activeCellId);
       const newPlaneHasSelectedCell =
         newPlane.rangeRestrictedColumnIds.has(columnId) &&
         newPlane.rowIds.has(rowId);
