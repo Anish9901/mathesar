@@ -117,7 +117,7 @@
     [ID_ROW_CONTROL_COLUMN, ROW_HEADER_WIDTH_PX],
     [ID_ADD_NEW_COLUMN, 32],
     ...getCustomizedColumnWidths($processedColumns.values()),
-    ...[...$joinedColumns.keys()].map((id): [string, number] => [id, 200]),
+    ...[...$joinedColumns.keys()].map((id): [string, number] => [id, 300]),
   ]);
   $: showTableInspector = $tableInspectorVisible && supportsTableInspector;
 </script>
