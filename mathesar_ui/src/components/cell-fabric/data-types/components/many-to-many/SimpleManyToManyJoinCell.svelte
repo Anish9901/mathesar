@@ -29,13 +29,15 @@
 
   $: items = value?.result ?? [];
   $: totalCount = value?.count ?? 0;
-  $: itemsWithSummaries = items.map((itemId) => {
-    const summary = joinedRecordSummariesMap?.get(String(itemId));
-    return {
-      id: itemId,
-      summary: summary ?? String(itemId),
-    };
-  });
+  $: itemsWithSummaries = items
+    .filter((i) => i !== null)
+    .map((itemId) => {
+      const summary = joinedRecordSummariesMap?.get(String(itemId));
+      return {
+        id: itemId,
+        summary: summary ?? String(itemId),
+      };
+    });
 
   async function launchRecordSelector(event?: MouseEvent) {
     if (!recordSelector) return;
