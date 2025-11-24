@@ -19,18 +19,18 @@
 
 <style lang="scss">
   .form-branding a {
-    color: var(--color-fg-base); 
+    color: var(--color-fg-base);
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
     text-decoration: none;
-    border-bottom: 2px solid transparent; 
+    border-bottom: 2px solid transparent;
     fill: currentColor;
     stroke: currentColor;
   }
 
   .form-branding a:hover,
   .form-branding a:focus {
-    border-bottom-color: currentColor; 
+    border-bottom-color: currentColor;
   }
 </style>
