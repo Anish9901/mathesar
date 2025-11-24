@@ -133,7 +133,7 @@
             event.stopPropagation();
             return;
           }
-          launchRecordSelector(event);
+          void launchRecordSelector(event);
         }}
         aria-label={$_('pick_record')}
         title={$_('pick_record')}
