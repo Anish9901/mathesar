@@ -5048,7 +5048,7 @@ BEGIN
 
   RETURN concat(
     E'SELECT \n',
-    '  ', base_alias, '.', quote_ident(base_key_col_name), E' AS key, \n',
+    '  ', 'DISTINCT ', base_alias, '.', quote_ident(base_key_col_name), E' AS key, \n',
     '  ', expr, E' AS summary \n',
     'FROM ',
     quote_ident(base_sch_name), '.', quote_ident(base_tab_name),
@@ -5134,6 +5134,7 @@ $$ LANGUAGE SQL STABLE;
 
 
 CREATE OR REPLACE FUNCTION msar.build_joined_columns_summaries_ctes(
+  results_cte_name text,
   joined_columns jsonb DEFAULT NULL,
   table_record_summary_templates jsonb DEFAULT NULL
 ) RETURNS TEXT AS $$/*
@@ -5143,13 +5144,15 @@ SELECT
   NULLIF(
     string_agg(
       format(
-        $q$ %1$I AS (%2$s)$q$,
+        $q$ %1$I AS (%3$s RIGHT JOIN %4$I ON to_jsonb(base.id) <@ (%4$I.%2$I->'result'))$q$,
         alias || '_cte',
+        alias,
         msar.build_record_summary_query_for_table(
           (join_path->-1->-1->>0)::oid,
           (join_path->-1->-1->>1)::smallint,
           table_record_summary_templates
-        )
+        ),
+        results_cte_name
       ),
       ', '
     ),
@@ -5471,6 +5474,7 @@ BEGIN
     ),
     /* %11 */ msar.build_results_eq_cte_expr(tab_id, 'results_ranked_cte', group_),
     /* %12 */ msar.build_joined_columns_summaries_ctes(
+      'enriched_results_cte',
       joined_columns,
       table_record_summary_templates
     ),
