@@ -601,7 +601,7 @@ INSERT INTO msar.all_mathesar_objects VALUES
   ('msar', 'msar.insert_from_select(regclass,regclass,jsonb)', 'FUNCTION', NULL),
   ('msar', 'msar.build_insert_lookup_table(jsonb,jsonb)', 'FUNCTION', NULL),
   ('msar', 'msar.build_join_expr(jsonb)', 'FUNCTION', NULL),
-  ('msar', 'msar.build_joined_columns_summaries_ctes(jsonb,jsonb)', 'FUNCTION', NULL),
+  ('msar', 'msar.build_joined_columns_summaries_ctes(text,jsonb,jsonb)', 'FUNCTION', NULL),
   ('msar', 'msar.build_joined_columns_summaries_expr(jsonb)', 'FUNCTION', NULL),
   ('msar', 'msar.build_linked_record_summaries_ctes(oid,jsonb)', 'FUNCTION', NULL),
   ('msar', 'msar.build_order_by_expr(oid,jsonb)', 'FUNCTION', NULL),

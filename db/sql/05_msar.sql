@@ -5144,7 +5144,11 @@ SELECT
   NULLIF(
     string_agg(
       format(
-        $q$ %1$I AS (%3$s RIGHT JOIN %4$I ON to_jsonb(base.id) <@ (%4$I.%2$I->'result'))$q$,
+        $q$ %1$I AS (
+          %3$s
+          RIGHT JOIN %4$I ON to_jsonb(base.id) <@ (%4$I.%2$I->'result')
+        )$q$, /* This join helps us filter distinct record summaries based on the result
+        of aggregated records of the joined columns */
         alias || '_cte',
         alias,
         msar.build_record_summary_query_for_table(
