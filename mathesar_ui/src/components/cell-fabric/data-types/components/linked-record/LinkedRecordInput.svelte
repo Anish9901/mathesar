@@ -119,7 +119,7 @@
     }
   }
 
-  async function toggleRecordSelector(event: MouseEvent) {
+  async function toggleRecordSelector(event: MouseEvent | KeyboardEvent) {
     if (event.shiftKey) {
       // Ignore when Shift is pressed to allow multi-selection
       event.stopPropagation();
@@ -141,7 +141,7 @@
     switch (e.key) {
       case 'Enter':
         if (e.target === element) {
-          void toggleRecordSelector();
+          void toggleRecordSelector(e);
         }
         break;
       case 'Delete':
