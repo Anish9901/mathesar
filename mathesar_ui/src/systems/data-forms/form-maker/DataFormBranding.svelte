@@ -18,22 +18,24 @@
 </div>
 
 <style lang="scss">
-  .form-branding {
-    padding: var(--sm1);
-    color: var(--color-fg-base-muted);
+.form-branding a {
+  color: var(--color-fg-base); /* theme base text color */
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  text-decoration: none;
+  border-bottom: 2px solid transparent; /* invisible by default */
+}
 
-    a {
-      color: var(--color-fg-base);
-      text-decoration: none;
-      transition:
-        color 120ms ease,
-        text-decoration 120ms ease;
+.form-branding a:hover,
+.form-branding a:focus {
+  border-bottom-color: currentColor; /* underline appears on hover/focus */
+}
 
-      &:hover,
-      &:focus {
-        text-decoration: underline;
-        outline: none;
-      }
-    }
-  }
+.form-branding a svg {
+  fill: currentColor;
+  stroke: currentColor;
+}
+
+
 </style>
