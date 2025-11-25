@@ -4194,6 +4194,232 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- msar.list_records_from_table listing joined columns ------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION __setup_list_records_table_joined_columns()
+RETURNS SETOF TEXT AS $$
+BEGIN
+  CREATE TABLE vehicles (
+    id int primary key,
+    name text,
+    wheel_count int
+  );
+
+  INSERT INTO vehicles VALUES
+    (1, 'Airplane', 10),
+    (2, 'Bicycle', 2),
+    (3, 'Boat', 0),
+    (4, 'Car', 4),
+    (5, 'Tricycle', 3),
+    (6, 'Truck', 4),
+    (7, 'Semi', 18),
+    (8, 'Unicycle', 1);
+
+  -- setup linkages
+  CREATE TABLE colors (id int primary key, name text);
+  CREATE TABLE windows_ (id int primary key, count text);
+
+  CREATE TABLE vehicles_colors (
+    id int primary key, vehicle int references vehicles, color int references colors
+  );
+
+  CREATE TABLE vehicles_windows (
+    id int primary key, vehicle int references vehicles, windows_ int references windows_
+  );
+
+  INSERT INTO colors VALUES
+    (1, 'blue'),
+    (2, 'green'),
+    (3, 'red');
+
+  INSERT INTO windows_ VALUES
+    (1, 'two'),
+    (2, 'four'),
+    (3, '>4');
+
+  INSERT INTO vehicles_colors VALUES
+    (1, 1, 1),
+    (2, 1, 2),
+    (4, 2, 1),
+    (5, 2, 2),
+    (6, 2, 2),
+    (8, 3, 1),
+    (9, 7, 3),
+    (10, 8, 1),
+    (11, 8, 2),
+    (12, 8, 3),
+    (13, 5, 2);
+
+  INSERT INTO vehicles_windows VALUES
+    (1, 1, 3),
+    (3, 3, 1),
+    (4, 3, 2),
+    (5, 3, 3),
+    (6, 4, 1),
+    (7, 4, 2),
+    (9, 6, 2),
+    (10, 7, 2);
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION test_list_records_table_joined_columns()
+RETURNS SETOF TEXT AS $$
+BEGIN
+  PERFORM __setup_list_records_table_joined_columns();
+  RETURN NEXT is(
+    msar.list_records_from_table(
+      'vehicles'::regclass,
+      3, 0, null, null, null,
+      joined_columns => jsonb_build_array(
+        jsonb_build_object(
+          'alias', 'colors_alias',
+          'join_path', jsonb_build_array(
+            jsonb_build_array(
+              jsonb_build_array('vehicles'::regclass::oid::bigint, 1),
+              jsonb_build_array('vehicles_colors'::regclass::oid::bigint, 2)
+            ),
+            jsonb_build_array(
+              jsonb_build_array('vehicles_colors'::regclass::oid::bigint, 3),
+              jsonb_build_array('colors'::regclass::oid::bigint, 1)
+            )
+          )
+        ),
+        jsonb_build_object(
+          'alias', 'windows_alias',
+          'join_path', jsonb_build_array(
+            jsonb_build_array(
+              jsonb_build_array('vehicles'::regclass::oid::bigint, 1),
+              jsonb_build_array('vehicles_windows'::regclass::oid::bigint, 2)
+            ),
+            jsonb_build_array(
+              jsonb_build_array('vehicles_windows'::regclass::oid::bigint, 3),
+              jsonb_build_array('windows_'::regclass::oid::bigint, 1)
+            )
+          ) 
+        )
+      )
+    ),
+    jsonb_build_object(
+      'count', 8,
+      'results', '[
+        {
+          "1": 1,
+          "2": "Airplane",
+          "3": 10,
+          "colors_alias": {"count": 2, "result": [1, 2]},
+          "windows_alias": {"count": 1, "result": [3]}
+        },
+        {
+          "1": 2,
+          "2": "Bicycle",
+          "3": 2,
+          "colors_alias": {"count": 2, "result": [1, 2]},
+          "windows_alias": {"count": 0, "result": []}
+        },
+        {
+          "1": 3,
+          "2": "Boat",
+          "3": 0,
+          "colors_alias": {"count": 1, "result": [1]},
+          "windows_alias": {"count": 3, "result": [1, 2, 3]}
+        }
+      ]'::jsonb,
+      'grouping', null,
+      'record_summaries', null,
+      'joined_record_summaries', '{
+        "colors_alias": {
+          "1": "blue",
+          "2": "green"
+        },
+        "windows_alias": {
+          "1": "two",
+          "2": "four",
+          "3": ">4"
+        }
+      }'::jsonb,
+      'linked_record_summaries', null
+    )
+  );
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION test_get_joined_columns_expr_json()
+RETURNS SETOF TEXT AS $$
+BEGIN
+  PERFORM __setup_list_records_table_joined_columns();
+  RETURN NEXT is(
+    msar.get_joined_columns_expr_json(
+      joined_columns => jsonb_build_array(
+        jsonb_build_object(
+          'alias', 'colors_alias',
+          'join_path', jsonb_build_array(
+            jsonb_build_array(
+              jsonb_build_array('vehicles'::regclass::oid::bigint, 1),
+              jsonb_build_array('vehicles_colors'::regclass::oid::bigint, 2)
+            ),
+            jsonb_build_array(
+              jsonb_build_array('vehicles_colors'::regclass::oid::bigint, 3),
+              jsonb_build_array('colors'::regclass::oid::bigint, 1)
+            )
+          )
+        ),
+        jsonb_build_object(
+          'alias', 'windows_alias',
+          'join_path', jsonb_build_array(
+            jsonb_build_array(
+              jsonb_build_array('vehicles'::regclass::oid::bigint, 1),
+              jsonb_build_array('vehicles_windows'::regclass::oid::bigint, 2)
+            ),
+            jsonb_build_array(
+              jsonb_build_array('vehicles_windows'::regclass::oid::bigint, 3),
+              jsonb_build_array('windows_'::regclass::oid::bigint, 1)
+            )
+          ) 
+        )
+      )
+    ),
+    jsonb_build_object(
+      'join_sql_expr', CONCAT_WS(
+        E'\n','LEFT JOIN public.vehicles_colors ON vehicles.id = vehicles_colors.vehicle',
+              'LEFT JOIN public.colors ON vehicles_colors.color = colors.id',
+              'LEFT JOIN public.vehicles_windows ON vehicles.id = vehicles_windows.vehicle',
+              'LEFT JOIN public.windows_ ON vehicles_windows.windows_ = windows_.id'
+      ),
+      'join_group_by_expr', 'GROUP BY vehicles.id',
+      'selectable_joined_columns_expr', $q$
+          jsonb_build_object(
+            'count', COUNT(DISTINCT colors.id),
+            'result', jsonb_path_query_array(
+              COALESCE(
+                NULLIF(
+                  jsonb_agg(DISTINCT colors.id),
+                  '[null]'::jsonb
+                ),
+                '[]'::jsonb
+              ), '$[0 to 24]'
+            ) -- limit results to 25
+          ) AS colors_alias
+          $q$ || ', ' || $q$
+          jsonb_build_object(
+            'count', COUNT(DISTINCT windows_.id),
+            'result', jsonb_path_query_array(
+              COALESCE(
+                NULLIF(
+                  jsonb_agg(DISTINCT windows_.id),
+                  '[null]'::jsonb
+                ),
+                '[]'::jsonb
+              ), '$[0 to 24]'
+            ) -- limit results to 25
+          ) AS windows_alias
+          $q$
+    )
+  );
+END;
+$$ LANGUAGE plpgsql;
+
 -- msar.get_table_columns_and_records ---------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION __setup_get_table_columns_records() RETURNS SETOF TEXT AS $$
