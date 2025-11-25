@@ -4392,26 +4392,14 @@ BEGIN
           jsonb_build_object(
             'count', COUNT(DISTINCT colors.id),
             'result', jsonb_path_query_array(
-              COALESCE(
-                NULLIF(
-                  jsonb_agg(DISTINCT colors.id),
-                  '[null]'::jsonb
-                ),
-                '[]'::jsonb
-              ), '$[0 to 24]'
+              jsonb_agg_strict(DISTINCT colors.id), '$[0 to 24]'
             ) -- limit results to 25
           ) AS colors_alias
           $q$ || ', ' || $q$
           jsonb_build_object(
             'count', COUNT(DISTINCT windows_.id),
             'result', jsonb_path_query_array(
-              COALESCE(
-                NULLIF(
-                  jsonb_agg(DISTINCT windows_.id),
-                  '[null]'::jsonb
-                ),
-                '[]'::jsonb
-              ), '$[0 to 24]'
+              jsonb_agg_strict(DISTINCT windows_.id), '$[0 to 24]'
             ) -- limit results to 25
           ) AS windows_alias
           $q$
