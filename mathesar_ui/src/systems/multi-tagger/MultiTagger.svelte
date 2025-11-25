@@ -47,6 +47,9 @@
     if (!option) return;
     option.update((o) => o.asLoading());
     const { key, mappingIds } = get(option);
+    if (Array.isArray(key)) {
+      throw new Error('Key cannot be an array');
+    }
     try {
       if (mappingIds.length === 0) {
         const newMappingId = await addMapping(controller, key);
