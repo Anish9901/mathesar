@@ -6332,7 +6332,13 @@ Args:
           jsonb_build_object(
             'count', COUNT(DISTINCT %1$I.%2$I),
             'result', jsonb_path_query_array(
-              jsonb_agg_strict(DISTINCT %1$I.%2$I), '$[0 to 24]'
+              COALESCE(
+                NULLIF(
+                  jsonb_agg(DISTINCT %1$I.%2$I),
+                  '[null]'::jsonb
+                ),
+                '[]'::jsonb
+              ), '$[0 to 24]'
             ) -- limit results to 25
           ) AS %3$I
           $q$,
