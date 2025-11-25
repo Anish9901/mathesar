@@ -5048,7 +5048,7 @@ BEGIN
 
   RETURN concat(
     E'SELECT \n',
-    '  ', base_alias, '.', quote_ident(base_key_col_name), E' AS key, \n',
+    '  ', 'DISTINCT ', base_alias, '.', quote_ident(base_key_col_name), E' AS key, \n',
     '  ', expr, E' AS summary \n',
     'FROM ',
     quote_ident(base_sch_name), '.', quote_ident(base_tab_name),
@@ -5134,6 +5134,7 @@ $$ LANGUAGE SQL STABLE;
 
 
 CREATE OR REPLACE FUNCTION msar.build_joined_columns_summaries_ctes(
+  results_cte_name text,
   joined_columns jsonb DEFAULT NULL,
   table_record_summary_templates jsonb DEFAULT NULL
 ) RETURNS TEXT AS $$/*
@@ -5143,13 +5144,19 @@ SELECT
   NULLIF(
     string_agg(
       format(
-        $q$ %1$I AS (%2$s)$q$,
+        $q$ %1$I AS (
+          %3$s
+          RIGHT JOIN %4$I ON to_jsonb(base.id) <@ (%4$I.%2$I->'result')
+        )$q$, /* This join helps us filter distinct record summaries based on the result
+        of aggregated records of the joined columns */
         alias || '_cte',
+        alias,
         msar.build_record_summary_query_for_table(
           (join_path->-1->-1->>0)::oid,
           (join_path->-1->-1->>1)::smallint,
           table_record_summary_templates
-        )
+        ),
+        results_cte_name
       ),
       ', '
     ),
@@ -5471,6 +5478,7 @@ BEGIN
     ),
     /* %11 */ msar.build_results_eq_cte_expr(tab_id, 'results_ranked_cte', group_),
     /* %12 */ msar.build_joined_columns_summaries_ctes(
+      'enriched_results_cte',
       joined_columns,
       table_record_summary_templates
     ),
@@ -5873,12 +5881,54 @@ END;
 $$ LANGUAGE plpgsql;
 
 
+CREATE OR REPLACE FUNCTION msar.get_simple_mapping_regclass(join_path jsonb) RETURNS regclass AS $$
+  SELECT (join_path -> 0 -> 1 ->> 0)::bigint;
+$$ LANGUAGE SQL;
+
+
+CREATE OR REPLACE FUNCTION msar.get_simple_mapping_join_cte(
+  join_path jsonb,
+  record_pkey text
+) RETURNS text AS $$
+DECLARE
+  mapping_rel regclass;
+  filter_col_attnum smallint;
+  join_col_attnum smallint;
+BEGIN
+  IF jsonb_array_length(join_path) <> 2 THEN
+    RAISE EXCEPTION 'Join path wrong length';
+  ELSIF join_path -> 0 -> 1 -> 0 <> join_path -> 1 -> 0 -> 0 THEN
+    RAISE EXCEPTION 'Inconsistent mapping table OID';
+  ELSIF join_path IS NULL OR record_pkey IS NULL THEN
+    RETURN 'SELECT NULL AS join_key, NULL AS mapping_keys';
+  ELSE
+    mapping_rel := msar.get_simple_mapping_regclass(join_path);
+    filter_col_attnum := join_path -> 0 -> 1 ->> 1;
+    join_col_attnum := join_path -> 1 -> 0 ->> 1;
+    RETURN format(
+      $c$
+        SELECT %1$I AS join_key, jsonb_agg(%2$I) AS mapping_keys
+        FROM %3$I.%4$I WHERE %5$I = %6$L GROUP BY join_key
+      $c$,
+      /* 1 */ msar.get_column_name(mapping_rel, join_col_attnum),
+      /* 2 */ msar.get_column_name(mapping_rel, msar.get_selectable_pkey_attnum(mapping_rel)),
+      /* 3 */ msar.get_relation_schema_name(mapping_rel),
+      /* 4 */ msar.get_relation_name(mapping_rel),
+      /* 5 */ msar.get_column_name(mapping_rel, filter_col_attnum),
+      /* 6 */ record_pkey
+    );
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+
 CREATE OR REPLACE FUNCTION msar.list_by_record_summaries(
   tab_id oid,
   limit_ integer,
   offset_ integer,
   search_ text DEFAULT NULL,
-  table_record_summary_templates jsonb DEFAULT NULL
+  table_record_summary_templates jsonb DEFAULT NULL,
+  linked_record_path jsonb DEFAULT NULL
 ) RETURNS jsonb
 LANGUAGE plpgsql STABLE
 AS $$/*
@@ -5893,9 +5943,15 @@ Args:
     term (case insensitive) in their text will be returned.
   table_record_summary_templates: (optional) A JSON object that maps table OIDs to record summary
     templates.
+  linked_record_path: (optional) A JSON object that represents linkages via a simple many-to-many
+    mapping to a record in another table. This can be used to determine whether the listed
+    summaries are derived from records which are linked from the other table.
+
 */
 DECLARE
   search_where_clause text := '';
+  mapping_join_path jsonb;
+  mapped_record_pkey text;
   final_sql text;
   result_json jsonb;
 BEGIN
@@ -5903,25 +5959,39 @@ BEGIN
     search_where_clause := format(' WHERE summary ILIKE %L', '%'||search_||'%');
   END IF;
 
+  mapping_join_path := linked_record_path -> 'join_path';
+  mapped_record_pkey := linked_record_path ->> 'record_pkey';
+
   final_sql := format(
     $q$
     WITH
       all_record_summaries AS ( %1$s ),
       filtered AS ( SELECT * FROM all_record_summaries %2$s ),
       sorted AS ( SELECT * FROM filtered ORDER BY summary LIMIT %3$s OFFSET %4$s ),
-      results AS ( SELECT coalesce(json_agg(sorted), '[]') AS results FROM sorted ),
-      count_all_results AS ( SELECT count(*) AS num FROM filtered )
-    SELECT
-      json_build_object(
-        'count', count_all_results.num,
-        'results', results.results
+      results AS ( SELECT coalesce(jsonb_agg(sorted), '[]') AS results FROM sorted ),
+      count_all_results AS ( SELECT count(*) AS num FROM filtered ),
+      mapping_cte AS (%5$s),
+      agg_mapping_cte AS (
+        SELECT NULLIF(pg_catalog.jsonb_strip_nulls(pg_catalog.jsonb_build_object(
+          'join_table', %6$L::bigint,
+          'joined_values', pg_catalog.jsonb_object_agg(m.join_key, m.mapping_keys)
+        )), '{}'::jsonb) AS mapping
+        FROM mapping_cte m INNER JOIN sorted s ON m.join_key::text = s.key::text
       )
-    FROM count_all_results, results
+    SELECT
+      jsonb_build_object(
+        'count', count_all_results.num,
+        'results', results.results,
+        'mapping', agg_mapping_cte.mapping
+      )
+    FROM count_all_results, results, agg_mapping_cte
     $q$,
     /* 1 */ msar.build_record_summary_query_for_table(tab_id, NULL, table_record_summary_templates),
     /* 2 */ search_where_clause,
     /* 3 */ limit_,
-    /* 4 */ offset_
+    /* 4 */ offset_,
+    /* 5 */ msar.get_simple_mapping_join_cte(mapping_join_path, mapped_record_pkey::text),
+    /* 6 */ msar.get_simple_mapping_regclass(mapping_join_path)::oid
   );
 
   EXECUTE final_sql INTO result_json;
