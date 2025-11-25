@@ -19,16 +19,15 @@
   export let table: Table;
   export let recordId: ResultValue;
 
-$: if (recordId !== null && recordId !== undefined) {
-  preview.run({
-    database_id: table.schema.database.id,
-    table_oid: table.oid,
-    return_record_summaries: true,
-    record_id: recordId,
-    table_record_summary_templates: { [table.oid]: template },
-  });
-}
-
+  $: if (recordId !== null && recordId !== undefined) {
+    void preview.run({
+      database_id: table.schema.database.id,
+      table_oid: table.oid,
+      return_record_summaries: true,
+      record_id: recordId,
+      table_record_summary_templates: { [table.oid]: template },
+    });
+  }
 
   $: recordSummary =
     $preview.resolvedValue?.record_summaries?.[String(recordId)];
@@ -39,10 +38,8 @@ $: if (recordId !== null && recordId !== undefined) {
     <Spinner />
   {:else if recordSummary !== undefined}
     <LinkedRecord {recordSummary} />
-  {:else if $preview.error}
-    <Errors errors={[$preview.error]} />
   {:else}
-    <p class="no-summary">{$_('no_summary_available_for_this_record')}</p>
+    <Errors errors={[$preview.error ?? $_('unknown_error')]} />
   {/if}
 
   <div class="help">
