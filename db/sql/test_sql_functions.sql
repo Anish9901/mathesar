@@ -4345,6 +4345,72 @@ END;
 $$ LANGUAGE plpgsql;
 
 
+CREATE OR REPLACE FUNCTION test_get_record_from_table_joined_columns()
+RETURNS SETOF TEXT AS $$
+BEGIN
+  PERFORM __setup_list_records_table_joined_columns();
+  RETURN NEXT is(
+    msar.get_record_from_table(
+      'vehicles'::regclass,
+      3, joined_columns => jsonb_build_array(
+        jsonb_build_object(
+          'alias', 'colors_alias',
+          'join_path', jsonb_build_array(
+            jsonb_build_array(
+              jsonb_build_array('vehicles'::regclass::oid::bigint, 1),
+              jsonb_build_array('vehicles_colors'::regclass::oid::bigint, 2)
+            ),
+            jsonb_build_array(
+              jsonb_build_array('vehicles_colors'::regclass::oid::bigint, 3),
+              jsonb_build_array('colors'::regclass::oid::bigint, 1)
+            )
+          )
+        ),
+        jsonb_build_object(
+          'alias', 'windows_alias',
+          'join_path', jsonb_build_array(
+            jsonb_build_array(
+              jsonb_build_array('vehicles'::regclass::oid::bigint, 1),
+              jsonb_build_array('vehicles_windows'::regclass::oid::bigint, 2)
+            ),
+            jsonb_build_array(
+              jsonb_build_array('vehicles_windows'::regclass::oid::bigint, 3),
+              jsonb_build_array('windows_'::regclass::oid::bigint, 1)
+            )
+          ) 
+        )
+      )
+    ),
+    jsonb_build_object(
+      'count', 1,
+      'results', '[
+        {
+          "1": 3,
+          "2": "Boat",
+          "3": 0,
+          "colors_alias": {"count": 1, "result": [1]},
+          "windows_alias": {"count": 3, "result": [1, 2, 3]}
+        }
+      ]'::jsonb,
+      'grouping', null,
+      'record_summaries', null,
+      'joined_record_summaries', '{
+        "colors_alias": {
+          "1": "blue"
+        },
+        "windows_alias": {
+          "1": "two",
+          "2": "four",
+          "3": ">4"
+        }
+      }'::jsonb,
+      'linked_record_summaries', null
+    )
+  );
+END;
+$$ LANGUAGE plpgsql;
+
+
 CREATE OR REPLACE FUNCTION test_get_joined_columns_expr_json()
 RETURNS SETOF TEXT AS $$
 BEGIN
