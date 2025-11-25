@@ -7175,7 +7175,7 @@ BEGIN
   -- Empty table behavior
   RETURN NEXT is(
     msar.list_by_record_summaries('vehicles'::regclass, 10, 0),
-    '{"count": 0, "results": []}'
+    '{"count": 0, "mapping": null, "results": []}'::jsonb
   );
 
   INSERT INTO vehicles VALUES
@@ -7187,30 +7187,105 @@ BEGIN
     (6, 'Boat', 0),
     (7, 'Semi', 18),
     (8, 'Airplane', 10);
+
+  -- setup linkages
+  CREATE TABLE colors (id int primary key, name text);
+
+  CREATE TABLE vehicles_colors (
+    id int primary key, vehicle int references vehicles, color int references colors
+  );
+
+  INSERT INTO colors VALUES
+    (1, 'red'),
+    (2, 'blue'),
+    (3, 'green');
+
+  INSERT INTO vehicles_colors VALUES
+    (1, 1, 1),
+    (2, 2, 2),
+    (3, 2, 3),
+    (4, 4, 1),
+    (5, 4, 2),
+    (6, 5, 2),
+    (7, 6, 3),
+    (8, 7, 1),
+    (9, 7, 3),
+    (10, 8, 1),
+    (11, 8, 2),
+    (12, 8, 3),
+    (13, 5, 2);
   
   -- Basic test
   RETURN NEXT is(
     msar.list_by_record_summaries('vehicles'::regclass, 2, 0),
     '{
       "count": 8,
+      "mapping": null,
       "results": [
         {"key": 8, "summary": "Airplane"},
         {"key": 4, "summary": "Bicycle"}
       ]
-    }'
+    }'::jsonb
+  );
+
+  RETURN NEXT is(
+    msar.list_by_record_summaries(
+      'vehicles'::regclass, 2, 0,
+      linked_record_path => jsonb_build_object(
+        'record_pkey', 2,
+        'join_path', jsonb_build_array(
+          jsonb_build_array(
+            jsonb_build_array('colors'::regclass::oid::bigint, 1),
+            jsonb_build_array('vehicles_colors'::regclass::oid::bigint, 3)
+          ),
+          jsonb_build_array(
+            jsonb_build_array('vehicles_colors'::regclass::oid::bigint, 2),
+            jsonb_build_array('vehicles'::regclass::oid::bigint, 1)
+          )
+        )
+      )
+    ),
+    jsonb_build_object(
+      'count', 8,
+      'mapping', jsonb_build_object(
+        'join_table', 'vehicles_colors'::regclass::oid::bigint,
+        'joined_values', jsonb_build_object('4', '[5]'::jsonb, '8', '[11]'::jsonb)
+      ),
+      'results', '[{"key": 8, "summary": "Airplane"}, {"key": 4, "summary": "Bicycle"}]'::jsonb
+    )
   );
 
   -- Pagination
   RETURN NEXT is(
-    msar.list_by_record_summaries('vehicles'::regclass, 3, 3),
-    '{
-      "count": 8,
-      "results": [
+    msar.list_by_record_summaries(
+      'vehicles'::regclass, 3, 3,
+      linked_record_path => jsonb_build_object(
+        'record_pkey', 2,
+        'join_path', jsonb_build_array(
+          jsonb_build_array(
+            jsonb_build_array('colors'::regclass::oid::bigint, 1),
+            jsonb_build_array('vehicles_colors'::regclass::oid::bigint, 3)
+          ),
+          jsonb_build_array(
+            jsonb_build_array('vehicles_colors'::regclass::oid::bigint, 2),
+            jsonb_build_array('vehicles'::regclass::oid::bigint, 1)
+          )
+        )
+      )
+    ),
+    jsonb_build_object(
+      'count', 8,
+      'mapping', jsonb_build_object(
+        'join_table', 'vehicles_colors'::regclass::oid::bigint,
+        'joined_values', jsonb_build_object('5', '[6, 13]'::jsonb)
+      ),
+      'results',
+      '[
         {"key": 1, "summary": "Car"},
         {"key": 7, "summary": "Semi"},
         {"key": 5, "summary": "Tricycle"}
-      ]
-    }'
+      ]'::jsonb
+    )
   );
 
   -- Search query
@@ -7218,6 +7293,7 @@ BEGIN
     msar.list_by_record_summaries('vehicles'::regclass, 2, 0, 'cycle'),
     '{
       "count": 3,
+      "mapping": null,
       "results": [
         {"key": 4, "summary": "Bicycle"},
         {"key": 5, "summary": "Tricycle"}
@@ -7228,7 +7304,7 @@ BEGIN
   -- Empty search query
   RETURN NEXT is(
     msar.list_by_record_summaries('vehicles'::regclass, 2, 0, 'NOPE'),
-    '{"count": 0, "results": []}'
+    '{"count": 0, "mapping": null, "results": []}'
   );
 
   -- Search in custom record summary template
@@ -7240,7 +7316,7 @@ BEGIN
       '18 wheels',
       format('{ "%s": [ [2], " with ", [3], " wheels" ] }', 'vehicles'::regclass::oid)::jsonb
     ),
-    '{"count": 1, "results": [{"key": 7, "summary": "Semi with 18 wheels"}]}'
+    '{"count": 1, "mapping": null, "results": [{"key": 7, "summary": "Semi with 18 wheels"}]}'
   );
 END;
 $$ LANGUAGE plpgsql;
