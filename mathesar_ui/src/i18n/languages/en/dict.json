@@ -487,6 +487,7 @@
   "owner": "Owner",
   "page_doesnt_exist": "The page you're looking for doesn't exist.",
   "page_number": "Page {pageNumber}",
+  "page_number_of_total_pages": "Page {pageNumber} of {totalPages}",
   "page_size": "Page Size",
   "password": "Password",
   "password_help": "Can be left blank if your role doesn't use a password.",

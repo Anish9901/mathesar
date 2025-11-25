@@ -5,8 +5,8 @@
   import Select from '@mathesar/component-library/select/Select.svelte';
   import Pagination from '@mathesar/utils/Pagination';
   import {
+    AttachableDropdown,
     Button,
-    Dropdown,
     Icon,
     LabeledInput,
     iconChooseItemNext,
@@ -15,25 +15,32 @@
 
   import PageJumper from './PageJumper.svelte';
 
-  export let pagination: Pagination;
-  export let recordCount: number;
-  export let pageJumperIsOpen = false;
-  export let pageSizeOptions: number[] | undefined = undefined;
-
   const dispatch = createEventDispatcher<{
     change: Pagination;
   }>();
 
+  export let pagination: Pagination;
+  export let recordCount: number;
+  export let pageJumperIsOpen = false;
+  export let pageSizeOptions: number[] | undefined = undefined;
+  export let showTotalPages = false;
+
+  let pageJumperTriggerElement: HTMLElement;
+
   $: ({ page, size } = pagination);
   $: maxPage = pagination.getMaxPage(recordCount);
-  $: canGoBackward = page > 1;
-  $: canGoForward = page < maxPage;
+  $: hasBackButton = page > 1;
+  $: hasForwardButton = page < maxPage;
   $: allPageSizeOptions = (() => {
     if (pageSizeOptions === undefined) return undefined;
     if (pageSizeOptions.length < 2) return undefined;
     const uniqueOptions = new Set([...pageSizeOptions, size]);
     return [...uniqueOptions].sort((a, b) => a - b);
   })();
+
+  function togglePageJumper() {
+    pageJumperIsOpen = !pageJumperIsOpen;
+  }
 
   function goToPage(destination: number) {
     const nearestValidPage = Math.max(Math.min(destination, maxPage), 1);
@@ -62,97 +69,97 @@
 </script>
 
 <div class="mini-pagination">
-  {#if canGoBackward}
-    <Button
-      appearance="ghost"
-      class="padding-zero"
-      on:click={goBackward}
-      tooltip={$_('previous_page')}
-    >
-      <span class="button">
-        <Icon {...iconChooseItemPrevious} />
-      </span>
+  {#if hasBackButton}
+    <Button on:click={goBackward}>
+      <Icon {...iconChooseItemPrevious} />
     </Button>
   {/if}
-
-  <Dropdown
-    showArrow={false}
-    triggerAppearance="ghost"
-    triggerClass="padding-zero"
-    placements={['bottom', 'bottom-end', 'bottom-start', 'left', 'top']}
-    closeOnInnerClick={false}
-    bind:isOpen={pageJumperIsOpen}
-  >
-    <span slot="trigger" class="button">
-      {$_('page_number', { values: { pageNumber: page } })}
-    </span>
-    <div slot="content" class="detail" let:close>
-      <PageJumper
-        {pagination}
-        {recordCount}
-        goToPage={(destination) => {
-          goToPage(destination);
-          close();
-        }}
-      />
-
-      {#if allPageSizeOptions}
-        <div class="page-size">
-          <LabeledInput label={$_('page_size')}>
-            <Select
-              options={allPageSizeOptions}
-              value={size}
-              on:change={({ detail: newSize }) => {
-                if (!newSize) return;
-                changePageSize(newSize);
-                close();
-              }}
-            />
-          </LabeledInput>
-        </div>
+  <Button on:click={togglePageJumper} bind:element={pageJumperTriggerElement}>
+    <span class="label">
+      {#if showTotalPages}
+        {$_('page_number_of_total_pages', {
+          values: { pageNumber: page, totalPages: maxPage },
+        })}
+      {:else}
+        {$_('page_number', { values: { pageNumber: page } })}
       {/if}
-    </div>
-  </Dropdown>
-
-  <Button
-    appearance="ghost"
-    class="padding-zero"
-    on:click={goForward}
-    disabled={!canGoForward}
-    tooltip={$_('next_page')}
-  >
-    <span class="button">
-      <Icon {...iconChooseItemNext} />
     </span>
   </Button>
+  {#if hasForwardButton}
+    <Button on:click={goForward}>
+      <Icon {...iconChooseItemNext} />
+    </Button>
+  {/if}
 </div>
+
+<AttachableDropdown
+  trigger={pageJumperTriggerElement}
+  bind:isOpen={pageJumperIsOpen}
+  placements={['bottom', 'bottom-end', 'bottom-start', 'left', 'top']}
+  let:close
+>
+  <div class="jumper">
+    <PageJumper
+      {pagination}
+      {recordCount}
+      goToPage={(destination) => {
+        goToPage(destination);
+        close();
+      }}
+    />
+    {#if allPageSizeOptions}
+      <div class="page-size">
+        <LabeledInput label={$_('page_size')}>
+          <Select
+            options={allPageSizeOptions}
+            value={size}
+            on:change={({ detail: newSize }) => {
+              if (!newSize) return;
+              changePageSize(newSize);
+              close();
+            }}
+          />
+        </LabeledInput>
+      </div>
+    {/if}
+  </div>
+</AttachableDropdown>
 
 <style>
   .mini-pagination {
     display: grid;
-    max-width: min-content;
     grid-auto-flow: column;
-    --button-border: none;
+    isolation: isolate;
   }
-  .button {
-    --size: 1.9em;
-    height: var(--size);
-    min-width: var(--size);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: var(--sm5);
+  .mini-pagination > :global(*) {
+    border-right: none;
+    border-radius: 0;
+    position: relative;
+    z-index: 1;
   }
-  .button:hover {
-    background: var(--color-navigation-20-hover);
+  .mini-pagination > :global(*:hover) {
+    border-right: none !important;
+    z-index: 2;
   }
-  .detail {
-    padding: var(--sm4);
+  .mini-pagination > :global(:last-child) {
+    border-right: solid 1px var(--color-border-control) !important;
+    border-bottom-right-radius: var(--sm4);
+    border-top-right-radius: var(--sm4);
+  }
+  .mini-pagination > :global(:first-child) {
+    border-top-left-radius: var(--sm4);
+    border-bottom-left-radius: var(--sm4);
+  }
+  .label {
+    font-weight: normal;
   }
   .page-size {
     margin-top: 1em;
     font-size: var(--sm1);
     display: grid;
     justify-content: center;
+  }
+  .jumper {
+    padding: var(--sm4) var(--sm4) var(--sm1) var(--sm4);
   }
 </style>

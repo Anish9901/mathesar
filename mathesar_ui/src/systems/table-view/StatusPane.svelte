@@ -128,11 +128,14 @@
   </div>
 
   <div class="status-pane-items-section">
-    <MiniPagination
-      bind:pagination={$pagination}
-      recordCount={$totalCount ?? 0}
-      pageSizeOptions={[10, 50, 100, 500]}
-    />
+    {#if $totalCount !== undefined}
+      <MiniPagination
+        bind:pagination={$pagination}
+        recordCount={$totalCount ?? 0}
+        pageSizeOptions={[10, 50, 100, 500]}
+        showTotalPages={width > 480}
+      />
+    {/if}
     <RefreshButton
       on:click={refresh}
       state={refreshButtonState}
