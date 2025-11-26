@@ -188,6 +188,7 @@ class RecordList(TypedDict):
     grouping: GroupingResponse
     linked_record_summaries: dict[str, dict[str, str]]
     record_summaries: dict[str, str]
+    joined_record_summaries: dict
     download_links: Optional[dict]
 
     @classmethod
@@ -198,6 +199,7 @@ class RecordList(TypedDict):
             grouping=d.get("grouping"),
             linked_record_summaries=d.get("linked_record_summaries"),
             record_summaries=d.get("record_summaries"),
+            joined_record_summaries=d.get("joined_record_summaries"),
             download_links=d.get("download_links") or None
         )
 
@@ -289,6 +291,7 @@ def list_(
         order: list[OrderBy] = None,
         filter: Filter = None,
         grouping: Grouping = None,
+        joined_columns: list[dict] = None,
         return_record_summaries: bool = False,
         **kwargs
 ) -> RecordList:
@@ -304,6 +307,8 @@ def list_(
         order: An array of ordering definition objects.
         filter: An array of filter definition objects.
         grouping: An array of group definition objects.
+        joined_columns: An array of dict(s) that include an "alias" and "join_path" where,
+            "join_path" represents linkages via a simple many-to-many mapping to a column in another table.
         return_record_summaries: Whether to return summaries of retrieved
             records.
 
@@ -320,6 +325,7 @@ def list_(
             order=order,
             filter=filter,
             group=grouping,
+            joined_columns=joined_columns,
             return_record_summaries=return_record_summaries,
             table_record_summary_templates=get_table_record_summary_templates(database_id),
         )
@@ -339,6 +345,7 @@ def get(
         record_id: Any,
         table_oid: int,
         database_id: int,
+        joined_columns: list[dict] = None,
         return_record_summaries: bool = False,
         table_record_summary_templates: dict[str, Any] = None,
         **kwargs
@@ -350,6 +357,8 @@ def get(
         record_id: The primary key value of the record to be gotten.
         table_oid: Identity of the table in the user's database.
         database_id: The Django id of the database containing the table.
+        joined_columns: An array of dict(s) that include an "alias" and "join_path" where,
+            "join_path" represents linkages via a simple many-to-many mapping to a column in another table.
         return_record_summaries: Whether to return summaries of the
             retrieved record.
         table_record_summary_templates: A dict of record summary templates.
@@ -368,6 +377,7 @@ def get(
             conn,
             record_id,
             table_oid,
+            joined_columns,
             return_record_summaries=return_record_summaries,
             table_record_summary_templates={
                 **get_table_record_summary_templates(database_id),
