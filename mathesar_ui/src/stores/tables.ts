@@ -31,7 +31,10 @@ import {
 } from '@mathesar/packages/json-rpc-client-builder';
 import { getErrorMessage } from '@mathesar/utils/errors';
 import { preloadCommonData } from '@mathesar/utils/preloadData';
-import { tableRequiresImportConfirmation } from '@mathesar/utils/tables';
+import {
+  isTableView,
+  tableRequiresImportConfirmation,
+} from '@mathesar/utils/tables';
 import {
   CancellablePromise,
   type RecursivePartial,
@@ -62,7 +65,12 @@ function makeEmptyTablesData(): TablesData {
 const tablesStore = writable(makeEmptyTablesData());
 
 function sortTables(tables: Iterable<Table>): Table[] {
-  return [...tables].sort((a, b) => a.name.localeCompare(b.name));
+  const allTables = [...tables];
+  const regularTables = allTables.filter((table) => !isTableView(table));
+  const views = allTables.filter((table) => isTableView(table));
+
+  const sort = (a: Table, b: Table) => a.name.localeCompare(b.name);
+  return [...regularTables.sort(sort), ...views.sort(sort)];
 }
 
 function setTablesStore(
