@@ -11,6 +11,13 @@
 
   const tabularData = getTabularDataStoreFromContext();
   const numberFormatter = new Intl.NumberFormat();
+  const breakpoints = {
+    newAndUnsavedRecordCounts: 450,
+    paginationTotalPages: 480,
+    newRecordLabel: 520,
+    refreshLabel: 550,
+    leftAndRightBounds: 650,
+  };
 
   export let context: 'page' | 'widget' = 'page';
 
@@ -79,13 +86,15 @@
         appearance="primary"
         onClick={addRecord}
         icon={iconAddNew}
-        label={width > 520 ? $_('new_record') : undefined}
+        label={width > breakpoints.newRecordLabel
+          ? $_('new_record')
+          : undefined}
       />
     {/if}
     <div class="record-count">
       {#if $totalCount}
         <span>
-          {#if width > 650}
+          {#if width > breakpoints.leftAndRightBounds}
             {$_('showing_n_to_m_of_total', {
               values: {
                 leftBound: numberFormatter.format(leftBound),
@@ -103,7 +112,7 @@
         {$_('no_records_found')}
       {/if}
 
-      {#if width > 450}
+      {#if width > breakpoints.newAndUnsavedRecordCounts}
         {#if $persistedNewRecords.length > 0}
           <span class="pill">
             +{$_('count_new_records', {
@@ -133,13 +142,13 @@
         bind:pagination={$pagination}
         recordCount={$totalCount ?? 0}
         pageSizeOptions={[10, 50, 100, 500]}
-        showTotalPages={width > 480}
+        showTotalPages={width > breakpoints.paginationTotalPages}
       />
     {/if}
     <RefreshButton
       on:click={refresh}
       state={refreshButtonState}
-      showLabel={width > 550}
+      showLabel={width > breakpoints.refreshLabel}
     />
   </div>
 </div>
