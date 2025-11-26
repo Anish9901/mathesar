@@ -4807,7 +4807,7 @@ This is meant to work together with output of functions like msar.get_selectable
 Returns an expr in the form: msar.format_data("<column name>") as "<oid>", ...
 
 Args:
-  tab_name: TODO
+  tab_name: The unqoted name of the table for namespacing.
   columns: The columns to build the expr for, in the following jsonb sample format:
            { "2": <name of column with oid 2>, "4": <name of column with oid 4> }
 
@@ -5048,7 +5048,7 @@ BEGIN
 
   RETURN concat(
     E'SELECT \n',
-    '  ', 'DISTINCT ', base_alias, '.', quote_ident(base_key_col_name), E' AS key, \n',
+    '  ', base_alias, '.', quote_ident(base_key_col_name), E' AS key, \n',
     '  ', expr, E' AS summary \n',
     'FROM ',
     quote_ident(base_sch_name), '.', quote_ident(base_tab_name),
@@ -5135,9 +5135,17 @@ $$ LANGUAGE SQL STABLE;
 
 CREATE OR REPLACE FUNCTION msar.build_joined_columns_summaries_ctes(
   results_cte_name text,
-  joined_columns jsonb DEFAULT NULL,
+  joined_columns jsonb,
   table_record_summary_templates jsonb DEFAULT NULL
 ) RETURNS TEXT AS $$/*
+Build an SQL text expression defining a sequence of CTEs that give summaries for joined columns.
+
+Args:
+  results_cte_name: The name of the results cte.
+  joined_columns: A jsonb list defining columns joined via a simple many-to-many linkage.
+    See msar.get_joined_columns_expr_json for more details.
+  table_record_summary_templates: (optional) A JSON object that maps table OIDs to record summary
+    templates.
 */
 SELECT
   ', ' ||
@@ -5170,8 +5178,14 @@ $$ LANGUAGE SQL STABLE;
 
 
 CREATE OR REPLACE FUNCTION msar.build_joined_columns_summaries_expr(
-  joined_columns jsonb DEFAULT NULL
+  joined_columns jsonb
 ) RETURNS TEXT AS $$/*
+Returns a SELECT SQL expr for aggregating record summaries
+from the ctes generated via msar.build_joined_columns_summaries_ctes.
+
+Args:
+  joined_columns: A jsonb list defining columns joined via a simple many-to-many linkage.
+    See msar.get_joined_columns_expr_json for more details.
 */
 SELECT 'SELECT '
 || string_agg(
@@ -5279,6 +5293,8 @@ CREATE OR REPLACE FUNCTION msar.build_record_list_query_components_with_ctes(
     order_: An array of ordering definition objects
     filter_: An array of filter definition objects
     group_: An array of group definition objects
+    joined_columns: (optional) A jsonb list defining columns joined via a simple many-to-many linkage.
+      See msar.get_joined_columns_expr_json for more details.
 
   Behavior:
     Fetches metadata about the table (selectable_column list, schema name, table name etc.,)
@@ -5364,7 +5380,8 @@ Args:
   order_: An array of ordering definition objects.
   filter_: An array of filter definition objects.
   group_: An array of group definition objects.
-  joined_columns: TODO
+  joined_columns: (optional) A jsonb list defining columns joined via a simple many-to-many linkage.
+    See msar.get_joined_columns_expr_json for more details.
   return_record_summaries : Whether to return a summary for each record listed.
   table_record_summary_templates: (optional) A JSON object that maps table OIDs to record summary
     templates.
@@ -5672,7 +5689,8 @@ Get single record from a table. Only columns to which the user has access are re
 Args:
   tab_id: The OID of the table whose record we'll get.
   rec_id: The id value of the record.
-  joined_columns: TODO
+  joined_columns: (optional) A jsonb list defining columns joined via a simple many-to-many linkage.
+    See msar.get_joined_columns_expr_json for more details.
   return_record_summaries : Whether to return a summary for the record listed.
   table_record_summary_templates: A JSON object that maps table OIDs to record summary
     templates.
@@ -6250,7 +6268,10 @@ $$ LANGUAGE plpgsql RETURNS NULL ON NULL INPUT;
 
 
 CREATE OR REPLACE FUNCTION msar.build_join_expr(join_path jsonb) RETURNS TEXT AS $$/* 
+Returns a left join sql expr for a given join path.
 
+Note: This doesn't handle aliasing.
+  So, join_paths containing the same table to be joined more than once would through errors.
 */
   WITH cte AS (
     SELECT
@@ -6275,8 +6296,19 @@ $$ LANGUAGE SQL RETURNS NULL ON NULL INPUT;
 
 
 CREATE OR REPLACE FUNCTION msar.get_joined_columns_expr_json(joined_columns jsonb)
-RETURNS jsonb AS $$/* 
+RETURNS jsonb AS $$/*
+Returns a json object containing SQL exprs essential for listing aggregates of pk-ids for a table
+which is connect via a simple many-to-many relation.
 
+joined_columns should have the folowing form:
+[
+  {"alias": "column_alias_1", "join_path": [[[17837, 1],[17842, 2]], [[17842, 3],[17820, 1]]]},
+  {"alias": "column_alias_2", "join_path": [[[17837, 1], [17847, 2]], [[17847, 3], [17874, 1]]]},
+]
+
+Args:
+  joined_columns: A list of JSON object that include an "alias" and "join_path" where,
+    "join_path" represents linkages via a simple many-to-many mapping to a column in another table.
 */
   WITH cte AS (
     SELECT
@@ -6300,7 +6332,13 @@ RETURNS jsonb AS $$/*
           jsonb_build_object(
             'count', COUNT(DISTINCT %1$I.%2$I),
             'result', jsonb_path_query_array(
-              jsonb_agg(DISTINCT %1$I.%2$I), '$[0 to 24]'
+              COALESCE(
+                NULLIF(
+                  jsonb_agg(DISTINCT %1$I.%2$I),
+                  '[null]'::jsonb
+                ),
+                '[]'::jsonb
+              ), '$[0 to 24]'
             ) -- limit results to 25
           ) AS %3$I
           $q$,
