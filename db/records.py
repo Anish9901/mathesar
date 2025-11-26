@@ -35,7 +35,8 @@ def list_records_from_table(
         order: An array of ordering definition objects.
         filter: An array of filter definition objects.
         group: An array of group definition objects.
-        joined_columns: TODO
+        joined_columns: An array of dict(s) that include an "alias" and "join_path" where,
+            "join_path" represents linkages via a simple many-to-many mapping to a column in another table.
         return_record_summaries: Whether to return self record summaries.
         table_record_summary_templates: A dict of record summary templates, per table.
     """
@@ -71,7 +72,8 @@ def get_record_from_table(
     Args:
         record_id: The primary key value of the record.
         table_id: The OID of the table whose record we'll get.
-        joined_columns: TODO
+        joined_columns: An array of dict(s) that include an "alias" and "join_path" where,
+            "join_path" represents linkages via a simple many-to-many mapping to a column in another table.
         return_record_summaries: Whether to return self record summaries.
         table_record_summary_templates: A dict of record summary templates, per table.
     """

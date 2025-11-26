@@ -291,7 +291,7 @@ def list_(
         order: list[OrderBy] = None,
         filter: Filter = None,
         grouping: Grouping = None,
-        joined_columns: list[list[list]] = None,
+        joined_columns: list[dict] = None,
         return_record_summaries: bool = False,
         **kwargs
 ) -> RecordList:
@@ -307,7 +307,8 @@ def list_(
         order: An array of ordering definition objects.
         filter: An array of filter definition objects.
         grouping: An array of group definition objects.
-        joined_columns: TODO
+        joined_columns: An array of dict(s) that include an "alias" and "join_path" where,
+            "join_path" represents linkages via a simple many-to-many mapping to a column in another table.
         return_record_summaries: Whether to return summaries of retrieved
             records.
 
@@ -344,7 +345,7 @@ def get(
         record_id: Any,
         table_oid: int,
         database_id: int,
-        joined_columns: list[list[list]] = None,
+        joined_columns: list[dict] = None,
         return_record_summaries: bool = False,
         table_record_summary_templates: dict[str, Any] = None,
         **kwargs
@@ -356,7 +357,8 @@ def get(
         record_id: The primary key value of the record to be gotten.
         table_oid: Identity of the table in the user's database.
         database_id: The Django id of the database containing the table.
-        joined_columns: TODO
+        joined_columns: An array of dict(s) that include an "alias" and "join_path" where,
+            "join_path" represents linkages via a simple many-to-many mapping to a column in another table.
         return_record_summaries: Whether to return summaries of the
             retrieved record.
         table_record_summary_templates: A dict of record summary templates.
