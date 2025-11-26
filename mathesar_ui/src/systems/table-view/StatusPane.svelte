@@ -7,16 +7,20 @@
   import { iconAddNew } from '@mathesar/icons';
   import { getTabularDataStoreFromContext } from '@mathesar/stores/table-data';
   import { getFirstEditableColumn } from '@mathesar/stores/table-data/processedColumns';
-  import { SpinnerButton } from '@mathesar-component-library';
+  import Pagination from '@mathesar/utils/Pagination';
+  import { Select, SpinnerButton } from '@mathesar-component-library';
 
   const tabularData = getTabularDataStoreFromContext();
   const numberFormatter = new Intl.NumberFormat();
+  const pageSizeOptions = [10, 50, 100, 500];
   const breakpoints = {
+    miniPaginationDropdownIndicator: 430,
     newAndUnsavedRecordCounts: 450,
-    paginationTotalPages: 480,
-    newRecordLabel: 520,
-    refreshLabel: 550,
-    leftAndRightBounds: 650,
+    paginationTotalPages: 510,
+    pageSizeDropdown: 590,
+    newRecordLabel: 690,
+    refreshLabel: 720,
+    leftAndRightBounds: 770,
   };
 
   export let context: 'page' | 'widget' = 'page';
@@ -141,9 +145,28 @@
       <MiniPagination
         bind:pagination={$pagination}
         recordCount={$totalCount ?? 0}
-        pageSizeOptions={[10, 50, 100, 500]}
+        pageSizeOptions={width <= breakpoints.pageSizeDropdown
+          ? pageSizeOptions
+          : undefined}
         showTotalPages={width > breakpoints.paginationTotalPages}
+        hasDropdownIndicator={width >
+          breakpoints.miniPaginationDropdownIndicator}
       />
+      {#if width > breakpoints.pageSizeDropdown}
+        <div class="page-size-dropdown">
+          <Select
+            triggerAppearance="secondary"
+            options={pageSizeOptions}
+            value={$pagination.size}
+            on:change={(e) => {
+              $pagination = new Pagination({
+                ...$pagination,
+                size: e.detail,
+              });
+            }}
+          />
+        </div>
+      {/if}
     {/if}
     <RefreshButton
       on:click={refresh}
@@ -179,6 +202,13 @@
       border: 1px solid var(--color-border-control);
       border-radius: var(--border-radius-m);
       padding: var(--sm6);
+    }
+    .page-size-dropdown {
+      width: min-content;
+      & > :global(*) {
+        background: var(--color-bg-control);
+        border-color: var(--color-border-control);
+      }
     }
   }
 

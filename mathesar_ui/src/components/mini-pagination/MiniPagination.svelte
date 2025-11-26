@@ -11,6 +11,7 @@
     LabeledInput,
     iconChooseItemNext,
     iconChooseItemPrevious,
+    iconExpandDown,
   } from '@mathesar-component-library';
 
   import PageJumper from './PageJumper.svelte';
@@ -18,12 +19,14 @@
   const dispatch = createEventDispatcher<{
     change: Pagination;
   }>();
+  const numberFormatter = new Intl.NumberFormat();
 
   export let pagination: Pagination;
   export let recordCount: number;
   export let pageJumperIsOpen = false;
   export let pageSizeOptions: number[] | undefined = undefined;
   export let showTotalPages = false;
+  export let hasDropdownIndicator = true;
 
   let pageJumperTriggerElement: HTMLElement;
 
@@ -78,12 +81,18 @@
     <span class="label">
       {#if showTotalPages}
         {$_('page_number_of_total_pages', {
-          values: { pageNumber: page, totalPages: maxPage },
+          values: {
+            pageNumber: page,
+            totalPages: numberFormatter.format(maxPage),
+          },
         })}
       {:else}
         {$_('page_number', { values: { pageNumber: page } })}
       {/if}
     </span>
+    {#if hasDropdownIndicator && maxPage > 2}
+      <Icon {...iconExpandDown} size="0.75em" />
+    {/if}
   </Button>
   {#if hasForwardButton}
     <Button on:click={goForward}>
