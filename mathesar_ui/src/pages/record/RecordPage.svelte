@@ -18,7 +18,10 @@
   $: recordStoreFetchRequest = record.fetchRequest;
   $: ({ summary } = record);
   $: recordStoreIsLoading = $recordStoreFetchRequest?.state === 'processing';
-  $: recordStoreError = $recordStoreFetchRequest?.state === 'failure' ? $recordStoreFetchRequest?.errors : null;
+  $: recordStoreError =
+    $recordStoreFetchRequest?.state === 'failure'
+      ? $recordStoreFetchRequest?.errors
+      : null;
   $: title = recordStoreIsLoading ? '' : $summary;
 </script>
 
@@ -80,7 +83,7 @@
     border: none;
     border-radius: 6px;
     margin-top: 16px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
     cursor: pointer;
     transition: background 0.2s;
   }
