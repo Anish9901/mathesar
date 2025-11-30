@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { type Writable, get } from 'svelte/store';
   import { _ } from 'svelte-i18n';
 
@@ -8,7 +9,7 @@
   import { RpcError } from '@mathesar/packages/json-rpc-client-builder';
   import { toast } from '@mathesar/stores/toast';
   import { getErrorMessage } from '@mathesar/utils/errors';
-  import { Spinner } from '@mathesar-component-library';
+  import { Spinner, createDebounce } from '@mathesar-component-library';
 
   import type MultiTaggerController from './MultiTaggerController';
   import type { MultiTaggerOption } from './MultiTaggerOption';
@@ -26,6 +27,11 @@
 
   let options: Writable<MultiTaggerOption>[] = [];
   let selectedIndex: number | undefined;
+
+  const { debounced: debouncedOnMappingChange, cancel: cancelMappingChange } =
+    createDebounce(() => controller.onMappingChange(), 350);
+
+  onDestroy(() => cancelMappingChange());
 
   function handleRefresh(response: RecordsSummaryListResponse | undefined) {
     options = [...getOptions(response)];
@@ -58,7 +64,7 @@
         await removeMapping(controller, mappingIds);
         option.update((o) => o.withoutMappings());
       }
-      controller.onMappingChange();
+      debouncedOnMappingChange();
     } catch (error) {
       toast.error(getErrorMessage(error));
     }

@@ -1,6 +1,7 @@
 // Utils
 export * from './common/utils';
 export { getPageCount as getPaginationPageCount } from './pagination/paginationUtils';
+export { createDebounce } from './debounce/debounceUtils';
 
 // Actions
 export { default as clickOffBounds } from './common/actions/clickOffBounds';
