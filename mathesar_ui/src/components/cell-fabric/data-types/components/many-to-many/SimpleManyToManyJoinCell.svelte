@@ -1,9 +1,14 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
+  import { get } from 'svelte/store';
   import { _ } from 'svelte-i18n';
 
   import Null from '@mathesar/components/Null.svelte';
-  import { recordSelectorContext } from '@mathesar/systems/record-selector/RecordSelectorController';
+  import { parseCellId } from '@mathesar/components/sheet/cellIds';
+  import { databasesStore } from '@mathesar/stores/databases';
+  // eslint-disable-next-line import/no-cycle
+  import { getTabularDataStoreFromContext } from '@mathesar/stores/table-data';
+  import { multiTaggerContext } from '@mathesar/systems/multi-tagger/AttachableMultiTaggerController';
   import { Badge, Icon, iconExpandDown } from '@mathesar-component-library';
 
   import CellWrapper from '../CellWrapper.svelte';
@@ -12,7 +17,9 @@
   type $$Props = SimpleManyToManyJoinCellProps;
 
   const dispatch = createEventDispatcher();
-  const recordSelector = recordSelectorContext.get();
+  const multiTaggerController = multiTaggerContext.getOrError();
+
+  const tabularData = getTabularDataStoreFromContext();
 
   export let isActive: $$Props['isActive'];
   export let value: $$Props['value'] = undefined;
@@ -40,31 +47,52 @@
       };
     });
 
-  async function launchRecordSelector(event?: MouseEvent) {
-    if (!recordSelector) return;
-    if (disabled) return;
+  function openMultiTagger(event?: MouseEvent) {
+    // eslint-disable-next-line no-console
+    console.log(columnAlias); // TODO use this to notify cell of changes
+
+    const database = get(databasesStore.currentDatabase);
+    if (!database) return;
+    const { columnsDataStore, selection, recordsData } = get(tabularData);
+    const pkColumn = get(columnsDataStore.pkColumn);
+    if (!pkColumn) return;
+    const { activeCellId } = get(selection);
+    if (!activeCellId) return;
+    const { rowId } = parseCellId(activeCellId);
+    const rows = get(recordsData.selectableRowsMap);
+    const row = rows.get(rowId);
+    if (!row) return;
+    const currentTablePkColumnAttnum = pkColumn.id;
+    const currentRecordPk = row.record[currentTablePkColumnAttnum];
+    if (currentRecordPk === undefined) return;
+
     event?.stopPropagation();
-    try {
-      // TODO: Implement editing for many-to-many joined columns
-      // eslint-disable-next-line no-console
-      console.log(columnAlias, joinPath, tableId);
-      await recordSelector.acquireUserInput({
-        tableOid: tableId,
-      });
-      // do nothing for now
-    } catch {
-      // do nothing - record selector was closed
-    }
-    // Re-focus the cell element so that the user can use the keyboard to move
-    // the active cell.
-    cellWrapperElement?.focus();
+
+    multiTaggerController.open({
+      triggerElement: cellWrapperElement,
+      database: { id: database.id },
+      currentTable: {
+        oid: tableId,
+        pkColumnAttnum: currentTablePkColumnAttnum,
+      },
+      currentRecordPk,
+      intermediateTable: {
+        oid: joinPath[0][1][0],
+        attnumOfFkToCurrentTable: joinPath[0][1][1],
+        attnumOfFkToTargetTable: joinPath[1][0][1],
+      },
+      targetTable: {
+        oid: joinPath[1][1][0],
+        pkColumnAttnum: joinPath[1][1][1],
+      },
+    });
   }
 
   function handleWrapperKeyDown(e: KeyboardEvent) {
     switch (e.key) {
       case 'Enter':
         if (isActive) {
-          void launchRecordSelector();
+          openMultiTagger();
         }
         break;
       case 'Tab':
@@ -89,7 +117,7 @@
 
   function handleClick() {
     if (wasActiveBeforeClick) {
-      void launchRecordSelector();
+      openMultiTagger();
     }
   }
 </script>
@@ -102,7 +130,7 @@
   on:keydown={handleWrapperKeyDown}
   on:mousedown={handleMouseDown}
   on:click={handleClick}
-  on:dblclick={launchRecordSelector}
+  on:dblclick={openMultiTagger}
   hasPadding={false}
   bind:element={cellWrapperElement}
 >
@@ -141,7 +169,7 @@
     {#if !disabled && !isIndependentOfSheet}
       <button
         class="dropdown-button passthrough"
-        on:click={launchRecordSelector}
+        on:click={openMultiTagger}
         aria-label={$_('pick_record')}
         title={$_('pick_record')}
       >
