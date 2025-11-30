@@ -25,6 +25,7 @@ import type { Database } from '@mathesar/models/Database';
 import type { Table } from '@mathesar/models/Table';
 import {
   RpcError,
+  type RpcResponse,
   batchSend,
 } from '@mathesar/packages/json-rpc-client-builder';
 import type Pagination from '@mathesar/utils/Pagination';
@@ -512,6 +513,23 @@ export class RecordsData {
     return pkColumn;
   }
 
+  private updateSummaryStores(responses: RpcResponse<RecordsResponse>[]): void {
+    let newRecordSummaries: ImmutableMap<
+      string,
+      ImmutableMap<string, string>
+    > = new ImmutableMap();
+    for (const response of responses) {
+      if (response.status === 'error') continue;
+      const linkedRecordSummaries = response.value.linked_record_summaries;
+      if (!linkedRecordSummaries) continue;
+      newRecordSummaries = mergeAssociatedValuesForSheet(
+        newRecordSummaries,
+        buildAssociatedCellValuesForSheet(linkedRecordSummaries),
+      );
+    }
+    this.linkedRecordSummaries.addBespokeValues(newRecordSummaries);
+  }
+
   async bulkDml(
     modificationRecipes: RowModificationRecipe[],
     additionRecipes: RowAdditionRecipe[] = [],
@@ -667,20 +685,7 @@ export class RecordsData {
     this.fetchedRecordRows.update((rows) => rows.map(postProcessRecordRow));
     this.newRecords.update((rows) => rows.map(postProcessRecordRow));
 
-    let newRecordSummaries: ImmutableMap<
-      string,
-      ImmutableMap<string, string>
-    > = new ImmutableMap();
-    for (const response of responses) {
-      if (response.status === 'error') continue;
-      const linkedRecordSummaries = response.value.linked_record_summaries;
-      if (!linkedRecordSummaries) continue;
-      newRecordSummaries = mergeAssociatedValuesForSheet(
-        newRecordSummaries,
-        buildAssociatedCellValuesForSheet(linkedRecordSummaries),
-      );
-    }
-    this.linkedRecordSummaries.addBespokeValues(newRecordSummaries);
+    this.updateSummaryStores(responses);
   }
 
   // TODO: it would be nice to refactor this function to utilize the
@@ -727,6 +732,13 @@ export class RecordsData {
     try {
       const result = await promise;
       this.meta.cellModificationStatus.set(cellKey, { state: 'success' });
+
+      const response: RpcResponse<RecordsResponse> = {
+        status: 'ok',
+        value: result,
+      };
+      this.updateSummaryStores([response]);
+
       return row.withRecord(result.results[0]);
     } catch (err) {
       this.meta.cellModificationStatus.set(cellKey, {
