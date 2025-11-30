@@ -7,7 +7,10 @@
   import { parseCellId } from '@mathesar/components/sheet/cellIds';
   import { databasesStore } from '@mathesar/stores/databases';
   // eslint-disable-next-line import/no-cycle
-  import { getTabularDataStoreFromContext } from '@mathesar/stores/table-data';
+  import {
+    getTabularDataStoreFromContext,
+    isPersistedRecordRow,
+  } from '@mathesar/stores/table-data';
   import { multiTaggerContext } from '@mathesar/systems/multi-tagger/AttachableMultiTaggerController';
   import { Badge, Icon, iconExpandDown } from '@mathesar-component-library';
 
@@ -24,7 +27,6 @@
   export let isActive: $$Props['isActive'];
   export let value: $$Props['value'] = undefined;
   export let disabled: $$Props['disabled'];
-  export let targetTableOid: $$Props['targetTableOid'];
   export let columnAlias: $$Props['columnAlias'];
   export let joinPath: $$Props['joinPath'];
   export let isIndependentOfSheet: $$Props['isIndependentOfSheet'];
@@ -48,9 +50,6 @@
     });
 
   function openMultiTagger(event?: MouseEvent) {
-    // eslint-disable-next-line no-console
-    console.log(targetTableOid, columnAlias, joinPath);
-
     const database = get(databasesStore.currentDatabase);
     if (!database) return;
     const { table, columnsDataStore, selection, recordsData } =
@@ -86,8 +85,14 @@
         oid: joinPath[1][1][0],
         pkColumnAttnum: joinPath[1][1][1],
       },
-      onMappingChange: () => {
-        //
+      onMappingChange: async () => {
+        if (isPersistedRecordRow(row)) {
+          const result = await recordsData.refetchAndMutateRow(row);
+          dispatch('update', {
+            value: result.record[columnAlias],
+            preventFocus: true,
+          });
+        }
       },
     });
   }

@@ -104,9 +104,13 @@
     selection.update((s) => s.ofOneCell(cellId));
   }
 
-  async function valueUpdated(e: CustomEvent<{ value: unknown }>) {
+  async function valueUpdated(
+    e: CustomEvent<{ value: unknown; preventFocus?: boolean }>,
+  ) {
     await setValue(e.detail.value);
-    focus();
+    if (!e.detail.preventFocus) {
+      focus();
+    }
   }
 </script>
 

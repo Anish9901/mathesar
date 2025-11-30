@@ -792,6 +792,55 @@ export class RecordsData {
     return row;
   }
 
+  async refetchAndMutateRow(
+    row: PersistedRecordRow,
+  ): Promise<PersistedRecordRow> {
+    const { record } = row;
+    const pkColumn = get(this.columnsDataStore.pkColumn);
+    if (pkColumn === undefined) {
+      // eslint-disable-next-line no-console
+      console.error('Unable to fetch record without a primary key column');
+      return row;
+    }
+    const primaryKeyValue = record[pkColumn.id];
+    if (primaryKeyValue === undefined) {
+      // eslint-disable-next-line no-console
+      console.error('Unable to fetch record with a missing primary key value');
+      return row;
+    }
+    const { joining } = get(this.meta.recordsRequestParamsData);
+
+    try {
+      const result = await api.records
+        .get({
+          ...this.apiContext,
+          record_id: primaryKeyValue,
+          return_record_summaries: this.loadIntrinsicRecordSummaries,
+          ...joining.recordsRequestParams(),
+        })
+        .run();
+
+      const response: RpcResponse<RecordsResponse> = {
+        status: 'ok',
+        value: result,
+      };
+      this.updateSummaryStores([response]);
+
+      const updatedRecord = result.results[0];
+      const mergedRecord = this.mergePreviousJoinedColumnValues(
+        row.record,
+        updatedRecord,
+      );
+
+      return row.mutateRecord(mergedRecord);
+    } catch (err) {
+      // When error in refetching, return row as-is
+      // eslint-disable-next-line no-console
+      console.error('Error refetching row', err);
+      return row;
+    }
+  }
+
   getEmptyApiRecord(): ApiRecord {
     const record: ApiRecord = Object.fromEntries(
       get(this.columnsDataStore.columns)
