@@ -514,20 +514,33 @@ export class RecordsData {
   }
 
   private updateSummaryStores(responses: RpcResponse<RecordsResponse>[]): void {
-    let newRecordSummaries: ImmutableMap<
+    let newLinkedRecordSummaries: ImmutableMap<
+      string,
+      ImmutableMap<string, string>
+    > = new ImmutableMap();
+    let newJoinedRecordSummaries: ImmutableMap<
       string,
       ImmutableMap<string, string>
     > = new ImmutableMap();
     for (const response of responses) {
       if (response.status === 'error') continue;
       const linkedRecordSummaries = response.value.linked_record_summaries;
-      if (!linkedRecordSummaries) continue;
-      newRecordSummaries = mergeAssociatedValuesForSheet(
-        newRecordSummaries,
-        buildAssociatedCellValuesForSheet(linkedRecordSummaries),
-      );
+      if (linkedRecordSummaries) {
+        newLinkedRecordSummaries = mergeAssociatedValuesForSheet(
+          newLinkedRecordSummaries,
+          buildAssociatedCellValuesForSheet(linkedRecordSummaries),
+        );
+      }
+      const joinedRecordSummaries = response.value.joined_record_summaries;
+      if (joinedRecordSummaries) {
+        newJoinedRecordSummaries = mergeAssociatedValuesForSheet(
+          newJoinedRecordSummaries,
+          buildAssociatedCellValuesForSheet(joinedRecordSummaries),
+        );
+      }
     }
-    this.linkedRecordSummaries.addBespokeValues(newRecordSummaries);
+    this.linkedRecordSummaries.addBespokeValues(newLinkedRecordSummaries);
+    this.joinedRecordSummaries.addBespokeValues(newJoinedRecordSummaries);
   }
 
   async bulkDml(
