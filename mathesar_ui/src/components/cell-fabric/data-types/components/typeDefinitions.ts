@@ -96,7 +96,7 @@ export interface SimpleManyToManyJoinCellValue {
 }
 
 export interface SimpleManyToManyJoinCellExternalProps {
-  tableId: DBObjectEntry['id'];
+  targetTableOid: DBObjectEntry['id'];
   columnAlias: string;
   joinPath: JoinPath;
 }

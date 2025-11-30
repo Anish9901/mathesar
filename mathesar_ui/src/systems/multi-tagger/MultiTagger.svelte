@@ -58,6 +58,7 @@
         await removeMapping(controller, mappingIds);
         option.update((o) => o.withoutMappings());
       }
+      controller.onMappingChange();
     } catch (error) {
       toast.error(getErrorMessage(error));
     }

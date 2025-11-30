@@ -24,7 +24,7 @@
   export let isActive: $$Props['isActive'];
   export let value: $$Props['value'] = undefined;
   export let disabled: $$Props['disabled'];
-  export let tableId: $$Props['tableId'];
+  export let targetTableOid: $$Props['targetTableOid'];
   export let columnAlias: $$Props['columnAlias'];
   export let joinPath: $$Props['joinPath'];
   export let isIndependentOfSheet: $$Props['isIndependentOfSheet'];
@@ -49,11 +49,12 @@
 
   function openMultiTagger(event?: MouseEvent) {
     // eslint-disable-next-line no-console
-    console.log(columnAlias); // TODO use this to notify cell of changes
+    console.log(targetTableOid, columnAlias, joinPath);
 
     const database = get(databasesStore.currentDatabase);
     if (!database) return;
-    const { columnsDataStore, selection, recordsData } = get(tabularData);
+    const { table, columnsDataStore, selection, recordsData } =
+      get(tabularData);
     const pkColumn = get(columnsDataStore.pkColumn);
     if (!pkColumn) return;
     const { activeCellId } = get(selection);
@@ -72,7 +73,7 @@
       triggerElement: cellWrapperElement,
       database: { id: database.id },
       currentTable: {
-        oid: tableId,
+        oid: table.oid,
         pkColumnAttnum: currentTablePkColumnAttnum,
       },
       currentRecordPk,
@@ -84,6 +85,9 @@
       targetTable: {
         oid: joinPath[1][1][0],
         pkColumnAttnum: joinPath[1][1][1],
+      },
+      onMappingChange: () => {
+        //
       },
     });
   }
