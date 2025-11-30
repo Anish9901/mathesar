@@ -507,10 +507,10 @@ export class RecordsData {
   }
 
   /**
-   * records.update and other update methods do not provide data for
-   * joined columns.
+   * When updating records, we do not get the values for joined columns.
+   * Eg., records.patch only provides values for columns in the table.
    *
-   * Retain previous values in such scenarios.
+   * We retain previous values in such scenarios.
    */
   private mergePreviousJoinedColumnValues(
     previousRecord: ApiRecord,
