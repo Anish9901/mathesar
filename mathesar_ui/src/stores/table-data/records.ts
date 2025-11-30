@@ -300,13 +300,6 @@ export class RecordsData {
         ...this.contextualFilters,
       ].map(([columnId, value]) => ({ columnId, conditionId: 'equal', value }));
 
-      const joinedColumns = params.joining
-        .getSimpleManyToManyJoins()
-        .map(({ alias, joinPath }) => ({
-          alias,
-          join_path: joinPath,
-        }));
-
       const recordsListParams: RecordsListParams = {
         ...this.apiContext,
         ...params.pagination.recordsRequestParams(),
@@ -318,7 +311,7 @@ export class RecordsData {
           .withEntries(contextualFilterEntries)
           .recordsRequestParams(),
         return_record_summaries: this.loadIntrinsicRecordSummaries,
-        ...(joinedColumns.length > 0 ? { joined_columns: joinedColumns } : {}),
+        ...params.joining.recordsRequestParams(),
       };
 
       const fuzzySearchParams = params.searchFuzzy.getSearchParams();
@@ -513,6 +506,28 @@ export class RecordsData {
     return pkColumn;
   }
 
+  /**
+   * records.update and other update methods do not provide data for
+   * joined columns.
+   *
+   * Retain previous values in such scenarios.
+   */
+  private mergePreviousJoinedColumnValues(
+    previousRecord: ApiRecord,
+    newRecord: ApiRecord,
+  ): ApiRecord {
+    const joining = get(this.meta.joining);
+    const joinedColumns = joining.recordsRequestParams().joined_columns;
+
+    const mergedRecord: ApiRecord = { ...newRecord };
+    joinedColumns?.forEach(({ alias }) => {
+      if (!(alias in mergedRecord) && alias in previousRecord) {
+        mergedRecord[alias] = previousRecord[alias];
+      }
+    });
+    return mergedRecord;
+  }
+
   private updateSummaryStores(responses: RpcResponse<RecordsResponse>[]): void {
     let newLinkedRecordSummaries: ImmutableMap<
       string,
@@ -647,7 +662,7 @@ export class RecordsData {
      * @returns the `RecordRow` we want to persist on the front end going
      * forward
      */
-    function postProcessRecordRow<R extends RecordRow>(row: R): R {
+    const postProcessRecordRow = <R extends RecordRow>(row: R): R => {
       const responseMapValue = responseMap.get(row.identifier);
       if (!responseMapValue) return row;
       const { blueprint, response } = responseMapValue;
@@ -683,6 +698,11 @@ export class RecordsData {
       const result = first(response.value.results);
       if (!result) return makeFallbackRow();
 
+      const mergedResult = this.mergePreviousJoinedColumnValues(
+        row.record,
+        result,
+      );
+
       for (const columnId of Object.keys(row.record)) {
         const cellKey = getCellKey(row.identifier, columnId);
         cellStatus.set(cellKey, { state: 'success' });
@@ -690,10 +710,10 @@ export class RecordsData {
       }
 
       if (isDraftRecordRow(row)) {
-        return PersistedRecordRow.fromDraft(row.withRecord(result)) as R;
+        return PersistedRecordRow.fromDraft(row.withRecord(mergedResult)) as R;
       }
-      return row.withRecord(result) as R;
-    }
+      return row.withRecord(mergedResult) as R;
+    };
 
     this.fetchedRecordRows.update((rows) => rows.map(postProcessRecordRow));
     this.newRecords.update((rows) => rows.map(postProcessRecordRow));
@@ -752,7 +772,13 @@ export class RecordsData {
       };
       this.updateSummaryStores([response]);
 
-      return row.withRecord(result.results[0]);
+      const updatedRecord = result.results[0];
+      const mergedRecord = this.mergePreviousJoinedColumnValues(
+        row.record,
+        updatedRecord,
+      );
+
+      return row.withRecord(mergedRecord);
     } catch (err) {
       this.meta.cellModificationStatus.set(cellKey, {
         state: 'failure',

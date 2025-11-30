@@ -1,3 +1,4 @@
+import type { RecordsListParams } from '@mathesar/api/rpc/records';
 import type { JoinPath } from '@mathesar/api/rpc/tables';
 import { ImmutableMap } from '@mathesar-component-library';
 
@@ -65,5 +66,21 @@ export class Joining {
         joinPath,
       }),
     );
+  }
+
+  recordsRequestParams(): Pick<RecordsListParams, 'joined_columns'> {
+    const joinedColumns = this.getSimpleManyToManyJoins().map(
+      ({ alias, joinPath }) => ({
+        alias,
+        join_path: joinPath,
+      }),
+    );
+
+    if (!joinedColumns.length) {
+      return {};
+    }
+    return {
+      joined_columns: joinedColumns,
+    };
   }
 }
