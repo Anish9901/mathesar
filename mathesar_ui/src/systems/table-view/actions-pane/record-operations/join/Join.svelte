@@ -1,37 +1,29 @@
 <script lang="ts">
-  import { api } from '@mathesar/api/rpc';
+  import { filterJoinableTablesByMaxDepth } from '@mathesar/api/rpc/tables';
   import { Spinner } from '@mathesar/component-library';
   import ErrorBox from '@mathesar/components/message-boxes/ErrorBox.svelte';
-  import type { Table } from '@mathesar/models/Table';
   import { getTabularDataStoreFromContext } from '@mathesar/stores/table-data';
   import { getErrorMessage } from '@mathesar/utils/errors';
 
   import JoinConfig from './JoinConfig.svelte';
-  import { getSimpleManyToManyRelationships } from './joinConfigUtils';
-
-  export let table: Table;
 
   const tabularData = getTabularDataStoreFromContext();
 
-  $: ({ meta } = $tabularData);
+  $: ({ meta, joinableTables } = $tabularData);
   $: joining = meta.joining;
-  $: joinableTablesPromise = api.tables
-    .list_joinable({
-      database_id: table.schema.database.id,
-      table_oid: table.oid,
-      max_depth: 2,
-    })
-    .run();
+  $: joinableTablesValue = $joinableTables;
+  $: joinableTablesUpto2Levels = joinableTablesValue.resolvedValue
+    ? filterJoinableTablesByMaxDepth(joinableTablesValue.resolvedValue, 2)
+    : undefined;
 </script>
 
-{#await joinableTablesPromise}
+{#if joinableTablesValue.isLoading}
   <div class="loading"><Spinner /></div>
-{:then r}
-  {@const simpleManyToManyRelationships = getSimpleManyToManyRelationships(r)}
-  <JoinConfig {simpleManyToManyRelationships} {joining} />
-{:catch error}
-  <ErrorBox>{getErrorMessage(error)}</ErrorBox>
-{/await}
+{:else if joinableTablesUpto2Levels}
+  <JoinConfig joinableTables={joinableTablesUpto2Levels} {joining} />
+{:else if joinableTablesValue.error}
+  <ErrorBox>{getErrorMessage(joinableTablesValue.error)}</ErrorBox>
+{/if}
 
 <style>
   .loading {

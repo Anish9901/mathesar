@@ -2,6 +2,7 @@
   import { getSheetCellStyle } from './sheetCellUtils';
 
   export let columnIdentifierKey: string;
+  export let isRangeRestricted = false;
 
   const style = getSheetCellStyle(columnIdentifierKey);
 </script>
@@ -9,6 +10,7 @@
 <div
   data-sheet-element="column-header-cell"
   data-column-identifier={columnIdentifierKey}
+  data-sheet-column-selection={isRangeRestricted ? 'restrict-range' : undefined}
   style={$style}
 >
   <slot />

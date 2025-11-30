@@ -50,4 +50,20 @@ export class Joining {
       ),
     });
   }
+
+  getSimpleManyToManyJoins(): {
+    alias: string;
+    intermediateTableOid: number;
+    targetTableOid: number | undefined;
+    joinPath: JoinPath;
+  }[] {
+    return [...this.simpleManyToMany].map(
+      ([intermediateTableOid, joinPath]) => ({
+        alias: `joined-${intermediateTableOid}`,
+        intermediateTableOid,
+        targetTableOid: joinPath[1]?.[1]?.[0],
+        joinPath,
+      }),
+    );
+  }
 }

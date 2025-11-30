@@ -11,6 +11,11 @@ export {
 export { Sorting } from './sorting';
 export { Grouping, type GroupEntry, type TerseGrouping } from './grouping';
 export { Joining, type TerseJoining } from './joining';
+export {
+  SimpleManyToManyJoinedColumn,
+  type JoinedColumn,
+  isJoinedColumn,
+} from './joinedColumns';
 export { type TableRecordsData } from './records';
 export {
   type GroupHeaderRow,

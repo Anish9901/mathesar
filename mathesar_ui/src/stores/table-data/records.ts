@@ -43,6 +43,7 @@ import AssociatedCellData, {
 import type { ColumnsDataStore } from './columns';
 import type { FilterEntry, Filtering } from './filtering';
 import type { Grouping as GroupingRequest } from './grouping';
+import type { Joining } from './joining';
 import type { Meta } from './meta';
 import {
   DraftRecordRow,
@@ -70,6 +71,7 @@ export interface RecordsRequestParamsData {
   grouping: GroupingRequest;
   filtering: Filtering;
   searchFuzzy: SearchFuzzy;
+  joining: Joining;
 }
 
 export interface TableRecordsData {
@@ -183,6 +185,8 @@ export class RecordsData {
 
   linkedRecordSummaries = new AssociatedCellData<string>();
 
+  joinedRecordSummaries = new AssociatedCellData<string>();
+
   fileManifests = new AssociatedCellData<FileManifest>();
 
   grouping: Writable<RecordGrouping | undefined>;
@@ -295,6 +299,13 @@ export class RecordsData {
         ...this.contextualFilters,
       ].map(([columnId, value]) => ({ columnId, conditionId: 'equal', value }));
 
+      const joinedColumns = params.joining
+        .getSimpleManyToManyJoins()
+        .map(({ alias, joinPath }) => ({
+          alias,
+          join_path: joinPath,
+        }));
+
       const recordsListParams: RecordsListParams = {
         ...this.apiContext,
         ...params.pagination.recordsRequestParams(),
@@ -306,6 +317,7 @@ export class RecordsData {
           .withEntries(contextualFilterEntries)
           .recordsRequestParams(),
         return_record_summaries: this.loadIntrinsicRecordSummaries,
+        ...(joinedColumns.length > 0 ? { joined_columns: joinedColumns } : {}),
       };
 
       const fuzzySearchParams = params.searchFuzzy.getSearchParams();
@@ -328,6 +340,11 @@ export class RecordsData {
       if (response.linked_record_summaries) {
         this.linkedRecordSummaries.setFetchedValuesFromPrimitive(
           response.linked_record_summaries,
+        );
+      }
+      if (response.joined_record_summaries) {
+        this.joinedRecordSummaries.setFetchedValuesFromPrimitive(
+          response.joined_record_summaries,
         );
       }
       if (response.record_summaries) {
@@ -419,7 +436,7 @@ export class RecordsData {
           } else {
             // This can happen in the case of a failure due to RLS
             const msg = get(_)('row_deletion_ignored_by_pg', {
-              values: { rowId },
+              values: { rowId: String(rowId) },
             });
             rowsFailedToDelete.set(row.identifier, RpcError.fromAnything(msg));
           }

@@ -1,19 +1,11 @@
 <script lang="ts">
-  import type { ComponentProps } from 'svelte';
   import { _ } from 'svelte-i18n';
 
   import { iconTableLink } from '@mathesar/icons';
-  import type { Table } from '@mathesar/models/Table';
   import { getTabularDataStoreFromContext } from '@mathesar/stores/table-data';
   import { BadgeCount, Dropdown, Icon } from '@mathesar-component-library';
 
   import Join from './Join.svelte';
-
-  interface $$Props extends ComponentProps<Dropdown> {
-    table: Table;
-  }
-
-  export let table: Table;
 
   const tabularData = getTabularDataStoreFromContext();
   $: ({ meta } = $tabularData);
@@ -35,7 +27,7 @@
     </span>
   </svelte:fragment>
   <div slot="content" class="content">
-    <Join {table} />
+    <Join />
   </div>
 </Dropdown>
 

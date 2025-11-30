@@ -17,10 +17,12 @@
   import {
     type CellKey,
     type ClientSideCellError,
+    type JoinedColumn,
     type ProcessedColumn,
     type RecordRow,
     type RecordsData,
     getRowSelectionId,
+    isJoinedColumn,
     isPlaceholderRecordRow,
     isProvisionalRecordRow,
   } from '@mathesar/stores/table-data';
@@ -37,24 +39,26 @@
     CellKey,
     RequestStatus<RpcError[]>
   >;
-  export let processedColumn: ProcessedColumn;
+  export let columnFabric: ProcessedColumn | JoinedColumn;
   export let clientSideErrorMap: WritableMap<CellKey, ClientSideCellError[]>;
   export let value: unknown = undefined;
   export let canUpdateRecords: boolean;
 
-  $: effectiveProcessedColumn = isProvisionalRecordRow(row)
-    ? processedColumn.withoutEnhancedPkCell()
-    : processedColumn;
-  $: cellId = makeCellId(getRowSelectionId(row), effectiveProcessedColumn.id);
+  $: effectiveColumnFabric =
+    isProvisionalRecordRow(row) && !isJoinedColumn(columnFabric)
+      ? columnFabric.withoutEnhancedPkCell()
+      : columnFabric;
+  $: cellId = makeCellId(getRowSelectionId(row), effectiveColumnFabric.id);
 
   // To be used in case of publicly shared links where user should not be able
   // to view linked tables & explorations
   const canViewLinkedEntities = true;
 
   $: recordsDataState = recordsData.state;
-  $: ({ linkedRecordSummaries, fileManifests } = recordsData);
-  $: ({ column } = effectiveProcessedColumn);
-  $: columnId = effectiveProcessedColumn.id;
+  $: ({ linkedRecordSummaries, joinedRecordSummaries, fileManifests } =
+    recordsData);
+  $: ({ column } = effectiveColumnFabric);
+  $: columnId = effectiveColumnFabric.id;
   $: isWithinPlaceholderRow = isPlaceholderRecordRow(row);
   $: modificationStatus = $modificationStatusMap.get(key);
   $: serverErrors =
@@ -67,23 +71,32 @@
   $: isProcessing = modificationStatus?.state === 'processing';
   // TODO: Handle case where INSERT is allowed, but UPDATE isn't
   // i.e. row is a placeholder row and record isn't saved yet
-  $: isEditable = canUpdateRecords && effectiveProcessedColumn.isEditable;
+  $: isEditable = canUpdateRecords && effectiveColumnFabric.isEditable;
   $: recordSummary = $linkedRecordSummaries.get(columnId)?.get(String(value));
+  $: joinedRecordSummariesMap = isJoinedColumn(effectiveColumnFabric)
+    ? $joinedRecordSummaries.get(columnId)
+    : undefined;
   $: fileManifest = (() => {
     if (!column.metadata?.file_backend) return undefined;
     const fileReference = parseFileReference(value);
     if (!fileReference) return undefined;
     return $fileManifests.get(columnId)?.get(fileReference.mash);
   })();
+  $: isPrimaryKey = 'primary_key' in column && column.primary_key;
 
   async function setValue(newValue: unknown) {
     if (newValue === value) {
       return;
     }
     value = newValue;
+    if (isJoinedColumn(effectiveColumnFabric)) {
+      // Joined columns do not support direct updates through RecordsData
+      return;
+    }
+    const col = effectiveColumnFabric.column;
     const updatedRow = isProvisionalRecordRow(row)
-      ? await recordsData.createOrUpdateRecord(row, column)
-      : await recordsData.updateCell(row, column);
+      ? await recordsData.createOrUpdateRecord(row, col)
+      : await recordsData.updateCell(row, col);
     value = updatedRow.record?.[columnId] ?? value;
   }
 
@@ -102,8 +115,13 @@
   cellSelectionId={cellId}
   selection={$selection}
   {isWithinPlaceholderRow}
+  isRangeRestricted={isJoinedColumn(columnFabric)}
   let:isActive
 >
+  <CellBackground
+    when={isJoinedColumn(columnFabric)}
+    color="var(--cell-bg-color-joined-cell)"
+  />
   <CellBackground
     when={hasServerError || (!isActive && hasClientError)}
     color="var(--cell-bg-color-error)"
@@ -119,7 +137,7 @@
   {/if}
 
   <CellFabric
-    columnFabric={effectiveProcessedColumn}
+    columnFabric={effectiveColumnFabric}
     {isActive}
     {value}
     {isProcessing}
@@ -139,12 +157,13 @@
         key: recordId,
         value: rs,
       })}
+    {joinedRecordSummariesMap}
     showAsSkeleton={$recordsDataState === States.Loading}
     disabled={!isEditable}
     on:movementKeyDown={({ detail }) =>
       handleKeyboardEventOnCell(detail.originalEvent, selection)}
     on:update={valueUpdated}
-    horizontalAlignment={column.primary_key ? 'left' : undefined}
+    horizontalAlignment={isPrimaryKey ? 'left' : undefined}
     lightText={hasError || isProcessing}
   />
 
