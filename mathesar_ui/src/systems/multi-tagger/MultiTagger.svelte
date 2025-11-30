@@ -29,7 +29,7 @@
   let selectedIndex: number | undefined;
 
   const { debounced: debouncedOnMappingChange, cancel: cancelMappingChange } =
-    createDebounce(() => controller.onMappingChange(), 350);
+    createDebounce(() => controller.onMappingChange(), 250);
 
   onDestroy(() => cancelMappingChange());
 
