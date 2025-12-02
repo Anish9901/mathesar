@@ -7,7 +7,10 @@
   import { parseCellId } from '@mathesar/components/sheet/cellIds';
   import { databasesStore } from '@mathesar/stores/databases';
   // eslint-disable-next-line import/no-cycle
-  import { getTabularDataStoreFromContext } from '@mathesar/stores/table-data';
+  import {
+    getTabularDataStoreFromContext,
+    isPersistedRecordRow,
+  } from '@mathesar/stores/table-data';
   import { multiTaggerContext } from '@mathesar/systems/multi-tagger/AttachableMultiTaggerController';
   import { Badge, Icon, iconExpandDown } from '@mathesar-component-library';
 
@@ -24,7 +27,6 @@
   export let isActive: $$Props['isActive'];
   export let value: $$Props['value'] = undefined;
   export let disabled: $$Props['disabled'];
-  export let tableId: $$Props['tableId'];
   export let columnAlias: $$Props['columnAlias'];
   export let joinPath: $$Props['joinPath'];
   export let isIndependentOfSheet: $$Props['isIndependentOfSheet'];
@@ -48,12 +50,10 @@
     });
 
   function openMultiTagger(event?: MouseEvent) {
-    // eslint-disable-next-line no-console
-    console.log(columnAlias); // TODO use this to notify cell of changes
-
     const database = get(databasesStore.currentDatabase);
     if (!database) return;
-    const { columnsDataStore, selection, recordsData } = get(tabularData);
+    const { table, columnsDataStore, selection, recordsData } =
+      get(tabularData);
     const pkColumn = get(columnsDataStore.pkColumn);
     if (!pkColumn) return;
     const { activeCellId } = get(selection);
@@ -72,7 +72,7 @@
       triggerElement: cellWrapperElement,
       database: { id: database.id },
       currentTable: {
-        oid: tableId,
+        oid: table.oid,
         pkColumnAttnum: currentTablePkColumnAttnum,
       },
       currentRecordPk,
@@ -84,6 +84,15 @@
       targetTable: {
         oid: joinPath[1][1][0],
         pkColumnAttnum: joinPath[1][1][1],
+      },
+      onMappingChange: async () => {
+        if (isPersistedRecordRow(row)) {
+          const result = await recordsData.refetchAndMutateRow(row);
+          dispatch('update', {
+            value: result.record[columnAlias],
+            preventFocus: true,
+          });
+        }
       },
     });
   }

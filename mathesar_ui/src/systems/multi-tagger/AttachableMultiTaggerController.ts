@@ -8,6 +8,7 @@ import MultiTaggerController, {
 
 interface AttachableMultiTaggerControllerProps extends MultiTaggerProps {
   triggerElement: HTMLElement;
+  onMappingChange: () => unknown;
 }
 
 export class AttachableMultiTaggerController {
@@ -17,7 +18,10 @@ export class AttachableMultiTaggerController {
 
   open(props: AttachableMultiTaggerControllerProps) {
     this.triggerElement.set(props.triggerElement);
-    const multiTagger = new MultiTaggerController(props);
+    const multiTagger = new MultiTaggerController({
+      ...props,
+      onMappingChange: props.onMappingChange,
+    });
     this.multiTagger.set(multiTagger);
     void multiTagger.getRecords();
   }

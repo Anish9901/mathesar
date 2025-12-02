@@ -38,12 +38,15 @@ export type MultiTaggerProps = {
     oid: number;
     pkColumnAttnum: number;
   };
+  onMappingChange: () => unknown;
 };
 
 export default class MultiTaggerController {
   readonly elementId = getGloballyUniqueId();
 
   readonly props: MultiTaggerProps;
+
+  readonly onMappingChange: () => unknown;
 
   records: MultiTaggerRecordStore;
 
@@ -55,6 +58,7 @@ export default class MultiTaggerController {
 
   constructor(p: MultiTaggerProps) {
     this.props = p;
+    this.onMappingChange = p.onMappingChange;
     this.records = new AsyncRpcApiStore(api.records.list_summaries, {
       staticProps: {
         database_id: p.database.id,

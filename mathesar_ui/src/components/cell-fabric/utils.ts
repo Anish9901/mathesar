@@ -67,7 +67,6 @@ export function getCellCap({
       return {
         component: SimpleManyToManyJoinCell,
         props: {
-          tableId: joinedColumnInfo.targetTableOid,
           columnAlias: joinedColumnInfo.alias,
           joinPath: joinedColumnInfo.joinPath,
         },
