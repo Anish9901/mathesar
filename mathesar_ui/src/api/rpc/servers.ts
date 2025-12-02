@@ -1,9 +1,12 @@
 import { rpcMethodTypeContainer } from '@mathesar/packages/json-rpc-client-builder';
 
+export type SslMode = 'disable' | 'prefer' | 'require';
+
 export interface RawServer {
   id: number;
   host: string;
   port: number | null;
+  sslmode: SslMode;
 }
 
 export const servers = {
@@ -15,6 +18,7 @@ export const servers = {
         patch: {
           host?: string;
           port?: number | null;
+          sslmode?: SslMode;
         };
       },
       Array<RawServer>

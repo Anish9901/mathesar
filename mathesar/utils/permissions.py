@@ -34,6 +34,8 @@ def set_up_new_database_for_user_on_internal_server(
         raise BadInstallationTarget(
             "Mathesar can't be installed in the internal database."
         )
+    # Use sslmode from internal database config if available
+    sslmode = getattr(conn_info, 'sslmode', None) or 'prefer'
     user_database_role = _setup_connection_models(
         conn_info.host,
         conn_info.port,
@@ -41,7 +43,8 @@ def set_up_new_database_for_user_on_internal_server(
         nickname,
         conn_info.role,
         conn_info.password,
-        user
+        user,
+        sslmode=sslmode
     )
     with mathesar_connection(
             host=conn_info.host,
@@ -49,6 +52,7 @@ def set_up_new_database_for_user_on_internal_server(
             dbname=conn_info.dbname,
             user=conn_info.role,
             password=conn_info.password,
+            sslmode=sslmode,
             application_name='mathesar.utils.permissions.set_up_new_database_for_user_on_internal_server',
     ) as root_conn:
         create_database(database_name, root_conn)
@@ -62,7 +66,8 @@ def set_up_new_database_for_user_on_internal_server(
 
 @transaction.atomic
 def set_up_preexisting_database_for_user(
-        host, port, database_name, nickname, role_name, password, user, sample_data=[]
+        host, port, database_name, nickname, role_name, password, user,
+        sample_data=[], sslmode='prefer'
 ):
     internal_conn_info = get_internal_database_config()
     if (
@@ -74,7 +79,8 @@ def set_up_preexisting_database_for_user(
             "Mathesar can't be installed in the internal database."
         )
     user_database_role = _setup_connection_models(
-        host, port, database_name, nickname, role_name, password, user
+        host, port, database_name, nickname, role_name, password, user,
+        sslmode=sslmode
     )
     user_database_role.database.install_sql(
         username=user_database_role.configured_role.name,
@@ -87,9 +93,17 @@ def set_up_preexisting_database_for_user(
 
 @transaction.atomic
 def _setup_connection_models(
-        host, port, database_name, nickname, role_name, password, user
+        host, port, database_name, nickname, role_name, password, user,
+        sslmode='prefer'
 ):
-    server, _ = Server.objects.get_or_create(host=host, port=port)
+    server, _ = Server.objects.get_or_create(
+        host=host, port=port,
+        defaults={"sslmode": sslmode}
+    )
+    # Update sslmode if the server already exists but sslmode differs
+    if server.sslmode != sslmode:
+        server.sslmode = sslmode
+        server.save()
     database, _ = Database.objects.get_or_create(
         name=database_name, nickname=nickname, server=server
     )

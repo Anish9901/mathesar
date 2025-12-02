@@ -732,6 +732,8 @@
   "slower_for_large_imports": "slower for large imports",
   "software_update": "Software Update",
   "some_columns_in_query_missing": "Some of the columns present in the query are missing in the underlying base table.",
+  "ssl_mode": "SSL Mode",
+  "ssl_mode_help": "Controls how Mathesar connects to the database. 'Prefer' uses SSL if available, 'Require' enforces SSL, and 'Disable' turns off SSL.",
   "some_errors_were_encountered": "Some Errors Were Encountered",
   "sort": "Sort",
   "sort_type": "Sort {sortingType}",

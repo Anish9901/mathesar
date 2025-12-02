@@ -1,6 +1,7 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
 
+  import type { SslMode } from '@mathesar/api/rpc/servers';
   import Help from '@mathesar/component-library/help/Help.svelte';
   import DocsLink from '@mathesar/components/DocsLink.svelte';
   import {
@@ -17,6 +18,7 @@
   import {
     NumberInput,
     PasswordInput,
+    Select,
     portalToWindowFooter,
   } from '@mathesar-component-library';
 
@@ -31,12 +33,24 @@
   export let onCancel: () => void;
   export let onSuccess: (db: Database) => void;
 
+  interface SslModeOption {
+    value: SslMode;
+    label: string;
+  }
+
+  const sslModeOptions: SslModeOption[] = [
+    { value: 'prefer', label: 'Prefer SSL' },
+    { value: 'require', label: 'Require SSL' },
+    { value: 'disable', label: 'Disable SSL' },
+  ];
+
   const databaseName = requiredField('');
   const nickname = optionalField<string | undefined>(undefined);
   const host = requiredField('localhost');
   const port = optionalField(5432);
   const role = requiredField('');
   const password = optionalField('');
+  const sslmode = requiredField<SslModeOption>(sslModeOptions[0]);
   const installationSchemas = requiredField<InstallationSchema[]>(['internal']);
   const form = makeForm({
     databaseName,
@@ -45,6 +59,7 @@
     port,
     role,
     password,
+    sslmode,
     installationSchemas,
   });
 
@@ -56,6 +71,7 @@
       password: $password,
       database: $databaseName,
       nickname: $nickname ?? null,
+      sslmode: $sslmode.value,
       sample_data:
         getSampleSchemasFromInstallationSchemas($installationSchemas),
     });
@@ -124,6 +140,23 @@
           <DocsLink page="storedRoles">{translatedArg}</DocsLink>
         {/if}
       </RichText>
+    </svelte:fragment>
+  </Field>
+
+  <Field
+    label={$_('ssl_mode')}
+    layout="stacked"
+    field={sslmode}
+    input={{
+      component: Select,
+      props: {
+        options: sslModeOptions,
+        getLabel: (o) => o.label,
+      },
+    }}
+  >
+    <svelte:fragment slot="help">
+      {$_('ssl_mode_help')}
     </svelte:fragment>
   </Field>
 
