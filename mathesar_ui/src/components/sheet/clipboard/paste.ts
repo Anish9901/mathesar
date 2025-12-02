@@ -2,13 +2,19 @@ import { arrayFrom, cycle, execPipe, first, map, take, zip } from 'iter-tools';
 import { type Writable, get } from 'svelte/store';
 import { _ } from 'svelte-i18n';
 
-import { type RawColumnWithMetadata, getColumnMetadataValue } from '@mathesar/api/rpc/columns';
+import {
+  type RawColumnWithMetadata,
+  getColumnMetadataValue,
+} from '@mathesar/api/rpc/columns';
 import { type RecordRow, getRowSelectionId } from '@mathesar/stores/table-data';
 import type {
   RowAdditionRecipe,
   RowModificationRecipe,
 } from '@mathesar/stores/table-data/records';
-import { DateTimeFormatter, DateTimeSpecification } from '@mathesar/utils/date-time';
+import {
+  DateTimeFormatter,
+  DateTimeSpecification,
+} from '@mathesar/utils/date-time';
 import { startingFrom } from '@mathesar/utils/iterUtils';
 import {
   type ImmutableSet,
@@ -131,7 +137,7 @@ function parseDateTimeValue(
   if (!specType) return value;
 
   try {
-    const specOptions: any = {
+    const specOptions = {
       type: specType,
       dateFormat: getColumnMetadataValue(column, 'date_format'),
       timeFormat: getColumnMetadataValue(column, 'time_format'),
