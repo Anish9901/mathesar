@@ -120,10 +120,10 @@ function parseDateTimeValue(
   value: string,
   column: RawColumnWithMetadata,
 ): string {
-  const specTypeMap: { [key: string]: 'date' | 'datetime' | 'time' } = {
+  const specTypeMap: { [key: string]: string } = {
     date: 'date',
-    timestamp: 'datetime',
-    timestamptz: 'datetime',
+    timestamp: 'timestamp',
+    timestamptz: 'timestampWithTZ',
     time: 'time',
   };
 
@@ -131,11 +131,7 @@ function parseDateTimeValue(
   if (!specType) return value;
 
   try {
-    const specOptions: {
-      type: 'date' | 'datetime' | 'time';
-      dateFormat?: string;
-      timeFormat?: string;
-    } = {
+    const specOptions: any = {
       type: specType,
       dateFormat: getColumnMetadataValue(column, 'date_format'),
       timeFormat: getColumnMetadataValue(column, 'time_format'),
