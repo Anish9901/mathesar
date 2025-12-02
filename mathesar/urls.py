@@ -9,7 +9,7 @@ from mathesar.views.installation.complete_installation import CompleteInstallati
 from mathesar.views.users.password_reset import MathesarPasswordResetConfirmView
 
 # db_router = routers.DefaultRouter()
-# db_router.register(r'data_filess', DataFileViewSet, basename='data-file')
+# db_router.register(r'data_files', DataFileViewSet, basename='data-file')
 
 urlpatterns = [
     path('api/rpc/v0/', views.MathesarRPCEntryPoint.as_view()),

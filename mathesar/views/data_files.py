@@ -144,13 +144,24 @@ def list_or_create_data_file(request):
             return JsonResponse({"errors": form.errors}, status=400)
 
     else:
-        return JsonResponse({"errors": "Unexpected"}, status=400)
+        # Control should never reach here
+        return JsonResponse({"errors": "Unknown error occured"}, status=400)
 
 
 @require_http_methods(["GET", "PATCH"])
 @login_required
 def get_or_patch_data_file(request, data_file_id):
     user = request.user
+    if data_file_id is None:
+        return JsonResponse({"errors": "data_file_id is required."}, status=400)
+
+    try:
+        data_file = DataFile.objects.get(id=data_file_id, user=user)
+    except DataFile.DoesNotExist:
+        return JsonResponse(
+            {"errors": "No DataFile matches the given query."},
+            status=404
+        )
 
     def datafile_to_dict(df: DataFile):
         return {
@@ -169,50 +180,30 @@ def get_or_patch_data_file(request, data_file_id):
 
     if request.method == 'GET':
         # Get a data file
-        if data_file_id:
-            try:
-                data_file = DataFile.objects.get(id=data_file_id, user=user)
-            except DataFile.DoesNotExist:
-                return JsonResponse(
-                    {"errors": "No DataFile matches the given query."},
-                    status=404
-                )
-            return JsonResponse(
-                datafile_to_dict(data_file),
-                status=200
-            )
+        return JsonResponse(
+            datafile_to_dict(data_file),
+            status=200
+        )
 
     elif request.method == 'PATCH':
-        if data_file_id is None:
-            return JsonResponse({"errors": "data_file_id is required."}, status=400)
-        try:
-            data_file = DataFile.objects.get(id=data_file_id, user=user)
-            form = DataFileForm(request)
-            if form.is_valid():
-                data = form.cleaned_data
-                if data.get('header') is not None:
-                    data_file.header = data['header']
-                    data_file.save()
-                    return JsonResponse(
-                        datafile_to_dict(data_file),
-                        status=200
-                    )
-                else:
-                    return JsonResponse(
-                        {"errors": 'Method "PATCH" allowed only for header.'},
-                        status=405
-                    )
+        form = DataFileForm(request)
+        if form.is_valid():
+            data = form.cleaned_data
+            if data.get('header') is not None:
+                data_file.header = data['header']
+                data_file.save()
+                return JsonResponse(
+                    datafile_to_dict(data_file),
+                    status=200
+                )
             else:
-                return JsonResponse({"errors": form.errors}, status=400)
-        except DataFile.DoesNotExist:
-            return JsonResponse(
-                {"errors": "No DataFile matches the given query."},
-                status=404
-            )
-        except Exception as e:
-            return JsonResponse(
-                {"errors": force_str(e)},
-                status=400
-            )
+                return JsonResponse(
+                    {"errors": 'Method "PATCH" allowed only for header.'},
+                    status=405
+                )
+        else:
+            return JsonResponse({"errors": form.errors}, status=400)
+
     else:
-        return JsonResponse({"errors": "Unexpected"}, status=400)
+        # Control should never reach here
+        return JsonResponse({"errors": "Unknown error occured"}, status=400)
