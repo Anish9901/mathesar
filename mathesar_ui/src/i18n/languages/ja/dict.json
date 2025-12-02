@@ -726,8 +726,6 @@
   "slower_for_large_imports": "インポートが大きいほど遅い",
   "software_update": "ソフトウェアのアップデート",
   "some_columns_in_query_missing": "クエリに存在する列の一部が、基礎となるベーステーブルに存在していません。",
-  "ssl_mode": "SSL Mode",
-  "ssl_mode_help": "Controls how Mathesar connects to the database. 'Prefer' uses SSL if available, 'Require' enforces SSL, and 'Disable' turns off SSL.",
   "some_errors_were_encountered": "エラーが発生しました",
   "sort": "並べ替え",
   "sort_type": "並び替え{sortingType}",

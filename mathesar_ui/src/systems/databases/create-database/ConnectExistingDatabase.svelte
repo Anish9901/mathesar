@@ -18,11 +18,11 @@
   import {
     NumberInput,
     PasswordInput,
-    Select,
     portalToWindowFooter,
   } from '@mathesar-component-library';
 
   import DatabaseNicknameInput from '../common/DatabaseNicknameInput.svelte';
+  import SelectSslMode from '../common/SelectSslMode.svelte';
 
   import {
     type InstallationSchema,
@@ -33,24 +33,13 @@
   export let onCancel: () => void;
   export let onSuccess: (db: Database) => void;
 
-  interface SslModeOption {
-    value: SslMode;
-    label: string;
-  }
-
-  const sslModeOptions: SslModeOption[] = [
-    { value: 'prefer', label: 'Prefer SSL' },
-    { value: 'require', label: 'Require SSL' },
-    { value: 'disable', label: 'Disable SSL' },
-  ];
-
   const databaseName = requiredField('');
   const nickname = optionalField<string | undefined>(undefined);
   const host = requiredField('localhost');
   const port = optionalField(5432);
   const role = requiredField('');
   const password = optionalField('');
-  const sslmode = requiredField<SslModeOption>(sslModeOptions[0]);
+  const sslmode = requiredField<SslMode>('prefer');
   const installationSchemas = requiredField<InstallationSchema[]>(['internal']);
   const form = makeForm({
     databaseName,
@@ -71,7 +60,7 @@
       password: $password,
       database: $databaseName,
       nickname: $nickname ?? null,
-      sslmode: $sslmode.value,
+      sslmode: $sslmode,
       sample_data:
         getSampleSchemasFromInstallationSchemas($installationSchemas),
     });
@@ -147,13 +136,7 @@
     label={$_('ssl_mode')}
     layout="stacked"
     field={sslmode}
-    input={{
-      component: Select,
-      props: {
-        options: sslModeOptions,
-        getLabel: (o) => o.label,
-      },
-    }}
+    input={{ component: SelectSslMode }}
   >
     <svelte:fragment slot="help">
       {$_('ssl_mode_help')}
