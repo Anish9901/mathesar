@@ -146,6 +146,7 @@
               modalRecordView,
               tabularData: $tabularData,
               imperativeFilterController,
+              clipboardHandler,
               beginSelectingCellRange,
             });
           }}
