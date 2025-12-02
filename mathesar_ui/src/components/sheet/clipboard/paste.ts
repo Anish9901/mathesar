@@ -126,48 +126,44 @@ function parseDateTimeValue(
   value: string,
   column: RawColumnWithMetadata,
 ): string {
-  const specTypeMap = {
-    date: 'date',
-    timestamp: 'timestamp',
-    timestamptz: 'timestampWithTZ',
-    time: 'time',
-  } as const;
-
-  const specType = specTypeMap[column.type as keyof typeof specTypeMap];
-  if (!specType) return value;
-
   try {
-    let specOptions:
-      | { type: 'date'; dateFormat?: string }
-      | { type: 'time'; timeFormat?: string }
-      | {
-          type: 'timestamp' | 'timestampWithTZ';
-          dateFormat?: string;
-          timeFormat?: string;
-        };
+    let specification: DateTimeSpecification;
 
-    if (specType === 'date') {
-      specOptions = {
+    if (column.type === 'date') {
+      const dateFormat = getColumnMetadataValue(column, 'date_format');
+      specification = new DateTimeSpecification({
         type: 'date',
-        dateFormat: getColumnMetadataValue(column, 'date_format') as string,
-      };
-    } else if (specType === 'time') {
-      specOptions = {
+        ...(dateFormat && { dateFormat }),
+      });
+    } else if (column.type === 'time') {
+      const timeFormat = getColumnMetadataValue(column, 'time_format');
+      specification = new DateTimeSpecification({
         type: 'time',
-        timeFormat: getColumnMetadataValue(column, 'time_format') as string,
-      };
+        ...(timeFormat && { timeFormat }),
+      });
+    } else if (column.type === 'timestamp') {
+      const dateFormat = getColumnMetadataValue(column, 'date_format');
+      const timeFormat = getColumnMetadataValue(column, 'time_format');
+      specification = new DateTimeSpecification({
+        type: 'timestamp',
+        ...(dateFormat && { dateFormat }),
+        ...(timeFormat && { timeFormat }),
+      });
+    } else if (column.type === 'timestamptz') {
+      const dateFormat = getColumnMetadataValue(column, 'date_format');
+      const timeFormat = getColumnMetadataValue(column, 'time_format');
+      specification = new DateTimeSpecification({
+        type: 'timestampWithTZ',
+        ...(dateFormat && { dateFormat }),
+        ...(timeFormat && { timeFormat }),
+      });
     } else {
-      specOptions = {
-        type: specType,
-        dateFormat: getColumnMetadataValue(column, 'date_format') as string,
-        timeFormat: getColumnMetadataValue(column, 'time_format') as string,
-      };
+      return value;
     }
 
-    const formatter = new DateTimeFormatter(
-      new DateTimeSpecification(specOptions as any),
-    );
-    return formatter.parse(value).value ?? value;
+    const formatter = new DateTimeFormatter(specification);
+    const { value: parsed } = formatter.parse(value);
+    return parsed ?? value;
   } catch {
     return value;
   }
