@@ -3044,6 +3044,41 @@ END;
 $$ LANGUAGE plpgsql;
 
 
+CREATE OR REPLACE FUNCTION test_get_column_info_with_multiple_indexes() RETURNS SETOF TEXT AS $$/*
+Regression test for issue #4656: get_column_info returned duplicate column entries when a column
+appeared in multiple indexes (e.g., a primary key and a unique index on the same column).
+*/
+DECLARE
+  col_info jsonb;
+BEGIN
+  CREATE TABLE index_test (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    col_a text NOT NULL
+  );
+  -- Add a unique index on the primary key column (in addition to the PK index)
+  CREATE UNIQUE INDEX idx_test_id ON index_test(id);
+
+  col_info = msar.get_column_info('index_test');
+
+  RETURN NEXT is(
+    jsonb_array_length(col_info), 2, 'Should have exactly 2 columns, not duplicates.'
+  );
+  RETURN NEXT is(
+    col_info -> 0 ->> 'name', 'id', 'First column should be id'
+  );
+  RETURN NEXT is(
+    (col_info -> 0 ->> 'primary_key')::boolean, true, 'id column should have primary_key=true'
+  );
+  RETURN NEXT is(
+    col_info -> 1 ->> 'name', 'col_a', 'Second column should be col_a'
+  );
+  RETURN NEXT is(
+    (col_info -> 1 ->> 'primary_key')::boolean, false, 'col_a column should have primary_key=false'
+  );
+END;
+$$ LANGUAGE plpgsql;
+
+
 CREATE OR REPLACE FUNCTION __setup_get_table_info() RETURNS SETOF TEXT AS $$
 BEGIN
   CREATE SCHEMA pi;
@@ -7206,7 +7241,7 @@ BEGIN
     (6, 'Boat', 0),
     (7, 'Semi', 18),
     (8, 'Airplane', 10);
-  
+
   -- Basic test
   RETURN NEXT is(
     msar.list_by_record_summaries('vehicles'::regclass, 2, 0),
@@ -7444,7 +7479,7 @@ BEGIN
   SELECT jsonb_agg(to_jsonb(i)) FROM "Items" i INTO items_table_record;
 
   RETURN NEXT is(
-    authors_table_record, 
+    authors_table_record,
     $j$[
       {
         "id": 1,
@@ -7455,7 +7490,7 @@ BEGIN
     ]$j$
   );
   RETURN NEXT is(
-    books_table_record, 
+    books_table_record,
     $j$[
       {
         "id": 1,
@@ -7469,7 +7504,7 @@ BEGIN
     ]$j$
   );
   RETURN NEXT is(
-    items_table_record, 
+    items_table_record,
     $j$[
       {
         "id": 1,
@@ -7495,7 +7530,7 @@ BEGIN
   PERFORM __setup_items_books_authors_insert();
 
   authors_table_oid := '"Authors"'::regclass::oid;
-  
+
   field_info_list := jsonb_build_array(
     jsonb_build_object(
       'key', '_id-609eefde-cfcc-4ebf-97a4-62992c210312',
@@ -7531,7 +7566,7 @@ BEGIN
   SELECT jsonb_agg(to_jsonb(a)) FROM "Authors" a INTO authors_table_record;
 
   RETURN NEXT is(
-    authors_table_record, 
+    authors_table_record,
     $j$[
       {
         "id": 1,
@@ -7622,7 +7657,7 @@ BEGIN
     files jsonb
   );
 
-  INSERT INTO a(name, files) VALUES 
+  INSERT INTO a(name, files) VALUES
   ('cat', '{"uri": "s3://msar/cat.png", "mash": "bad_mash"}'::jsonb),
   ('dog', '{"uri": "s3://msar/dog.png", "mash": "outdated_mash_34b801f337ee016d21"}'::jsonb),
   ('elephant', '{"uri": "s3://msar/elephant.png", "mash": ""}'::jsonb), -- empty mash
@@ -7644,9 +7679,9 @@ DECLARE
 BEGIN
   PERFORM __setup_files_table_with_bad_mash();
   tab_a_oid := 'a'::regclass::oid;
-  
+
   PERFORM msar.reset_mash(tab_a_oid, 3::smallint, uri_mash_map);
-  
+
   SELECT jsonb_agg(to_jsonb(a)) FROM a INTO results;
 
   RETURN NEXT is(
