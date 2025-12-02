@@ -2,12 +2,13 @@ import { arrayFrom, cycle, execPipe, first, map, take, zip } from 'iter-tools';
 import { type Writable, get } from 'svelte/store';
 import { _ } from 'svelte-i18n';
 
-import type { RawColumnWithMetadata } from '@mathesar/api/rpc/columns';
+import { type RawColumnWithMetadata, getColumnMetadataValue } from '@mathesar/api/rpc/columns';
 import { type RecordRow, getRowSelectionId } from '@mathesar/stores/table-data';
 import type {
   RowAdditionRecipe,
   RowModificationRecipe,
 } from '@mathesar/stores/table-data/records';
+import { DateTimeFormatter, DateTimeSpecification } from '@mathesar/utils/date-time';
 import { startingFrom } from '@mathesar/utils/iterUtils';
 import {
   type ImmutableSet,
@@ -115,6 +116,40 @@ function getDestinationColumns(
   return sheetColumns.slice(firstIndex, lastIndex + 1);
 }
 
+function parseDateTimeValue(
+  value: string,
+  column: RawColumnWithMetadata,
+): string {
+  const specTypeMap: { [key: string]: 'date' | 'datetime' | 'time' } = {
+    date: 'date',
+    timestamp: 'datetime',
+    timestamptz: 'datetime',
+    time: 'time',
+  };
+
+  const specType = specTypeMap[column.type];
+  if (!specType) return value;
+
+  try {
+    const specOptions: {
+      type: 'date' | 'datetime' | 'time';
+      dateFormat?: string;
+      timeFormat?: string;
+    } = {
+      type: specType,
+      dateFormat: getColumnMetadataValue(column, 'date_format'),
+      timeFormat: getColumnMetadataValue(column, 'time_format'),
+    };
+
+    const formatter = new DateTimeFormatter(
+      new DateTimeSpecification(specOptions),
+    );
+    return formatter.parse(value).value ?? value;
+  } catch {
+    return value;
+  }
+}
+
 function prepareStructuredCellValue(
   column: RawColumnWithMetadata,
   cell: PayloadCell,
@@ -123,6 +158,18 @@ function prepareStructuredCellValue(
     // Since TSV doesn't have a mechanism to faithfully represent NULLs, we
     // assume that empty strings are NULLs.
     if (cell.value === '' && column.nullable) return null;
+
+    // For date/datetime/time columns, parse the TSV value using DateTimeFormatter
+    // to ensure it respects the column's format metadata (e.g., European date format).
+    // This mirrors the behavior of edit-mode parsing.
+    if (
+      column.type === 'date' ||
+      column.type === 'timestamp' ||
+      column.type === 'timestamptz' ||
+      column.type === 'time'
+    ) {
+      return parseDateTimeValue(cell.value, column);
+    }
 
     return cell.value;
   }
