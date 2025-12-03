@@ -35,9 +35,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
-    "rest_framework",
-    "django_filters",
-    "django_property_filter",
     "modernrpc",
     "mathesar",
     "allauth",
@@ -330,7 +327,6 @@ MATHESAR_UI_BUILD_LOCATION = os.path.join(BASE_DIR, 'mathesar/static/mathesar/')
 MATHESAR_MANIFEST_LOCATION = os.path.join(MATHESAR_UI_BUILD_LOCATION, 'manifest.json')
 MATHESAR_CLIENT_DEV_PORT = os.environ.get('MATHESAR_CLIENT_DEV_PORT', default='3000')
 MATHESAR_UI_SOURCE_LOCATION = os.path.join(BASE_DIR, 'mathesar_ui/')
-MATHESAR_CAPTURE_UNHANDLED_EXCEPTION = os.environ.get('CAPTURE_UNHANDLED_EXCEPTION', default=False)
 MATHESAR_STATIC_NON_CODE_FILES_LOCATION = os.path.join(BASE_DIR, 'mathesar/static/non-code/')
 MATHESAR_ANALYTICS_URL = os.environ.get('MATHESAR_ANALYTICS_URL', default='https://example.com/collector')
 MATHESAR_INIT_REPORT_URL = os.environ.get('MATHESAR_INIT_REPORT_URL', default='https://example.com/hello')
@@ -349,9 +345,7 @@ AUTH_USER_MODEL = 'mathesar.User'
 LOGIN_URL = '/auth/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = LOGIN_URL
-DRF_ACCESS_POLICY = {
-    'reusable_conditions': ['mathesar.api.permission_conditions']
-}
+
 # List of Template names that contains additional script tags to be added to the base template
 BASE_TEMPLATE_ADDITIONAL_SCRIPT_TEMPLATES = []
 
