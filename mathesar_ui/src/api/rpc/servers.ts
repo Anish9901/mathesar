@@ -1,6 +1,8 @@
 import { rpcMethodTypeContainer } from '@mathesar/packages/json-rpc-client-builder';
 
-export type SslMode = 'disable' | 'prefer' | 'require';
+export const sslModeOptions = ['prefer', 'require', 'disable'] as const;
+
+export type SslMode = (typeof sslModeOptions)[number];
 
 export interface RawServer {
   id: number;
