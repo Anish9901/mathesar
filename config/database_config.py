@@ -131,7 +131,7 @@ class PostgresConfig(DBConfig):
     @classmethod
     def from_django_dict(cls, cfg: Mapping[str, Any]) -> "PostgresConfig":
         raw_opts = cfg.get("OPTIONS", {}).copy()
-        sslmode = raw_opts.pop("sslmode", None)
+        sslmode = raw_opts.pop("sslmode", "prefer")
         base_cfg = dict(cfg, OPTIONS=raw_opts)
         base = super().from_django_dict(base_cfg)
         return replace(base, sslmode=sslmode)
