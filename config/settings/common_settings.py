@@ -299,28 +299,6 @@ MEDIA_ROOT = os.environ.get('MEDIA_ROOT', default=DEFAULT_MEDIA_ROOT)
 
 MEDIA_URL = "/media/"
 
-# Update Authentication classes, removed BasicAuthentication
-# Defaults: https://www.django-rest-framework.org/api-guide/settings/
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
-        'rest_framework.authentication.SessionAuthentication'
-    ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
-    ],
-    'DEFAULT_PARSER_CLASSES': [
-        'rest_framework.parsers.JSONParser',
-    ],
-    'DEFAULT_FILTER_BACKENDS': (
-        'django_filters.rest_framework.DjangoFilterBackend',
-        'rest_framework.filters.OrderingFilter',
-    ),
-    'TEST_REQUEST_DEFAULT_FORMAT': 'json',
-    'EXCEPTION_HANDLER':
-        'mathesar.exception_handlers.mathesar_exception_handler',
-}
-
 # Mathesar settings
 MATHESAR_MODE = os.environ.get('MODE', default='PRODUCTION')
 MATHESAR_UI_BUILD_LOCATION = os.path.join(BASE_DIR, 'mathesar/static/mathesar/')
