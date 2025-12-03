@@ -99,7 +99,7 @@ class DBConfig(ABC):
 @dataclass(frozen=True)
 class PostgresConfig(DBConfig):
     engine: str = POSTGRES_ENGINE
-    sslmode: Optional[str] = None
+    sslmode: str = "prefer"
 
     # Inject sslmode into OPTIONS
     # https://www.postgresql.org/docs/current/libpq-ssl.html#LIBPQ-SSL-PROTECTION
@@ -115,7 +115,9 @@ class PostgresConfig(DBConfig):
         params = conninfo.conninfo_to_dict(url)
         dbname = params.get("dbname")
         if not dbname:
-            raise ValueError("PostgresConfig.from_connection_string: missing database name in URL")
+            raise ValueError(
+                "PostgresConfig.from_connection_string: missing database name in URL"
+            )
 
         return cls(
             dbname=dbname,
