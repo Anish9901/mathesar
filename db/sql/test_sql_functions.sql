@@ -3044,10 +3044,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION test_get_column_info_with_multiple_indexes() RETURNS SETOF TEXT AS $$/*
-Regression test for issue #4656: get_column_info returned duplicate column entries when a column
-appeared in multiple indexes (e.g., a primary key and a unique index on the same column).
-*/
+CREATE OR REPLACE FUNCTION test_get_column_info_with_multiple_indexes() RETURNS SETOF TEXT AS $$
 DECLARE
   col_info jsonb;
 BEGIN
