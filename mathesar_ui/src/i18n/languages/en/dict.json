@@ -744,7 +744,7 @@
   "specify_a_role": "Specify a PostgreSQL Role",
   "ssl_mode": "SSL Mode",
   "ssl_mode_disable": "Disable SSL",
-  "ssl_mode_help": "Controls how Mathesar connects to the database. 'Prefer' uses SSL if available, 'Require' enforces SSL, and 'Disable' turns off SSL.",
+  "ssl_mode_help": "Controls the encryption that Mathesar uses when connecting to the database.",
   "ssl_mode_prefer": "Prefer SSL",
   "ssl_mode_require": "Require SSL",
   "start_over": "Start Over",

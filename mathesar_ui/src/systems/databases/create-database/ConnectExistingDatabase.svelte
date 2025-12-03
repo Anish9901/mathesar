@@ -13,6 +13,7 @@
   } from '@mathesar/components/form';
   import Field from '@mathesar/components/form/Field.svelte';
   import { RichText } from '@mathesar/components/rich-text';
+  import SeeDocsToLearnMore from '@mathesar/components/SeeDocsToLearnMore.svelte';
   import type { Database } from '@mathesar/models/Database';
   import { databasesStore } from '@mathesar/stores/databases';
   import {
@@ -140,6 +141,7 @@
   >
     <svelte:fragment slot="help">
       {$_('ssl_mode_help')}
+      <SeeDocsToLearnMore page="sslMode" />
     </svelte:fragment>
   </Field>
 

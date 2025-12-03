@@ -15,6 +15,7 @@
   import Identifier from '@mathesar/components/Identifier.svelte';
   import WarningBox from '@mathesar/components/message-boxes/WarningBox.svelte';
   import { RichText } from '@mathesar/components/rich-text';
+  import SeeDocsToLearnMore from '@mathesar/components/SeeDocsToLearnMore.svelte';
   import { iconUndo } from '@mathesar/icons';
   import type { Database } from '@mathesar/models/Database';
   import { databasesStore } from '@mathesar/stores/databases';
@@ -108,6 +109,7 @@
     >
       <svelte:fragment slot="help">
         {$_('ssl_mode_help')}
+        <SeeDocsToLearnMore page="sslMode" />
       </svelte:fragment>
     </Field>
 
