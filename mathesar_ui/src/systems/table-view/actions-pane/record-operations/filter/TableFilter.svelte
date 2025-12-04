@@ -1,6 +1,6 @@
 <script lang="ts">
   import { takeLast } from 'iter-tools';
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { _ } from 'svelte-i18n';
 
   import type { LinkedRecordInputElement } from '@mathesar/components/cell-fabric/types';
@@ -19,10 +19,12 @@
   import { imperativeFilterControllerContext } from '@mathesar/pages/table/ImperativeFilterController';
   import {
     Filtering,
+    type ProcessedColumn,
     getTabularDataStoreFromContext,
   } from '@mathesar/stores/table-data';
   import { getColumnConstraintTypeByColumnId } from '@mathesar/utils/columnUtils';
-  import { BadgeCount, Dropdown, Icon } from '@mathesar-component-library';
+
+  import OperationDropdown from '../OperationDropdown.svelte';
 
   const tabularData = getTabularDataStoreFromContext();
 
@@ -42,6 +44,7 @@
     }
   }
   $: onExternalFilteringChange($filtering);
+  $: addedFilterCount = $filtering.addedFilterCount;
 
   function activateLastFilterInput() {
     const lastFilterInput = takeLast(
@@ -60,6 +63,7 @@
 
   function setFilteringIfSqlExprHasChanged() {
     const newFiltering = new Filtering(filterGroup.clone());
+    addedFilterCount = newFiltering.addedFilterCount;
     if (JSON.stringify(newFiltering.sqlExpr) !== filteringSqlExpr) {
       filtering.set(newFiltering);
     }
@@ -87,6 +91,12 @@
     }
   }
 
+  async function addColumnToOperation(column: ProcessedColumn) {
+    addFilter(column.id);
+    await tick();
+    activateLastFilterInput();
+  }
+
   onMount(() =>
     imperativeFilterController?.onOpenDropdown(() => {
       isOpen = true;
@@ -100,30 +110,19 @@
   );
 </script>
 
-<Dropdown
+<OperationDropdown
   bind:isOpen
-  showArrow={false}
-  triggerAppearance="secondary"
+  label={$_('filter')}
+  icon={{ ...iconFiltering, size: '0.8em' }}
+  badgeCount={addedFilterCount}
+  {addColumnToOperation}
+  applied={addedFilterCount > 0}
   {...$$restProps}
-  ariaLabel={$_('filter')}
 >
-  <svelte:fragment slot="trigger">
-    <Icon {...iconFiltering} size="0.8em" />
-    <span class="responsive-button-label with-badge">
-      {$_('filter')}
-      <BadgeCount value={$filtering.appliedFilterCount} />
-    </span>
-  </svelte:fragment>
-  <div
-    class="filters"
-    bind:this={content}
-    slot="content"
-    use:dnd={{ onChange }}
-  >
+  <div class="filters" bind:this={content} use:dnd={{ onChange }}>
     <div class="header">{$_('filter_records')}</div>
     <div class="content">
       <FilterGroupComponent
-        {...$$restProps}
         columns={$processedColumns}
         getColumnLabel={(c) => $processedColumns.get(c.id)?.column.name ?? ''}
         getColumnConstraintType={(c) =>
@@ -133,14 +132,10 @@
         bind:operator={filterGroup.operator}
         bind:args={filterGroup.args}
         on:update={setFilteringIfSqlExprHasChanged}
-      >
-        <div slot="empty" class="muted">
-          {$_('no_filters_added')}
-        </div>
-      </FilterGroupComponent>
+      />
     </div>
   </div>
-</Dropdown>
+</OperationDropdown>
 
 <style lang="scss">
   .filters {
@@ -149,16 +144,7 @@
   .header {
     font-weight: bolder;
   }
-  .with-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--sm5);
-  }
   .content {
     margin-top: 0.8rem;
-  }
-
-  .muted {
-    color: var(--color-fg-base-disabled);
   }
 </style>

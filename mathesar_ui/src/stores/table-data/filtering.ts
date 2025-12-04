@@ -242,10 +242,21 @@ function filterGroupToSqlExpr(group: FilterGroup<number>): SqlExpr | undefined {
   return expr;
 }
 
+function calculateAddedFilterCount<ID>(group: FilterGroup<ID>): number {
+  return group.args.reduce((count, entry) => {
+    if (entry.type === 'group') {
+      return count + calculateAddedFilterCount(entry);
+    }
+    return count + 1;
+  }, 0);
+}
+
 export class Filtering {
   readonly root: FilterGroup<number>;
 
   readonly sqlExpr: SqlExpr | undefined;
+
+  readonly addedFilterCount: number;
 
   readonly appliedFilterCount: number;
 
@@ -256,6 +267,7 @@ export class Filtering {
         operator: 'and',
         args: [],
       });
+    this.addedFilterCount = calculateAddedFilterCount(this.root);
     this.sqlExpr = filterGroupToSqlExpr(this.root);
     this.appliedFilterCount = this.sqlExpr
       ? getCountOfNonConjunctionalExpr(this.sqlExpr)

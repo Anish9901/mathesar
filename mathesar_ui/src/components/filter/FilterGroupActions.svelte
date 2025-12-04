@@ -4,9 +4,15 @@
 
   import type { ConstraintType } from '@mathesar/api/rpc/constraints';
   import type { Appearance } from '@mathesar/component-library/commonTypes';
+  import ColumnName from '@mathesar/components/column/ColumnName.svelte';
   import { iconAddGroup, iconAddNew } from '@mathesar/icons';
   import type { ReadableMapLike } from '@mathesar/typeUtils';
-  import { Button, Icon } from '@mathesar-component-library';
+  import {
+    Button,
+    ButtonMenuItem,
+    DropdownMenu,
+    Icon,
+  } from '@mathesar-component-library';
 
   import {
     type FilterEntryColumn,
@@ -24,6 +30,7 @@
 
   export let level = 0;
   export let columns: ReadableMapLike<ColumnLikeType['id'], ColumnLikeType>;
+  export let getColumnLabel: (column: ColumnLikeType) => string;
   export let getColumnConstraintType: (
     column: ColumnLikeType,
   ) => ConstraintType[] | undefined;
@@ -36,8 +43,12 @@
   let buttonAppearance: Appearance;
   $: buttonAppearance = showTextInButtons ? 'secondary' : 'action';
 
-  function addFilter() {
-    const filter = makeIndividualFilter<T>(columns, getColumnConstraintType);
+  function addFilter(columnInfo: ColumnLikeType) {
+    const filter = makeIndividualFilter<T>(
+      columns,
+      getColumnConstraintType,
+      columnInfo.id,
+    );
     if (filter) {
       args = [...args, filter];
       dispatch('update');
@@ -63,12 +74,25 @@
     </div>
   {/if}
   <div class="actions">
-    <Button appearance={buttonAppearance} on:click={addFilter}>
-      <Icon {...iconAddNew} />
-      {#if showTextInButtons}
-        {$_('add_filter')}
-      {/if}
-    </Button>
+    <DropdownMenu
+      icon={iconAddNew}
+      label={showTextInButtons ? $_('add_filter') : undefined}
+      triggerAppearance={buttonAppearance}
+    >
+      {#each [...columns.values()] as columnInfo (columnInfo.id)}
+        <ButtonMenuItem on:click={() => addFilter(columnInfo)}>
+          <ColumnName
+            column={{
+              name: getColumnLabel(columnInfo),
+              type: columnInfo?.column.type ?? 'unknown',
+              type_options: columnInfo?.column.type_options ?? null,
+              constraintsType: getColumnConstraintType(columnInfo),
+              metadata: columnInfo?.column.metadata ?? null,
+            }}
+          />
+        </ButtonMenuItem>
+      {/each}
+    </DropdownMenu>
 
     {#if level < 2}
       <Button appearance={buttonAppearance} on:click={addFilterGroup}>

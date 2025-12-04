@@ -56,6 +56,7 @@
     <FilterGroupActions
       {level}
       {columns}
+      {getColumnLabel}
       {getColumnConstraintType}
       bind:operator
       bind:args
@@ -116,6 +117,7 @@
         <FilterGroupActions
           {level}
           {columns}
+          {getColumnLabel}
           {getColumnConstraintType}
           bind:operator
           bind:args
@@ -134,6 +136,7 @@
       showTextInButtons
       {level}
       {columns}
+      {getColumnLabel}
       {getColumnConstraintType}
       bind:operator
       bind:args
