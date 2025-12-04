@@ -426,10 +426,7 @@ export class RecordsData {
         });
       } catch (error) {
         persistedRowsToDelete.forEach((row) =>
-          rowsFailedToDelete.set(
-            row.identifier,
-            RpcError.fromAnything(RpcError),
-          ),
+          rowsFailedToDelete.set(row.identifier, RpcError.fromAnything(error)),
         );
       }
     }
