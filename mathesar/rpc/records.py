@@ -254,8 +254,8 @@ def list_(
         offset: The number of rows to skip before returning records from
             following rows.
         order: An array of ordering definition objects.
-        filter: An array of filter definition objects.
-        grouping: An array of group definition objects.
+        filter: A filter definition object.
+        grouping: A group definition object.
         return_record_summaries: Whether to return summaries of retrieved
             records.
 
@@ -296,20 +296,21 @@ def get(
         **kwargs
 ) -> RecordList:
     """
-    Get single record from a table by its primary key.
+    Get a single record from a table by its primary key.
 
     Args:
-        record_id: The primary key value of the record to be gotten.
+        record_id: The primary key value of the record to retrieve.
         table_oid: Identity of the table in the user's database.
         database_id: The Django id of the database containing the table.
         return_record_summaries: Whether to return summaries of the
             retrieved record.
         table_record_summary_templates: A dict of record summary templates.
-            If none are provided, then the templates will be take from the
+            If none are provided, then the templates will be taken from the
             Django metadata. Any templates provided will take precedence on a
             per-table basis over the stored metadata templates. The purpose of
             this function parameter is to allow clients to generate record
             summary previews without persisting any metadata.
+
     Returns:
         The requested record, along with some metadata.
     """
@@ -352,7 +353,7 @@ def add(
     that column in the created record. Missing keys will use default
     values (if set on the DB), and explicit `null` values will set null
     for that value regardless of default (with obvious exceptions where
-    that would violate some constraint)
+    that would violate some constraint).
 
     Args:
         record_def: An object representing the record to be added.
@@ -396,7 +397,7 @@ def patch(
     some constraint).
 
     Args:
-        record_def: An object representing the record to be added.
+        record_def: An object representing the record to be modified.
         record_id: The primary key value of the record to modify.
         table_oid: Identity of the table in the user's database.
         database_id: The Django id of the database containing the table.
@@ -461,7 +462,6 @@ def search(
 ) -> RecordList:
     """
     List records from a table according to `search_params`.
-
 
     Literals will be searched for in a basic way in string-like columns,
     but will have to match exactly in non-string-like columns.
