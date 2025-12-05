@@ -130,7 +130,14 @@
     {#if !disabled}
       <button
         class="dropdown-button passthrough"
-        on:click={launchRecordSelector}
+        on:click={(event) => {
+          if (event.shiftKey) {
+            // Do not open the record selector on Shift+click
+            event.stopPropagation();
+            return;
+          }
+          void launchRecordSelector(event);
+        }}
         aria-label={$_('pick_record')}
         title={$_('pick_record')}
       >

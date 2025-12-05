@@ -954,7 +954,7 @@ CREATE OR REPLACE FUNCTION msar.column_info_table(tab_id regclass) RETURNS TABLE
   type text, -- The type of the column for the table.
   type_options jsonb, -- type_options for the column(if any).
   nullable boolean, -- is the column nullable.
-  primary_key boolean, -- whether the column has primary key constraint. 
+  primary_key boolean, -- whether the column has primary key constraint.
   "default" jsonb, -- the default for the column(if any).
   has_dependents boolean, -- is the column referenced by others.
   description text, -- The description of the column on the database.
@@ -972,7 +972,7 @@ SELECT
   msar.col_description(tab_id, attnum) AS description,
   msar.list_column_privileges_for_current_role(tab_id, attnum) AS current_role_priv
 FROM pg_catalog.pg_attribute pga
-  LEFT JOIN pg_index pgi ON pga.attrelid=pgi.indrelid AND pga.attnum=ANY(pgi.indkey)
+  LEFT JOIN pg_index pgi ON pga.attrelid=pgi.indrelid AND pga.attnum=ANY(pgi.indkey) AND pgi.indisprimary
 WHERE pga.attrelid=tab_id AND pga.attnum > 0 and NOT attisdropped;
 $$ LANGUAGE SQL STABLE RETURNS NULL ON NULL INPUT;
 
@@ -2488,7 +2488,7 @@ __msar.process_pk_col_def(
   -- The below tuple(s) defines a default 'id' column for Mathesar. It can have a given name, type
   -- integer or uuid, it's not null, it uses the 'identity' or 'gen_random_uuid()' functionality to
   -- generate default values, has a default comment.
-  SELECT CASE pkey_type 
+  SELECT CASE pkey_type
     WHEN 'IDENTITY' THEN
       ARRAY[
         (col_name, 'integer', true, null, pkey_type, 'Mathesar default integer ID column')
@@ -3260,7 +3260,7 @@ BEGIN
   END IF;
 
   IF jsonb_path_exists(col_defs, '$[*] ? (@.name == "id")') THEN
-    -- rename 'id' 
+    -- rename 'id'
     SELECT array_agg(col_def->>'name') INTO existing_col_names FROM jsonb_array_elements(col_defs) col_def;
     id_col_name := msar.get_unique_local_identifier(existing_col_names, 'id');
 
@@ -3656,7 +3656,7 @@ CONCAT_WS(', ',
   val,
   CASE WHEN NULLIF(cast_options, '{}'::jsonb) IS NOT NULL THEN
     CASE type_::regtype
-      WHEN 'numeric'::regtype THEN 
+      WHEN 'numeric'::regtype THEN
         CONCAT_WS(', ',
           'group_sep =>' || quote_literal(cast_options ->> 'group_sep') || '::"char"',
           'decimal_p =>' || quote_literal(cast_options ->> 'decimal_p') || '::"char"'
@@ -3887,15 +3887,15 @@ BEGIN
       -- set new default
       PERFORM msar.set_col_default(tab_id, col.attnum, col.new_default #>> '{}');
     ELSEIF (col.new_default IS NULL OR jsonb_typeof(col.new_default)<>'null') AND col.new_type IS NOT NULL THEN
-      -- preserve old default 
+      -- preserve old default
       -- when a new_default is absent and col is retyped with a new_type.
       -- Note: We don't want to preserve old default for jsonb_typeof(col.new_default)='null'
-      -- as we consider it as an intent to drop the default. 
+      -- as we consider it as an intent to drop the default.
       PERFORM msar.set_old_col_default(tab_id, col.attnum, col.old_default, col.new_type, is_default_dynamic, col.cast_options);
     END IF;
 
     -- PG13 doesn't allow concat b/w integer[] and smallint need to typecast
-    return_attnum_arr := return_attnum_arr || col.attnum::integer; 
+    return_attnum_arr := return_attnum_arr || col.attnum::integer;
   END LOOP;
   RETURN return_attnum_arr; -- do we really need this??
 END;
@@ -5489,7 +5489,7 @@ BEGIN
           THEN msar.build_self_summary_json_expr(tab_id)
           END
         ), ''
-      ), 'COUNT(1) AS count_hack' 
+      ), 'COUNT(1) AS count_hack'
       -- count_hack ensures that summary_cte is not empty,
       -- which in turn helps to generate summaries_json_cte
     ),
@@ -6075,7 +6075,7 @@ $$ LANGUAGE SQL RETURNS NULL ON NULL INPUT;
 
 
 CREATE OR REPLACE FUNCTION msar.raise_exception(err_msg text)
-RETURNS void AS $$/* 
+RETURNS void AS $$/*
 Utility function to raise an exceptions with an error message.
 
 Having this utility function allows us to raise exceptions within SQL functions
@@ -6142,9 +6142,9 @@ Returns a lookup table for given field_info_list and values_
 
 Example: Inserting into Items while creating a new book entry, adding a new Title,
 creating a new entry for Author, picking a Publisher.
-           table_name           |                  column_names                   |                values_                 | cte_name | from_cte_name 
+           table_name           |                  column_names                   |                values_                 | cte_name | from_cte_name
 --------------------------------+-------------------------------------------------+----------------------------------------+----------+---------------
- "Library Management"."Authors" | "First Name", "Last Name"                       | 'Jerome K.', 'Jerome                   | k1_cte   | 
+ "Library Management"."Authors" | "First Name", "Last Name"                       | 'Jerome K.', 'Jerome                   | k1_cte   |
  "Library Management"."Books"   | "Title", "Author", "Publisher"                  | 'Three men in a Boat', k1_cte.id, '12' | k0_cte   | k1_cte
  "Library Management"."Items"   | "Acquisition Date", "Acquisition Price", "Book" | '2025-10-09', '69.69', k0_cte.id       |          | k0_cte
 
@@ -6246,7 +6246,7 @@ BEGIN
   FOR ins IN SELECT * FROM msar.build_insert_lookup_table(field_info_list, values_) LOOP
     insert_stub := 'INSERT INTO ' ||
       ins.table_name || '(' || ins.column_names || ') SELECT ' || ins.values_ ||
-      CASE 
+      CASE
         WHEN ins.from_cte_name IS NOT NULL THEN CONCAT(' FROM ', ins.from_cte_name)
         ELSE '' END || ' RETURNING *';
     CASE
