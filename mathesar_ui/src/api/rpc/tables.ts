@@ -103,6 +103,7 @@ export interface JoinableTablesResult {
         {
           name: string;
           type: string;
+          primary_key: boolean;
         }
       >;
     }
@@ -160,6 +161,19 @@ export function* getLinksToThisTable(
       column: table.columns[columnId],
     };
   }
+}
+
+export function filterJoinableTablesByMaxDepth(
+  result: JoinableTablesResult,
+  maxDepth: number,
+): JoinableTablesResult {
+  const filteredTables = result.joinable_tables.filter(
+    (t) => t.depth <= maxDepth,
+  );
+  return {
+    joinable_tables: filteredTables,
+    target_table_info: result.target_table_info,
+  };
 }
 
 export const tables = {
