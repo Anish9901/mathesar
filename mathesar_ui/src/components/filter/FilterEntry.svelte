@@ -245,16 +245,20 @@
         />
       {/if}
     {/key}
-    <slot />
   </InputGroup>
+  <slot />
 </div>
 
 <style lang="scss">
   .filter-entry {
     display: flex;
-    gap: 10px;
+    gap: 0.2rem;
     min-width: min(30rem, 100%);
     max-width: 38rem;
+
+    &.horizontal {
+      align-items: center;
+    }
 
     @media (max-width: 600px) {
       :global(.filter-input) {

@@ -1,9 +1,13 @@
 <script lang="ts">
+  import { createEventDispatcher } from 'svelte';
+
   import type { ConstraintType } from '@mathesar/api/rpc/constraints';
+  import { dndDragHandle } from '@mathesar/components/drag-and-drop/dnd';
+  import { iconDeleteMinor, iconGrip } from '@mathesar/icons';
   import type AssociatedCellData from '@mathesar/stores/AssociatedCellData';
   import type { ReadableMapLike } from '@mathesar/typeUtils';
+  import { Button, Icon } from '@mathesar-component-library';
 
-  import FilterActions from './FilterActions.svelte';
   import FilterEntry from './FilterEntry.svelte';
   import FilterGroupComponent from './FilterGroup.svelte';
   import type {
@@ -19,6 +23,8 @@
     update: void;
     remove: void;
   }
+
+  const dispatch = createEventDispatcher<$$Events>();
 
   export let columns: ReadableMapLike<ColumnLikeType['id'], ColumnLikeType>;
   export let getColumnLabel: (column: ColumnLikeType) => string;
@@ -36,6 +42,9 @@
 </script>
 
 <div class="filter-row">
+  <div class="handle" use:dndDragHandle>
+    <Icon {...iconGrip} />
+  </div>
   {#if filter.type === 'individual'}
     <FilterEntry
       {columns}
@@ -47,7 +56,11 @@
       bind:value={filter.value}
       on:update
     >
-      <FilterActions on:remove />
+      <div class="close">
+        <Button appearance="plain" on:click={() => dispatch('remove')}>
+          <Icon {...iconDeleteMinor} />
+        </Button>
+      </div>
     </FilterEntry>
   {:else}
     <FilterGroupComponent
@@ -61,7 +74,27 @@
       bind:args={filter.args}
       on:update
     >
-      <FilterActions on:remove />
+      <div class="close">
+        <Button appearance="plain" on:click={() => dispatch('remove')}>
+          <Icon {...iconDeleteMinor} />
+        </Button>
+      </div>
     </FilterGroupComponent>
   {/if}
 </div>
+
+<style lang="scss">
+  .filter-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: top;
+  }
+  .handle {
+    cursor: grab;
+    color: var(--color-fg-subtle-2);
+  }
+  .close {
+    --button-color: var(--color-fg-subtle-2);
+    --button-padding: var(--sm6);
+  }
+</style>
