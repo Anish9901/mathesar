@@ -41,11 +41,11 @@ import type { FilterId } from '../abstract-types/types';
  * for this compatibility layer.
  */
 function individualFilterToSqlExpr(
-  individualFilter: IndividualFilter<number>,
+  individualFilter: IndividualFilter,
 ): SqlExpr {
   const column: SqlColumn = {
     type: 'attnum',
-    value: individualFilter.columnId,
+    value: Number(individualFilter.columnId),
   };
 
   /** Generate an SqlLiteral value */
@@ -104,25 +104,23 @@ function individualFilterToSqlExpr(
   return compatibilityMap[individualFilter.conditionId];
 }
 
-type TerseIndividualFilter = ['i', number, FilterId, unknown];
+type TerseIndividualFilter = ['i', string, FilterId, unknown];
 
 type TerseFilterGroup = [
   'g',
-  FilterGroup<number>['operator'],
+  FilterGroup['operator'],
   (TerseIndividualFilter | TerseFilterGroup)[],
 ];
 
 export type TerseFiltering = TerseFilterGroup;
 
 function makeTerseIndividualFilter(
-  entry: IndividualFilter<number>,
+  entry: IndividualFilter,
 ): TerseIndividualFilter {
   return ['i', entry.columnId, entry.conditionId, entry.value];
 }
 
-function makeTerseFilterGroup(
-  filterGroup: FilterGroup<number>,
-): TerseFilterGroup {
+function makeTerseFilterGroup(filterGroup: FilterGroup): TerseFilterGroup {
   return [
     'g',
     filterGroup.operator,
@@ -136,7 +134,7 @@ function makeTerseFilterGroup(
 
 function makeIndividualFilter(
   terseIndividualFilter: TerseIndividualFilter,
-): IndividualFilter<number> {
+): IndividualFilter {
   return {
     type: 'individual',
     columnId: terseIndividualFilter[1],
@@ -145,10 +143,8 @@ function makeIndividualFilter(
   };
 }
 
-function makeFilterGroup(
-  terseFilterGroup: TerseFilterGroup,
-): FilterGroup<number> {
-  return new FilterGroup<number>({
+function makeFilterGroup(terseFilterGroup: TerseFilterGroup): FilterGroup {
+  return new FilterGroup({
     operator: terseFilterGroup[1],
     args: terseFilterGroup[2].map((e) =>
       e[0] === 'i' ? makeIndividualFilter(e) : makeFilterGroup(e),
@@ -190,8 +186,8 @@ function getCountOfNonConjunctionalExpr(expr: SqlExpr) {
   return count;
 }
 
-function getCountOfColumnInExpr(expr: SqlExpr, columnId: number): number {
-  if (expr.type === 'attnum' && expr.value === columnId) {
+function getCountOfColumnInExpr(expr: SqlExpr, columnId: string): number {
+  if (expr.type === 'attnum' && expr.value === Number(columnId)) {
     return 1;
   }
   let count = 0;
@@ -204,12 +200,12 @@ function getCountOfColumnInExpr(expr: SqlExpr, columnId: number): number {
 }
 
 /** This method disregards any invalid values */
-function filterGroupToSqlExpr(group: FilterGroup<number>): SqlExpr | undefined {
+function filterGroupToSqlExpr(group: FilterGroup): SqlExpr | undefined {
   if (group.args.length === 0) {
     return undefined;
   }
 
-  function toSQLExpr(entry: FilterGroup<number> | IndividualFilter<number>) {
+  function toSQLExpr(entry: FilterGroup | IndividualFilter) {
     if ('operator' in entry) {
       return filterGroupToSqlExpr(entry);
     }
@@ -242,7 +238,7 @@ function filterGroupToSqlExpr(group: FilterGroup<number>): SqlExpr | undefined {
   return expr;
 }
 
-function calculateAddedFilterCount<ID>(group: FilterGroup<ID>): number {
+function calculateAddedFilterCount<ID>(group: FilterGroup): number {
   return group.args.reduce((count, entry) => {
     if (entry.type === 'group') {
       return count + calculateAddedFilterCount(entry);
@@ -252,7 +248,7 @@ function calculateAddedFilterCount<ID>(group: FilterGroup<ID>): number {
 }
 
 export class Filtering {
-  readonly root: FilterGroup<number>;
+  readonly root: FilterGroup;
 
   readonly sqlExpr: SqlExpr | undefined;
 
@@ -260,7 +256,7 @@ export class Filtering {
 
   readonly appliedFilterCount: number;
 
-  constructor(rootGroup?: FilterGroup<number>) {
+  constructor(rootGroup?: FilterGroup) {
     this.root =
       rootGroup ??
       new FilterGroup({
@@ -274,12 +270,12 @@ export class Filtering {
       : 0;
   }
 
-  withoutColumns(columnIds: number[]): Filtering {
+  withoutColumns(columnIds: string[]): Filtering {
     return new Filtering(this.root.withoutColumns(columnIds));
   }
 
-  withContextualFilters(contextualFilters: Map<number, unknown>): Filtering {
-    const contextualFilterEntries: IndividualFilter<number>[] = [
+  withContextualFilters(contextualFilters: Map<string, unknown>): Filtering {
+    const contextualFilterEntries: IndividualFilter[] = [
       ...contextualFilters,
     ].map(([columnId, value]) => ({
       type: 'individual',
@@ -289,7 +285,7 @@ export class Filtering {
     }));
 
     return new Filtering(
-      new FilterGroup<number>({
+      new FilterGroup({
         operator: 'and',
         args: [this.root, ...contextualFilterEntries],
       }),
@@ -304,7 +300,7 @@ export class Filtering {
     return new Filtering(makeFilterGroup(terse));
   }
 
-  appliedFilterCountForColumn(columnId: number): number {
+  appliedFilterCountForColumn(columnId: string): number {
     return this.sqlExpr ? getCountOfColumnInExpr(this.sqlExpr, columnId) : 0;
   }
 

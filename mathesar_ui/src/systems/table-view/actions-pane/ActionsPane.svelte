@@ -11,6 +11,7 @@
 
   import TableFilter from './record-operations/filter/TableFilter.svelte';
   import GroupDropdown from './record-operations/group/GroupDropdown.svelte';
+  import JoinDropdown from './record-operations/join/JoinDropdown.svelte';
   import SortDropdown from './record-operations/sort/SortDropdown.svelte';
 
   const tabularData = getTabularDataStoreFromContext();
@@ -40,6 +41,7 @@
       <TableFilter />
       <SortDropdown {sorting} />
       <GroupDropdown {grouping} />
+      <JoinDropdown />
     </div>
   {/if}
 
