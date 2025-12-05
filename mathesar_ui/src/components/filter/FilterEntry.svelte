@@ -29,18 +29,18 @@
     validateFilterEntry,
   } from './utils';
 
-  type T = $$Generic;
-  type ColumnLikeType = FilterEntryColumn<T>;
-
   const dispatch = createEventDispatcher();
 
-  export let columns: ReadableMapLike<ColumnLikeType['id'], ColumnLikeType>;
-  export let getColumnLabel: (column: ColumnLikeType) => string;
+  export let columns: ReadableMapLike<
+    FilterEntryColumn['id'],
+    FilterEntryColumn
+  >;
+  export let getColumnLabel: (column: FilterEntryColumn) => string;
   export let getColumnConstraintType: (
-    column: ColumnLikeType,
+    column: FilterEntryColumn,
   ) => ConstraintType[] | undefined = () => undefined;
 
-  export let columnIdentifier: ColumnLikeType['id'] | undefined;
+  export let columnIdentifier: FilterEntryColumn['id'] | undefined;
   export let conditionIdentifier: FilterId | undefined;
   export let value: unknown | undefined;
 
@@ -56,7 +56,7 @@
     : undefined;
   $: selectedColumnFiltersMap =
     selectedColumn?.allowedFiltersMap ??
-    (new Map() as ColumnLikeType['allowedFiltersMap']);
+    (new Map() as FilterEntryColumn['allowedFiltersMap']);
   $: conditionIds = [...selectedColumnFiltersMap.keys()];
   $: selectedCondition = conditionIdentifier
     ? selectedColumnFiltersMap.get(conditionIdentifier)
@@ -79,7 +79,7 @@
     window.clearTimeout(timer);
   });
 
-  function getColumnName(_columnId?: ColumnLikeType['id']) {
+  function getColumnName(_columnId?: FilterEntryColumn['id']) {
     if (_columnId) {
       const column = columns.get(_columnId);
       if (column) {
@@ -90,7 +90,7 @@
   }
 
   function getColumnConstraintTypeFromColumnId(
-    _columnId?: ColumnLikeType['id'],
+    _columnId?: FilterEntryColumn['id'],
   ) {
     if (_columnId) {
       const column = columns.get(_columnId);
@@ -130,7 +130,7 @@
 
   function calculateInputCap(
     _selectedCondition?: AbstractTypeFilterDefinition,
-    _selectedColumn?: ColumnLikeType,
+    _selectedColumn?: FilterEntryColumn,
   ): ComponentAndProps | undefined {
     const parameterTypeId = _selectedCondition?.parameters[0];
     // If there are no parameters, show no input. eg., isEmpty

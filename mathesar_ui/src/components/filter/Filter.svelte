@@ -16,9 +16,6 @@
     IndividualFilter,
   } from './utils';
 
-  type T = $$Generic;
-  type ColumnLikeType = FilterEntryColumn<T>;
-
   interface $$Events {
     update: void;
     remove: void;
@@ -26,17 +23,20 @@
 
   const dispatch = createEventDispatcher<$$Events>();
 
-  export let columns: ReadableMapLike<ColumnLikeType['id'], ColumnLikeType>;
-  export let getColumnLabel: (column: ColumnLikeType) => string;
+  export let columns: ReadableMapLike<
+    FilterEntryColumn['id'],
+    FilterEntryColumn
+  >;
+  export let getColumnLabel: (column: FilterEntryColumn) => string;
   export let getColumnConstraintType: (
-    column: ColumnLikeType,
+    column: FilterEntryColumn,
   ) => ConstraintType[] | undefined = () => undefined;
   export let recordSummaries: AssociatedCellData<string>;
 
-  export let filter: FilterGroup<T> | IndividualFilter<T>;
+  export let filter: FilterGroup | IndividualFilter;
   export let level = 0;
 
-  function filterGroupTypeGuard(filterGroup: FilterGroup<T>) {
+  function filterGroupTypeGuard(filterGroup: FilterGroup) {
     return () => filterGroup;
   }
 </script>

@@ -19,8 +19,6 @@
     IndividualFilter,
   } from './utils';
 
-  type T = $$Generic;
-  type ColumnLikeType = FilterEntryColumn<T>;
   interface $$Events {
     update: void;
   }
@@ -28,20 +26,23 @@
   const dispatch = createEventDispatcher<$$Events>();
   const filterOperators = ['and', 'or'] as const;
 
-  export let columns: ReadableMapLike<ColumnLikeType['id'], ColumnLikeType>;
-  export let getColumnLabel: (column: ColumnLikeType) => string;
+  export let columns: ReadableMapLike<
+    FilterEntryColumn['id'],
+    FilterEntryColumn
+  >;
+  export let getColumnLabel: (column: FilterEntryColumn) => string;
   export let getColumnConstraintType: (
-    column: ColumnLikeType,
+    column: FilterEntryColumn,
   ) => ConstraintType[] | undefined = () => undefined;
 
   export let level = 0;
-  export let getFilterGroup: () => FilterGroup<T>;
-  export let operator: FilterGroup<T>['operator'];
-  export let args: FilterGroup<T>['args'];
+  export let getFilterGroup: () => FilterGroup;
+  export let operator: FilterGroup['operator'];
+  export let args: FilterGroup['args'];
 
   export let recordSummaries: AssociatedCellData<string>;
 
-  function remove(filter: IndividualFilter<T> | FilterGroup<T>) {
+  function remove(filter: IndividualFilter | FilterGroup) {
     args = args.filter((f) => f !== filter);
     dispatch('update');
   }

@@ -20,8 +20,6 @@
     makeIndividualFilter,
   } from './utils';
 
-  type T = $$Generic;
-  type ColumnLikeType = FilterEntryColumn<T>;
   interface $$Events {
     update: void;
   }
@@ -29,22 +27,25 @@
   const dispatch = createEventDispatcher<$$Events>();
 
   export let level = 0;
-  export let columns: ReadableMapLike<ColumnLikeType['id'], ColumnLikeType>;
-  export let getColumnLabel: (column: ColumnLikeType) => string;
+  export let columns: ReadableMapLike<
+    FilterEntryColumn['id'],
+    FilterEntryColumn
+  >;
+  export let getColumnLabel: (column: FilterEntryColumn) => string;
   export let getColumnConstraintType: (
-    column: ColumnLikeType,
+    column: FilterEntryColumn,
   ) => ConstraintType[] | undefined;
 
-  export let operator: FilterGroup<T>['operator'];
-  export let args: FilterGroup<T>['args'];
+  export let operator: FilterGroup['operator'];
+  export let args: FilterGroup['args'];
 
   export let showTextInButtons = false;
 
   let buttonAppearance: Appearance;
   $: buttonAppearance = showTextInButtons ? 'secondary' : 'action';
 
-  function addFilter(columnInfo: ColumnLikeType) {
-    const filter = makeIndividualFilter<T>(
+  function addFilter(columnInfo: FilterEntryColumn) {
+    const filter = makeIndividualFilter(
       columns,
       getColumnConstraintType,
       columnInfo.id,

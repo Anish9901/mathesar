@@ -13,52 +13,49 @@ import type { ReadableMapLike } from '@mathesar/typeUtils';
 import { isDefinedNonNullable } from '@mathesar-component-library';
 import type { ComponentAndProps } from '@mathesar-component-library/types';
 
-export interface FilterEntryColumn<ID> {
-  id: ID;
+export interface FilterEntryColumn {
+  id: string;
   column: CellColumnLike;
   abstractType: AbstractType;
   allowedFiltersMap: ReturnType<typeof getFiltersForAbstractType>;
   simpleInputComponentAndProps: ComponentAndProps;
 }
 
-export interface IndividualFilter<ID> {
+export interface IndividualFilter {
   type: 'individual';
-  columnId: ID;
+  columnId: string;
   conditionId: FilterId;
   value?: unknown;
 }
 
-export class FilterGroup<ID> {
+export class FilterGroup {
   type = 'group' as const;
 
   operator: 'and' | 'or';
 
-  args: (IndividualFilter<ID> | FilterGroup<ID>)[];
+  args: (IndividualFilter | FilterGroup)[];
 
   constructor(props?: {
     operator: 'and' | 'or';
-    args: (IndividualFilter<ID> | FilterGroup<ID>)[];
+    args: (IndividualFilter | FilterGroup)[];
   }) {
     this.operator = props?.operator ?? 'and';
     this.args = props?.args ?? [];
   }
 
-  addArgument(
-    arg: IndividualFilter<ID> | FilterGroup<ID>,
-    destinationIndex: number,
-  ) {
+  addArgument(arg: IndividualFilter | FilterGroup, destinationIndex: number) {
     this.args.splice(destinationIndex, 0, arg);
     this.args = [...this.args];
   }
 
-  removeArgument(arg: IndividualFilter<ID> | FilterGroup<ID>) {
+  removeArgument(arg: IndividualFilter | FilterGroup) {
     this.args = this.args.filter((a) => a !== arg);
   }
 
-  withoutColumns(columnIds: ID[]): FilterGroup<ID> {
-    return new FilterGroup<ID>({
+  withoutColumns(columnIds: string[]): FilterGroup {
+    return new FilterGroup({
       operator: this.operator,
-      args: this.args.flatMap<FilterGroup<ID> | IndividualFilter<ID>>((e) => {
+      args: this.args.flatMap<FilterGroup | IndividualFilter>((e) => {
         if ('operator' in e) {
           return e.withoutColumns(columnIds);
         }
@@ -67,7 +64,7 @@ export class FilterGroup<ID> {
     });
   }
 
-  equals(filterGroup: FilterGroup<ID>) {
+  equals(filterGroup: FilterGroup) {
     if (this === filterGroup) {
       return true;
     }
@@ -101,7 +98,7 @@ export class FilterGroup<ID> {
     return true;
   }
 
-  clone(): FilterGroup<ID> {
+  clone(): FilterGroup {
     return new FilterGroup({
       operator: this.operator,
       args: this.args.map((a) =>
@@ -136,13 +133,13 @@ export function validateFilterEntry(
   return isDefinedNonNullable(value) && String(value) !== '';
 }
 
-export function makeIndividualFilter<T>(
-  columns: ReadableMapLike<FilterEntryColumn<T>['id'], FilterEntryColumn<T>>,
+export function makeIndividualFilter(
+  columns: ReadableMapLike<FilterEntryColumn['id'], FilterEntryColumn>,
   getColumnConstraintType: (
-    column: FilterEntryColumn<T>,
+    column: FilterEntryColumn,
   ) => ConstraintType[] | undefined,
-  columnId?: T,
-): IndividualFilter<T> | undefined {
+  columnId?: string,
+): IndividualFilter | undefined {
   const firstNonPrimaryColumn = find((c) => {
     const constraints = getColumnConstraintType(c);
     return !constraints || !constraints.includes('primary');

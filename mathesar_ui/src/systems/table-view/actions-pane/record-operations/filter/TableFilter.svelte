@@ -37,7 +37,7 @@
 
   const imperativeFilterController = imperativeFilterControllerContext.get();
 
-  let filterGroup = new FilterGroup<number>();
+  let filterGroup = new FilterGroup();
   function onExternalFilteringChange(_extFiltering: Filtering) {
     if (!_extFiltering.root.equals(filterGroup)) {
       filterGroup = _extFiltering.root.clone();
@@ -69,16 +69,14 @@
     }
   }
 
-  function onChange(
-    e: DndChangeDetail<IndividualFilter<number>, FilterGroup<number>>,
-  ) {
+  function onChange(e: DndChangeDetail<IndividualFilter, FilterGroup>) {
     e.fromParent.removeArgument(e.item);
     e.toParent.addArgument(e.item, e.toIndex);
     filterGroup = filterGroup.clone();
     setFilteringIfSqlExprHasChanged();
   }
 
-  function addFilter(columnId: number) {
+  function addFilter(columnId: string) {
     const filter = makeIndividualFilter(
       $processedColumns,
       (c) => getColumnConstraintTypeByColumnId(c.id, $processedColumns),
