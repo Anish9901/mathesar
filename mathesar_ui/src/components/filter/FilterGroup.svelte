@@ -86,6 +86,9 @@
           getItem: () => innerFilter,
         }}
       >
+        {#if innerFilter.type === 'group'}
+          <div class="horizontal-connector"></div>
+        {/if}
         {#if index > 0}
           <div class="prefix">
             {operator}
@@ -109,20 +112,9 @@
       </div>
     {:else}
       {#if level > 0}
-        <FilterGroupActions
-          {level}
-          {columns}
-          {getColumnLabel}
-          {getColumnConstraintType}
-          bind:operator
-          bind:args
-          on:update
-        >
-          <div class="empty-group-text" slot="text">
-            {$_('drag_filter_items_here')}
-          </div>
-          <slot />
-        </FilterGroupActions>
+        <div class="empty-group-text">
+          {$_('drag_filter_items_here')}
+        </div>
       {/if}
     {/each}
   </div>
@@ -146,19 +138,25 @@
     flex-direction: column;
     overflow: hidden;
     position: relative;
+    flex-grow: 1;
 
     .connecting-line {
       position: absolute;
       top: 1rem;
       bottom: 1rem;
-      width: 1px;
-      background: black;
       left: 0.5em;
+      width: calc(1.4rem - 0.5em);
+      height: calc(100% - 2rem);
+      border-left: 1px solid black;
+      border-bottom: 1px solid black;
+      border-radius: 0 0 0 var(--border-radius-m);
     }
 
     .handle {
       cursor: grab;
       color: var(--color-fg-subtle-2);
+      margin-top: 4px;
+      background: #fff;
     }
 
     .group-header {
@@ -179,12 +177,20 @@
       .filter {
         display: flex;
         flex-direction: row;
-        gap: var(--sm4);
+        gap: var(--sm2);
         align-items: start;
         position: relative;
 
+        .horizontal-connector {
+          position: absolute;
+          left: 1.2em;
+          top: calc(0.5em + 6px);
+          width: 2.5rem;
+          height: 1px;
+          background: black;
+        }
+
         .prefix {
-          width: 1.5rem;
           background: #fff;
           font-size: var(--sm2);
           border-radius: var(--border-radius-m);

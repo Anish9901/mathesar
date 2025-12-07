@@ -83,7 +83,6 @@
   .filter-row {
     display: flex;
     gap: 0.5rem;
-    align-items: top;
   }
   .close {
     --button-color: var(--color-fg-subtle-2);
