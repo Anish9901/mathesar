@@ -2,8 +2,7 @@
   import { createEventDispatcher } from 'svelte';
 
   import type { ConstraintType } from '@mathesar/api/rpc/constraints';
-  import { dndDragHandle } from '@mathesar/components/drag-and-drop/dnd';
-  import { iconDeleteMinor, iconGrip } from '@mathesar/icons';
+  import { iconDeleteMinor } from '@mathesar/icons';
   import type AssociatedCellData from '@mathesar/stores/AssociatedCellData';
   import type { ReadableMapLike } from '@mathesar/typeUtils';
   import { Button, Icon } from '@mathesar-component-library';
@@ -42,9 +41,6 @@
 </script>
 
 <div class="filter-row">
-  <div class="handle" use:dndDragHandle>
-    <Icon {...iconGrip} />
-  </div>
   {#if filter.type === 'individual'}
     <FilterEntry
       {columns}
@@ -88,10 +84,6 @@
     display: flex;
     gap: 0.5rem;
     align-items: top;
-  }
-  .handle {
-    cursor: grab;
-    color: var(--color-fg-subtle-2);
   }
   .close {
     --button-color: var(--color-fg-subtle-2);

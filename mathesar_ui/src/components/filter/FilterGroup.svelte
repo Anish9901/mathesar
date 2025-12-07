@@ -4,12 +4,14 @@
 
   import type { ConstraintType } from '@mathesar/api/rpc/constraints';
   import {
+    dndDragHandle,
     dndDraggable,
     dndDroppable,
   } from '@mathesar/components/drag-and-drop/dnd';
+  import { iconGrip } from '@mathesar/icons';
   import type AssociatedCellData from '@mathesar/stores/AssociatedCellData';
   import type { ReadableMapLike } from '@mathesar/typeUtils';
-  import { Select } from '@mathesar-component-library';
+  import { Icon, Select } from '@mathesar-component-library';
 
   import Filter from './Filter.svelte';
   import FilterGroupActions from './FilterGroupActions.svelte';
@@ -53,26 +55,24 @@
   class:top-level={level === 0}
   class:empty={!args.length}
 >
-  {#if args.length > 0 && level > 0}
-    <FilterGroupActions
-      {level}
-      {columns}
-      {getColumnLabel}
-      {getColumnConstraintType}
-      bind:operator
-      bind:args
-      on:update
-    >
-      <span slot="text">
-        {#if operator === 'and'}
-          {$_('all_of_the_following_are_true')}
-        {:else}
-          {$_('any_of_the_following_are_true')}
-        {/if}
-      </span>
-      <slot />
-    </FilterGroupActions>
-  {/if}
+  <div class="connecting-line"></div>
+
+  <div class="group-header">
+    <Select
+      triggerAppearance="action"
+      options={filterOperators}
+      bind:value={operator}
+      on:change={() => dispatch('update')}
+    />
+    <span>
+      {#if operator === 'and'}
+        {$_('all')}
+      {:else}
+        {$_('any')}
+      {/if}
+    </span>
+    <slot />
+  </div>
 
   {#if !args.length}
     <slot name="empty" />
@@ -86,19 +86,13 @@
           getItem: () => innerFilter,
         }}
       >
-        <div class="prefix">
-          {#if index === 0}
-            {$_('where')}
-          {:else if index === 1 && args.length > 1}
-            <Select
-              triggerAppearance="action"
-              options={filterOperators}
-              bind:value={operator}
-              on:change={() => dispatch('update')}
-            />
-          {:else if args.length > 1}
+        {#if index > 0}
+          <div class="prefix">
             {operator}
-          {/if}
+          </div>
+        {/if}
+        <div class="handle" use:dndDragHandle>
+          <Icon {...iconGrip} />
         </div>
         <div class="content">
           <Filter
@@ -132,57 +126,70 @@
       {/if}
     {/each}
   </div>
-  {#if level === 0}
-    <FilterGroupActions
-      showTextInButtons
-      {level}
-      {columns}
-      {getColumnLabel}
-      {getColumnConstraintType}
-      bind:operator
-      bind:args
-      on:update
-    >
-      <slot />
-    </FilterGroupActions>
-  {/if}
+  <FilterGroupActions
+    showTextInButtons
+    {level}
+    {columns}
+    {getColumnLabel}
+    {getColumnConstraintType}
+    bind:operator
+    bind:args
+    on:update
+  />
 </div>
 
 <style lang="scss">
   .filter-group {
     border-radius: var(--border-radius-m);
-    gap: var(--sm3);
+    gap: 1rem;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    position: relative;
 
-    &:not(.top-level) {
-      border: 1px solid var(--color-border-raised-1);
-      background: var(--color-navigation-5);
-      padding: var(--sm1);
+    .connecting-line {
+      position: absolute;
+      top: 1rem;
+      bottom: 1rem;
+      width: 1px;
+      background: black;
+      left: 0.5em;
     }
 
-    &:not(.empty):not(.top-level) > .group {
-      padding-right: 1rem;
+    .handle {
+      cursor: grab;
+      color: var(--color-fg-subtle-2);
+    }
+
+    .group-header {
+      margin-left: 1.4rem;
+      display: flex;
+    }
+
+    &:not(.top-level) {
+      margin-bottom: var(--sm3);
+      margin-left: var(--sm3);
     }
 
     .group {
       display: flex;
       flex-direction: column;
-      gap: var(--sm2);
-      overflow: hidden;
+      gap: 1rem;
 
       .filter {
         display: flex;
         flex-direction: row;
         gap: var(--sm4);
         align-items: start;
-        overflow: hidden;
+        position: relative;
 
         .prefix {
-          width: 3.5rem;
-          --button-padding: var(--sm6);
-          --button-gap: var(--sm6);
+          width: 1.5rem;
+          background: #fff;
+          font-size: var(--sm2);
+          border-radius: var(--border-radius-m);
+          position: absolute;
+          transform: translateY(-100%);
         }
 
         .content {

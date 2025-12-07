@@ -69,7 +69,7 @@
 </script>
 
 <div class="filter-group-actions">
-  {#if level > 0}
+  {#if level > 0 && $$slots.text}
     <div class="text">
       <slot name="text" />
     </div>
@@ -111,6 +111,7 @@
 <style lang="scss">
   .filter-group-actions {
     display: flex;
+    margin-left: 1.4rem;
 
     .text {
       flex-grow: 1;
@@ -119,7 +120,6 @@
     .actions {
       display: flex;
       gap: var(--sm5);
-      margin-left: auto;
     }
   }
 </style>
