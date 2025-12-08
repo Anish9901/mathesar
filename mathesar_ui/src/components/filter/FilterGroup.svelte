@@ -72,7 +72,7 @@
         {#if slotName === 'condition'}
           <span class="operator-selection">
             <Select
-              triggerAppearance="action"
+              triggerAppearance="secondary"
               options={filterOperators}
               bind:value={$operator}
               on:change={() => dispatch('update')}
@@ -148,7 +148,6 @@
       {/each}
     </div>
     <FilterGroupActions
-      showTextInButtons={level === 0}
       {level}
       {columns}
       {getColumnLabel}
@@ -165,6 +164,10 @@
     flex-grow: 1;
     --connecting-line-border-style: solid;
     --connecting-line-color: var(--color-fg-subtle-2);
+    --prefix-handle-background: var(
+      --filter-group-row-background,
+      var(--color-bg-raised-3)
+    );
 
     &.or-connect {
       --connecting-line-border-style: dashed;
@@ -194,7 +197,7 @@
       cursor: grab;
       color: var(--color-fg-subtle-2);
       margin-top: 4px;
-      background: var(--color-bg-raised-3);
+      background: var(--prefix-handle-background);
     }
 
     .group-header {
@@ -215,8 +218,7 @@
     }
 
     &:not(.top-level) {
-      margin-bottom: var(--sm3);
-      margin-left: var(--sm3);
+      margin: var(--sm4) 0 var(--sm3) var(--sm3);
     }
 
     .group-container {
@@ -244,6 +246,14 @@
     margin-left: 1.4rem;
   }
 
+  :global(.filter-row.group) {
+    --filter-group-row-background: var(--color-bg-raised-1);
+
+    :global(.filter-row.group) {
+      --filter-group-row-background: var(--color-bg-base);
+    }
+  }
+
   .filter {
     display: flex;
     flex-direction: row;
@@ -262,7 +272,7 @@
     }
 
     .prefix {
-      background: var(--color-bg-raised-3);
+      background: var(--prefix-handle-background);
       font-size: var(--sm2);
       color: var(--color-fg-subtle-2);
       border-radius: var(--border-radius-m);

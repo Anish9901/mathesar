@@ -4,7 +4,6 @@
   import { _ } from 'svelte-i18n';
 
   import type { ConstraintType } from '@mathesar/api/rpc/constraints';
-  import type { Appearance } from '@mathesar/component-library/commonTypes';
   import ColumnName from '@mathesar/components/column/ColumnName.svelte';
   import { iconAddFilter, iconFilterGroup } from '@mathesar/icons';
   import type { ReadableMapLike } from '@mathesar/typeUtils';
@@ -39,11 +38,6 @@
 
   export let filterGroup: FilterGroup;
 
-  export let showTextInButtons = false;
-
-  let buttonAppearance: Appearance;
-  $: buttonAppearance = showTextInButtons ? 'secondary' : 'action';
-
   function addFilter(columnInfo: FilterEntryColumn) {
     const filter = makeIndividualFilter(
       columns,
@@ -77,8 +71,8 @@
   <div class="actions">
     <DropdownMenu
       icon={{ ...iconAddFilter, size: '0.9rem' }}
-      label={showTextInButtons ? $_('add_filter') : undefined}
-      triggerAppearance={buttonAppearance}
+      label={$_('add_filter')}
+      triggerAppearance="secondary"
     >
       {#each [...columns.values()] as columnInfo (columnInfo.id)}
         <ButtonMenuItem on:click={() => addFilter(columnInfo)}>
@@ -96,11 +90,9 @@
     </DropdownMenu>
 
     {#if level < 2}
-      <Button appearance={buttonAppearance} on:click={addFilterGroup}>
+      <Button appearance="secondary" on:click={addFilterGroup}>
         <Icon {...iconFilterGroup} />
-        {#if showTextInButtons}
-          {$_('add_filter_group')}
-        {/if}
+        {$_('add_filter_group')}
       </Button>
     {/if}
 

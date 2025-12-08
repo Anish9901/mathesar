@@ -36,7 +36,7 @@
   export let level = 0;
 </script>
 
-<div class="filter-row">
+<div class="filter-row" class:group={filter.type === 'group'}>
   {#if filter.type === 'individual'}
     <IndividualFilterComponent
       {columns}
@@ -75,6 +75,11 @@
   .filter-row {
     display: flex;
     gap: 0.5rem;
+
+    &.group {
+      background: var(--filter-group-row-background);
+      border-radius: var(--border-radius-m);
+    }
   }
   .remove {
     --button-color: var(--color-fg-subtle-2);
