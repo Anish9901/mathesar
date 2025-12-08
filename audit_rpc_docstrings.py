@@ -12,7 +12,7 @@ to ensure that:
 import ast
 import os
 from pathlib import Path
-from typing import Dict, List, Set, Optional, Tuple
+from typing import Dict, Set, Optional
 
 
 class RPCDocstringAuditor(ast.NodeVisitor):
@@ -215,8 +215,8 @@ def main():
     
     rpc_files.sort()
     
-    print(f"Auditing RPC Endpoint Docstrings")
-    print(f"=" * 80)
+    print("Auditing RPC Endpoint Docstrings")
+    print("=" * 80)
     print(f"Found {len(rpc_files)} RPC files to audit\n")
     
     total_issues = 0
@@ -227,7 +227,7 @@ def main():
         result = audit_rpc_file(str(filepath))
         
         if result.get('error'):
-            print(f"❌ ERROR in {filepath}: {result['error']}")
+            print(f"[ERROR] in {filepath}: {result['error']}")
             continue
         
         total_endpoints += result['endpoints_checked']
@@ -236,24 +236,24 @@ def main():
             files_with_issues += 1
             total_issues += len(result['issues'])
             
-            print(f"\n📄 {filepath}")
+            print(f"\nFile: {filepath}")
             print(f"   Endpoints checked: {result['endpoints_checked']}")
             print(f"   Issues found: {len(result['issues'])}")
             
             for issue in result['issues']:
-                severity_icon = "🔴" if issue['severity'] == 'high' else "🟡"
+                severity_icon = "(!)" if issue['severity'] == 'high' else "(~)"
                 print(f"\n   {severity_icon} [{issue['severity'].upper()}] {issue['type']}")
                 print(f"       Endpoint: {issue['endpoint']} (line {issue['lineno']})")
                 print(f"       Message: {issue['message']}")
     
     print("\n" + "=" * 80)
-    print(f"📊 Summary:")
+    print("Summary:")
     print(f"   Total endpoints checked: {total_endpoints}")
     print(f"   Files with issues: {files_with_issues}/{len(rpc_files)}")
     print(f"   Total issues: {total_issues}")
     
     if total_issues == 0:
-        print(f"\n✅ All RPC endpoint docstrings are properly documented!")
+        print("\n[SUCCESS] All RPC endpoint docstrings are properly documented!")
 
 
 if __name__ == '__main__':
