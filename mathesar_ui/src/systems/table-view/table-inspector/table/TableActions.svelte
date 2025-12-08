@@ -142,14 +142,16 @@
     </AnchorButton>
   {/if}
 
-  <Button
-    appearance="danger"
-    on:click={handleDeleteTable}
-    disabled={!$currentRoleOwns}
-  >
-    <Icon {...iconDeleteMajor} />
-    <span>{isView ? $_('delete_view') : $_('delete_table')}</span>
-  </Button>
+  {#if !isView}
+    <Button
+      appearance="danger"
+      on:click={handleDeleteTable}
+      disabled={!$currentRoleOwns}
+    >
+      <Icon {...iconDeleteMajor} />
+      <span>{isView ? $_('delete_view') : $_('delete_table')}</span>
+    </Button>
+  {/if}
 </div>
 
 <style lang="scss">

@@ -70,7 +70,7 @@ function sortTables(tables: Iterable<Table>): Table[] {
   const views = allTables.filter((table) => isTableView(table));
 
   const sort = (a: Table, b: Table) => a.name.localeCompare(b.name);
-  return [...regularTables.sort(sort), ...views.sort(sort)];
+  return [...views.sort(sort), ...regularTables.sort(sort)];
 }
 
 function setTablesStore(

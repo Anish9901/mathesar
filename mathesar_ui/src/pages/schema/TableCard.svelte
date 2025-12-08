@@ -124,13 +124,16 @@
       >
         {isView ? $_('explore_view') : $_('explore_table')}
       </LinkMenuItem>
-      <ButtonMenuItem
-        on:click={() => openEditTableModal(table)}
-        icon={iconEdit}
-        disabled={!$currentRoleOwns}
-      >
-        {isView ? $_('rename_view') : $_('rename_table')}
-      </ButtonMenuItem>
+      {#if !isView}
+        <!-- Hiding option till updating view description is supported on the backend -->
+        <ButtonMenuItem
+          on:click={() => openEditTableModal(table)}
+          icon={iconEdit}
+          disabled={!$currentRoleOwns}
+        >
+          {isView ? $_('rename_view') : $_('rename_table')}
+        </ButtonMenuItem>
+      {/if}
       <ButtonMenuItem
         on:click={() => openTablePermissionsModal(table)}
         icon={iconPermissions}
@@ -138,13 +141,16 @@
         {isView ? $_('view_permissions') : $_('table_permissions')}
       </ButtonMenuItem>
     {/if}
-    <ButtonMenuItem
-      on:click={handleDeleteTable}
-      danger
-      icon={iconDeleteMajor}
-      disabled={!$currentRoleOwns}
-    >
-      {isView ? $_('delete_view') : $_('delete_table')}
-    </ButtonMenuItem>
+    {#if !isView}
+      <!-- Hiding option till deleting view is supported on the backend -->
+      <ButtonMenuItem
+        on:click={handleDeleteTable}
+        danger
+        icon={iconDeleteMajor}
+        disabled={!$currentRoleOwns}
+      >
+        {isView ? $_('delete_view') : $_('delete_table')}
+      </ButtonMenuItem>
+    {/if}
   </svelte:fragment>
 </EntityListItem>

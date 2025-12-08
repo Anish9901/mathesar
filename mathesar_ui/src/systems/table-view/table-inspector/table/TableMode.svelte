@@ -38,7 +38,9 @@
   isDbLevelConfiguration
 >
   <TableName disabled={!$currentRoleOwns} />
-  <TableDescription disabled={!$currentRoleOwns} />
+  {#if !isView}
+    <TableDescription disabled={!$currentRoleOwns} />
+  {/if}
   <div>
     <Button
       appearance="secondary"

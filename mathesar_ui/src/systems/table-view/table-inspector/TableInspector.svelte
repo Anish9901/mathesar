@@ -15,20 +15,33 @@
   export let activeTabId: TableInspectorTabId | undefined;
   export let table: Table;
 
-  $: tabMap = {
+  $: isView = isTableView(table);
+  const tabMap = {
     table: {
-      label: isTableView(table) ? $_('view') : $_('table'),
+      label: $_('table'),
       component: TableMode,
     },
     column: { label: $_('column'), component: ColumnMode },
     record: { label: $_('record'), component: RecordMode },
     cell: { label: $_('cell'), component: CellMode },
   };
+  const viewMap = {
+    table: {
+      label: $_('view'),
+      component: TableMode,
+    },
+    column: tabMap.column,
+    cell: tabMap.cell,
+  };
+  $: inspectorMap = isView ? viewMap : tabMap;
 
-  type TableInspectorTabId = keyof typeof tabMap;
+  type TableInspectorTabId = keyof typeof inspectorMap;
 
-  $: tabs = Object.entries(tabMap).map(([id, tab]) => ({ id, ...tab }));
-  $: activeTab = defined(activeTabId, (id) => ({ id, ...tabMap[id] }));
+  $: tabs = Object.entries(inspectorMap).map(([id, tab]) => ({ id, ...tab }));
+  $: activeTab =
+    defined(activeTabId, (id) => ({ id, ...inspectorMap[id] })) ?? tabs[0];
+
+  $: table, ([activeTab] = tabs);
 
   function handleTabSelected(e: CustomEvent<{ tab: Tab }>) {
     activeTabId = e.detail.tab.id as TableInspectorTabId;
