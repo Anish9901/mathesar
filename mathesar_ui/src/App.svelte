@@ -44,6 +44,7 @@
 <style global lang="scss">
   @import 'component-library/styles.scss';
   @import 'packages/new-item-highlighter/highlightNewItems.scss';
+  @import 'components/drag-and-drop/dnd.css';
 
   $product-utility-colors: (
     'schema': $salmon,

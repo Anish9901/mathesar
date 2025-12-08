@@ -111,6 +111,7 @@ import {
   createDatabaseIcon,
   databaseLineIcon,
   explorationIcon,
+  filterGroupIcon,
   jsonIcon,
   mathesarNameIcon,
   modalRecordViewIcon,
@@ -214,6 +215,7 @@ export const iconExploration: IconProps = { data: explorationIcon };
 export const iconExternalHyperlink: IconProps = { data: faUpRightFromSquare };
 export const iconFeedback: IconProps = { data: faCommentAlt };
 export const iconFiltering: IconProps = { data: faFilter };
+export const iconFilterGroup: IconProps = { data: filterGroupIcon };
 export const iconForm: IconProps = { data: faClipboardList };
 export const iconGrouping: IconProps = { data: faListUl };
 export const iconInwardLink: IconProps = { data: faArrowRight };

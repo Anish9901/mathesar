@@ -14,7 +14,7 @@
   } from '@mathesar/utils/tables';
   import { Icon, Tooltip } from '@mathesar-component-library';
 
-  import FilterDropdown from './record-operations/filter/FilterDropdown.svelte';
+  import TableFilter from './record-operations/filter/TableFilter.svelte';
   import GroupDropdown from './record-operations/group/GroupDropdown.svelte';
   import JoinDropdown from './record-operations/join/JoinDropdown.svelte';
   import SortDropdown from './record-operations/sort/SortDropdown.svelte';
@@ -23,14 +23,12 @@
 
   $: ({ table, meta, isLoading, hasPrimaryKey } = $tabularData);
   $: ({ currentRolePrivileges } = table.currentAccess);
-  $: ({ filtering, sorting, grouping, sheetState } = meta);
+  $: ({ sorting, grouping, sheetState } = meta);
 
   $: isSelectable = $currentRolePrivileges.has('SELECT');
   $: isView = isTableView(table);
   $: tableIcon = getTableIcon(table);
   $: iconFillColor = getTableIconFillColor(table);
-
-  const canViewLinkedEntities = true;
 
   function toggleTableInspector() {
     tableInspectorVisible.update((v) => !v);
@@ -48,7 +46,7 @@
 >
   {#if isSelectable}
     <div class="quick-access">
-      <FilterDropdown {filtering} {canViewLinkedEntities} />
+      <TableFilter />
       <SortDropdown {sorting} />
       <GroupDropdown {grouping} />
       {#if !isView}
