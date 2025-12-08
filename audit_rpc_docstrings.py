@@ -10,7 +10,6 @@ to ensure that:
 """
 
 import ast
-import os
 from pathlib import Path
 from typing import Dict, Set, Optional
 
