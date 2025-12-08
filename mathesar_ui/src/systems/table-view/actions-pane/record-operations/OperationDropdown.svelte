@@ -45,16 +45,15 @@
     {#if applied}
       <slot />
     {:else}
-      <Menu
-        style="--Menu__min-width: 100%;"
-        modal={{ close, closeRoot: close }}
-      >
-        {#each [...$processedColumns.values()] as column (column.id)}
-          <ButtonMenuItem on:click={() => addColumnToOperation(column)}>
-            <ProcessedColumnName processedColumn={column} />
-          </ButtonMenuItem>
-        {/each}
-      </Menu>
+      <div class="columns">
+        <Menu modal={{ close, closeRoot: close }}>
+          {#each [...$processedColumns.values()] as column (column.id)}
+            <ButtonMenuItem on:click={() => addColumnToOperation(column)}>
+              <ProcessedColumnName processedColumn={column} />
+            </ButtonMenuItem>
+          {/each}
+        </Menu>
+      </div>
     {/if}
   </svelte:fragment>
 </Dropdown>
@@ -64,5 +63,9 @@
     display: inline-flex;
     align-items: center;
     gap: var(--sm5);
+  }
+  .columns {
+    min-width: 10rem;
+    --Menu__min-width: 100%;
   }
 </style>

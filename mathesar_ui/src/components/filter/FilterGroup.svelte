@@ -117,7 +117,7 @@
           }}
         >
           {#if innerFilter.type === 'group'}
-            <div class="horizontal-connector"></div>
+            <div class="horizontal-connecting-line"></div>
           {/if}
           {#if index > 0}
             <div class="prefix">
@@ -127,7 +127,7 @@
           <div class="handle" use:dndDragHandle>
             <Icon {...iconGrip} />
           </div>
-          <div class="content">
+          <div class="inner-filter">
             <Filter
               {columns}
               {getColumnLabel}
@@ -143,7 +143,7 @@
       {:else}
         {#if level > 0}
           <div class="empty-group-text">
-            {$_('drag_filter_items_here')}
+            {$_('add_or_drag_filter_items_here')}
           </div>
         {/if}
       {/each}
@@ -174,10 +174,10 @@
 
     .connecting-line {
       position: absolute;
-      top: 2rem;
-      bottom: 1rem;
+      top: 2em;
+      bottom: 1em;
       left: 0.5em;
-      width: calc(1.4rem - 0.5em);
+      width: 1em;
       border-left: 1px var(--connecting-line-border-style)
         var(--connecting-line-color);
       border-bottom: 1px var(--connecting-line-border-style)
@@ -190,7 +190,6 @@
       display: flex;
       flex-direction: column;
       position: relative;
-      overflow: hidden;
     }
 
     .handle {
@@ -226,18 +225,25 @@
       display: flex;
       flex-direction: column;
       gap: var(--lg1);
+      min-height: 1.6rem;
     }
 
     .empty-group-text {
-      width: 100%;
-      min-width: 20rem;
       margin-left: 1.4rem;
+      flex-grow: 1;
+      padding: 0 var(--sm5);
+      color: var(--color-fg-subtle-2);
     }
   }
-  :global([data-ghost]) {
-    .prefix {
+  :global([data-dnd-ghost]) {
+    .prefix,
+    :global(.remove) {
       visibility: hidden;
     }
+  }
+
+  :global([data-dnd-placeholder]) {
+    margin-left: 1.4rem;
   }
 
   .filter {
@@ -247,11 +253,11 @@
     align-items: start;
     position: relative;
 
-    .horizontal-connector {
+    .horizontal-connecting-line {
       position: absolute;
       left: 1.2em;
-      top: calc(0.5em + 6px);
-      width: 1rem;
+      top: 1em;
+      width: 1em;
       height: 1px;
       border-bottom: 1px var(--connecting-line-border-style)
         var(--connecting-line-color);
@@ -263,11 +269,12 @@
       color: var(--color-fg-subtle-2);
       border-radius: var(--border-radius-m);
       position: absolute;
-      transform: translateY(-100%);
+      top: 0;
+      left: 0.5rem;
+      transform: translate(-50%, -100%);
     }
 
-    .content {
-      overflow: hidden;
+    .inner-filter {
       flex-grow: 1;
     }
   }

@@ -67,7 +67,6 @@ import {
   faPlay,
   faPlug,
   faPlus,
-  faPlusSquare,
   faProjectDiagram,
   faQuestion,
   faRedo,

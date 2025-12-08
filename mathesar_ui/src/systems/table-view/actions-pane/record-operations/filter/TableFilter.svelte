@@ -138,6 +138,7 @@
 <style lang="scss">
   .filters {
     padding: 1rem;
+    min-width: min(41rem, calc(100svw - 1rem));
   }
   .header {
     font-weight: bolder;

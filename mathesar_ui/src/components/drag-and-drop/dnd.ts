@@ -1,7 +1,6 @@
 const DRAGGABLE_ITEM_ATTR = 'data-dnd-draggable';
 const DROPPABLE_ITEM_ATTR = 'data-dnd-droppable';
 const HANDLE_ATTR = 'data-dnd-drag-handle';
-const PLACEHOLDER_CLASS = 'dnd-placeholder';
 const DRAGGING_CLASS = 'dnd-dragging';
 const DRAG_OVER_CLASS = 'dnd-drag-over';
 
@@ -103,7 +102,7 @@ export function dnd<Item, ParentItem>(
       boxSizing: 'border-box',
     });
 
-    ghost.dataset.ghost = 'true';
+    ghost.dataset.dndGhost = 'true';
     document.body.appendChild(ghost);
     ghostElement = ghost;
     return ghost;
@@ -113,7 +112,6 @@ export function dnd<Item, ParentItem>(
     if (placeholderElement) return placeholderElement;
 
     const placeholder = document.createElement('div');
-    placeholder.className = PLACEHOLDER_CLASS;
     Object.assign(placeholder.style, {
       height: `${Math.max(0, height)}px`,
       border: '2px dashed var(--color-fg-subtle-2-muted)',
@@ -121,7 +119,7 @@ export function dnd<Item, ParentItem>(
       background: 'transparent',
       boxSizing: 'border-box',
     });
-
+    placeholder.dataset.dndPlaceholder = 'true';
     placeholderElement = placeholder;
     return placeholder;
   }
