@@ -90,7 +90,7 @@ export function dnd<Item, ParentItem>(
       height: `${Math.max(1, Math.min(20, h))}px`,
       transform: 'translate(0,0)',
       pointerEvents: 'none',
-      opacity: '0.9',
+      opacity: '0.7',
       zIndex: '999999',
       boxSizing: 'border-box',
     });
@@ -104,7 +104,7 @@ export function dnd<Item, ParentItem>(
     const ph = document.createElement('div');
     ph.className = PLACEHOLDER_CLASS;
     Object.assign(ph.style, {
-      height: `${Math.max(1, Math.min(30, height))}px`,
+      height: `${height - 4}px`,
       border: '2px dashed #999',
       borderRadius: '8px',
       background: 'transparent',
@@ -174,7 +174,7 @@ export function dnd<Item, ParentItem>(
     if (!dragEl || !fromParentEl) return;
 
     ghostEl = makeGhost(dragEl);
-    dragEl.style.visibility = 'hidden';
+    dragEl.style.display = 'none';
     dragEl.style.height = '1px';
 
     document.body.style.userSelect = 'none';
@@ -215,7 +215,7 @@ export function dnd<Item, ParentItem>(
     }
 
     if (dragEl) {
-      dragEl.style.visibility = '';
+      dragEl.style.display = '';
       dragEl.style.height = '';
     }
     cleanupVisuals();

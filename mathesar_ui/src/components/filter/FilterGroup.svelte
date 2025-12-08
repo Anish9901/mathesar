@@ -8,6 +8,7 @@
     dndDraggable,
     dndDroppable,
   } from '@mathesar/components/drag-and-drop/dnd';
+  import { RichText } from '@mathesar/components/rich-text';
   import { iconFilterGroup, iconGrip } from '@mathesar/icons';
   import type AssociatedCellData from '@mathesar/stores/AssociatedCellData';
   import type { ReadableMapLike } from '@mathesar/typeUtils';
@@ -54,24 +55,47 @@
   class="filter-group"
   class:top-level={level === 0}
   class:empty={!args.length}
+  class:single-filter={args.length === 1}
+  class:or-connect={operator === 'or'}
 >
   <div class="connecting-line"></div>
-  <div class="group-icon">
-    <Icon {...iconFilterGroup} />
-  </div>
   <div class="filter-group-content">
     <div class="group-header">
-      <span>{$_('match')}</span>
-      <div class="operator-selection">
-        <Select
-          triggerAppearance="action"
-          options={filterOperators}
-          bind:value={operator}
-          on:change={() => dispatch('update')}
-        >
-          <span let:option> All of the following </span>
-        </Select>
+      <div class="group-icon">
+        <Icon {...iconFilterGroup} />
       </div>
+      <RichText
+        text={operator === 'or'
+          ? $_('where_condition_is_true')
+          : $_('where_conditions_are_true')}
+        let:slotName
+      >
+        {#if slotName === 'condition'}
+          <span class="operator-selection">
+            <Select
+              triggerAppearance="action"
+              options={filterOperators}
+              bind:value={operator}
+              on:change={() => dispatch('update')}
+              let:option
+            >
+              <span>
+                <RichText
+                  text={option === 'or'
+                    ? $_('any_of_the_following')
+                    : $_('all_of_the_following')}
+                  let:slotName={innerSlotName}
+                  let:translatedArg
+                >
+                  {#if innerSlotName === 'bold'}
+                    <strong>{translatedArg}</strong>
+                  {/if}
+                </RichText>
+              </span>
+            </Select>
+          </span>
+        {/if}
+      </RichText>
       <div class="clear-group">
         <slot />
       </div>
@@ -125,7 +149,7 @@
       {/each}
     </div>
     <FilterGroupActions
-      showTextInButtons
+      showTextInButtons={level === 0}
       {level}
       {columns}
       {getColumnLabel}
@@ -141,26 +165,28 @@
   .filter-group {
     position: relative;
     flex-grow: 1;
+    --connecting-line-border-style: solid;
+    --connecting-line-color: var(--color-fg-subtle-2);
+
+    &.or-connect {
+      --connecting-line-border-style: dashed;
+    }
 
     .connecting-line {
       position: absolute;
-      top: 1.8rem;
+      top: 2rem;
       bottom: 1rem;
       left: 0.5em;
       width: calc(1.4rem - 0.5em);
-      border-left: 1px solid var(--color-fg-subtle-2);
-      border-bottom: 1px solid var(--color-fg-subtle-2);
+      border-left: 1px var(--connecting-line-border-style)
+        var(--connecting-line-color);
+      border-bottom: 1px var(--connecting-line-border-style)
+        var(--connecting-line-color);
       border-radius: 0 0 0 var(--border-radius-m);
     }
 
-    .group-icon {
-      position: absolute;
-      left: 0;
-      top: 2px;
-    }
-
     .filter-group-content {
-      gap: 1rem;
+      gap: var(--lg1);
       display: flex;
       flex-direction: column;
       position: relative;
@@ -179,6 +205,12 @@
       display: flex;
       align-items: center;
       gap: var(--sm5);
+      position: relative;
+
+      .group-icon {
+        position: absolute;
+        left: -1.4rem;
+      }
 
       .clear-group {
         margin-left: auto;
@@ -193,37 +225,7 @@
     .group-container {
       display: flex;
       flex-direction: column;
-      gap: 1rem;
-
-      .filter {
-        display: flex;
-        flex-direction: row;
-        gap: var(--sm2);
-        align-items: start;
-        position: relative;
-
-        .horizontal-connector {
-          position: absolute;
-          left: 1.2em;
-          top: calc(0.5em + 6px);
-          width: 1rem;
-          height: 1px;
-          background: var(--color-fg-subtle-2);
-        }
-
-        .prefix {
-          background: var(--color-bg-raised-3);
-          font-size: var(--sm2);
-          border-radius: var(--border-radius-m);
-          position: absolute;
-          transform: translateY(-100%);
-        }
-
-        .content {
-          overflow: hidden;
-          flex-grow: 1;
-        }
-      }
+      gap: var(--lg1);
     }
 
     .empty-group-text {
@@ -235,6 +237,38 @@
   :global([data-ghost]) {
     .prefix {
       visibility: hidden;
+    }
+  }
+
+  .filter {
+    display: flex;
+    flex-direction: row;
+    gap: var(--sm2);
+    align-items: start;
+    position: relative;
+
+    .horizontal-connector {
+      position: absolute;
+      left: 1.2em;
+      top: calc(0.5em + 6px);
+      width: 1rem;
+      height: 1px;
+      border-bottom: 1px var(--connecting-line-border-style)
+        var(--connecting-line-color);
+    }
+
+    .prefix {
+      background: var(--color-bg-raised-3);
+      font-size: var(--sm2);
+      color: var(--color-fg-subtle-2);
+      border-radius: var(--border-radius-m);
+      position: absolute;
+      transform: translateY(-100%);
+    }
+
+    .content {
+      overflow: hidden;
+      flex-grow: 1;
     }
   }
 </style>
