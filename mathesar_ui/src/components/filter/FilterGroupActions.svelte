@@ -5,7 +5,7 @@
   import type { ConstraintType } from '@mathesar/api/rpc/constraints';
   import type { Appearance } from '@mathesar/component-library/commonTypes';
   import ColumnName from '@mathesar/components/column/ColumnName.svelte';
-  import { iconAddGroup, iconAddNew } from '@mathesar/icons';
+  import { iconAddFilter, iconFilterGroup } from '@mathesar/icons';
   import type { ReadableMapLike } from '@mathesar/typeUtils';
   import {
     Button,
@@ -76,7 +76,7 @@
   {/if}
   <div class="actions">
     <DropdownMenu
-      icon={iconAddNew}
+      icon={{ ...iconAddFilter, size: '0.9rem' }}
       label={showTextInButtons ? $_('add_filter') : undefined}
       triggerAppearance={buttonAppearance}
     >
@@ -97,7 +97,7 @@
 
     {#if level < 2}
       <Button appearance={buttonAppearance} on:click={addFilterGroup}>
-        <Icon {...iconAddGroup} />
+        <Icon {...iconFilterGroup} />
         {#if showTextInButtons}
           {$_('add_filter_group')}
         {/if}

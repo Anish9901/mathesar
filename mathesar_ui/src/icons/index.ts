@@ -112,6 +112,7 @@ import {
   createDatabaseIcon,
   databaseLineIcon,
   explorationIcon,
+  filterGroupIcon,
   jsonIcon,
   mathesarNameIcon,
   modalRecordViewIcon,
@@ -138,7 +139,6 @@ import {
 // (These names should all be verbs)
 
 export const iconAddFilter: IconProps = { data: faFilter };
-export const iconAddGroup: IconProps = { data: faPlusSquare };
 export const iconAddNew: IconProps = { data: faPlus };
 export const iconAddUser: IconProps = { data: faUserPlus };
 export const iconChangeAToB = { data: faArrowRight };
@@ -216,6 +216,7 @@ export const iconExploration: IconProps = { data: explorationIcon };
 export const iconExternalHyperlink: IconProps = { data: faUpRightFromSquare };
 export const iconFeedback: IconProps = { data: faCommentAlt };
 export const iconFiltering: IconProps = { data: faFilter };
+export const iconFilterGroup: IconProps = { data: filterGroupIcon };
 export const iconForm: IconProps = { data: faClipboardList };
 export const iconGrouping: IconProps = { data: faListUl };
 export const iconInwardLink: IconProps = { data: faArrowRight };

@@ -52,7 +52,7 @@
       bind:value={filter.value}
       on:update
     >
-      <div class="close">
+      <div class="remove">
         <Button appearance="plain" on:click={() => dispatch('remove')}>
           <Icon {...iconDeleteMinor} />
         </Button>
@@ -70,7 +70,7 @@
       bind:args={filter.args}
       on:update
     >
-      <div class="close">
+      <div class="remove">
         <Button appearance="plain" on:click={() => dispatch('remove')}>
           <Icon {...iconDeleteMinor} />
         </Button>
@@ -84,7 +84,7 @@
     display: flex;
     gap: 0.5rem;
   }
-  .close {
+  .remove {
     --button-color: var(--color-fg-subtle-2);
     --button-padding: var(--sm6);
   }

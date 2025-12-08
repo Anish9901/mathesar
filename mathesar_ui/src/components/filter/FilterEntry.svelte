@@ -258,6 +258,7 @@
 
     &.horizontal {
       align-items: center;
+      flex-grow: 1;
     }
 
     @media (max-width: 600px) {
