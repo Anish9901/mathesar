@@ -51,7 +51,9 @@
       <FilterDropdown {filtering} {canViewLinkedEntities} />
       <SortDropdown {sorting} />
       <GroupDropdown {grouping} />
-      <JoinDropdown />
+      {#if !isView}
+        <JoinDropdown />
+      {/if}
     </div>
   {/if}
 
