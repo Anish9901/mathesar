@@ -59,6 +59,7 @@
     selection,
     recordsData,
   } = $tabularData);
+  $: $tabularData, (tableInspectorTab = 'table');
   $: clipboardHandler = new SheetClipboardHandler({
     copyingContext: {
       getRows: () =>

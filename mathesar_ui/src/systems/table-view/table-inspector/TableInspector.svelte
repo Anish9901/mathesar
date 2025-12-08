@@ -35,13 +35,10 @@
   };
   $: inspectorMap = isView ? viewMap : tabMap;
 
-  type TableInspectorTabId = keyof typeof inspectorMap;
+  type TableInspectorTabId = 'table' | 'column' | 'record' | 'cell';
 
   $: tabs = Object.entries(inspectorMap).map(([id, tab]) => ({ id, ...tab }));
-  $: activeTab =
-    defined(activeTabId, (id) => ({ id, ...inspectorMap[id] })) ?? tabs[0];
-
-  $: table, ([activeTab] = tabs);
+  $: activeTab = tabs.find((entry) => entry.id === activeTabId);
 
   function handleTabSelected(e: CustomEvent<{ tab: Tab }>) {
     activeTabId = e.detail.tab.id as TableInspectorTabId;
