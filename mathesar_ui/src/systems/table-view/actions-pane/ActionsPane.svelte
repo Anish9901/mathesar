@@ -18,7 +18,7 @@
 
   $: ({ table, meta, isLoading, hasPrimaryKey } = $tabularData);
   $: ({ currentRolePrivileges } = table.currentAccess);
-  $: ({ filtering, sorting, grouping, sheetState } = meta);
+  $: ({ sorting, grouping, sheetState } = meta);
 
   $: isSelectable = $currentRolePrivileges.has('SELECT');
 

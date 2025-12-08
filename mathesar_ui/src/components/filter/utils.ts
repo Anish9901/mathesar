@@ -1,4 +1,7 @@
+/* eslint-disable max-classes-per-file */
+
 import { find, first, zip } from 'iter-tools';
+import { type Writable, get, writable } from 'svelte/store';
 
 import type { ConstraintType } from '@mathesar/api/rpc/constraints';
 import type { CellColumnLike } from '@mathesar/components/cell-fabric/types';
@@ -21,75 +24,99 @@ export interface FilterEntryColumn {
   simpleInputComponentAndProps: ComponentAndProps;
 }
 
-export interface IndividualFilter {
+export interface RawIndividualFilter {
   type: 'individual';
   columnId: string;
   conditionId: FilterId;
   value?: unknown;
 }
 
+export class IndividualFilter {
+  type = 'individual' as const;
+
+  columnId: Writable<string>;
+
+  conditionId: Writable<FilterId>;
+
+  value: Writable<unknown | undefined>;
+
+  constructor(props: RawIndividualFilter) {
+    this.columnId = writable(props.columnId);
+    this.conditionId = writable(props.conditionId);
+    this.value = writable(props.value);
+  }
+
+  toRaw(): RawIndividualFilter {
+    return {
+      type: 'individual',
+      columnId: get(this.columnId),
+      conditionId: get(this.conditionId),
+      value: get(this.value),
+    };
+  }
+}
+
+export interface RawFilterGroup {
+  type: 'group';
+  operator: 'and' | 'or';
+  args: (RawIndividualFilter | RawFilterGroup)[];
+}
+
 export class FilterGroup {
   type = 'group' as const;
 
-  operator: 'and' | 'or';
+  operator: Writable<'and' | 'or'>;
 
-  args: (IndividualFilter | FilterGroup)[];
+  args: Writable<(IndividualFilter | FilterGroup)[]>;
 
-  constructor(props?: {
-    operator: 'and' | 'or';
-    args: (IndividualFilter | FilterGroup)[];
-  }) {
-    this.operator = props?.operator ?? 'and';
-    this.args = props?.args ?? [];
-  }
-
-  addArgument(arg: IndividualFilter | FilterGroup, destinationIndex: number) {
-    this.args.splice(destinationIndex, 0, arg);
-    this.args = [...this.args];
-  }
-
-  removeArgument(arg: IndividualFilter | FilterGroup) {
-    this.args = this.args.filter((a) => a !== arg);
-  }
-
-  withoutColumns(columnIds: string[]): FilterGroup {
-    return new FilterGroup({
-      operator: this.operator,
-      args: this.args.flatMap<FilterGroup | IndividualFilter>((e) => {
-        if ('operator' in e) {
-          return e.withoutColumns(columnIds);
+  constructor(props?: RawFilterGroup) {
+    this.operator = writable(props?.operator ?? 'and');
+    this.args = writable(
+      props?.args.map((arg) => {
+        if (arg.type === 'group') {
+          return new FilterGroup(arg);
         }
-        return columnIds.includes(e.columnId) ? [] : [e];
-      }),
+        return new IndividualFilter(arg);
+      }) ?? [],
+    );
+  }
+
+  addArgument(arg: IndividualFilter | FilterGroup, destinationIndex?: number) {
+    this.args.update((args) => {
+      const insertionIndex = destinationIndex ?? args.length;
+      args.splice(insertionIndex, 0, arg);
+      return [...args];
     });
   }
 
-  equals(filterGroup: FilterGroup) {
-    if (this === filterGroup) {
-      return true;
-    }
-    if (this.operator !== filterGroup.operator) {
+  removeArgument(arg: IndividualFilter | FilterGroup) {
+    this.args.update((args) => args.filter((a) => a !== arg));
+  }
+
+  equalsRaw(rawFilterGroup: RawFilterGroup) {
+    if (get(this.operator) !== rawFilterGroup.operator) {
       return false;
     }
-    if (this.args.length !== filterGroup.args.length) {
+    const thisArgs = get(this.args);
+    if (thisArgs.length !== rawFilterGroup.args.length) {
       return false;
     }
-    for (const [thisArg, thatArg] of zip(this.args, filterGroup.args)) {
+    for (const [thisArg, thatArg] of zip(thisArgs, rawFilterGroup.args)) {
       if (thisArg.type !== thatArg.type) {
         return false;
       }
       if (
         thisArg.type === 'group' &&
         thatArg.type === 'group' &&
-        !thisArg.equals(thatArg)
+        !thisArg.equalsRaw(thatArg)
       ) {
         return false;
       }
       if (thisArg.type === 'individual' && thatArg.type === 'individual') {
         if (
-          thisArg.columnId !== thatArg.columnId ||
-          thisArg.conditionId !== thatArg.conditionId ||
-          thisArg.value !== thatArg.value
+          get(thisArg.columnId) !== thatArg.columnId ||
+          get(thisArg.conditionId) !== thatArg.conditionId ||
+          get(thisArg.value) !== thatArg.value
         ) {
           return false;
         }
@@ -98,20 +125,12 @@ export class FilterGroup {
     return true;
   }
 
-  clone(): FilterGroup {
-    return new FilterGroup({
-      operator: this.operator,
-      args: this.args.map((a) =>
-        'operator' in a
-          ? a.clone()
-          : {
-              type: a.type,
-              columnId: a.columnId,
-              conditionId: a.conditionId,
-              value: a.value,
-            },
-      ),
-    });
+  toRaw(): RawFilterGroup {
+    return {
+      type: 'group',
+      operator: get(this.operator),
+      args: get(this.args).map((a) => a.toRaw()),
+    };
   }
 }
 
@@ -157,10 +176,23 @@ export function makeIndividualFilter(
     return undefined;
   }
 
-  return {
+  return new IndividualFilter({
     type: 'individual',
     columnId: filterColumn.id,
     conditionId: firstCondition.id,
     value: undefined,
-  };
+  });
 }
+
+export function calcNumberOfIndividualFilters(
+  rawFilterGroup: RawFilterGroup,
+): number {
+  return rawFilterGroup.args.reduce((count, entry) => {
+    if (entry.type === 'group') {
+      return count + calcNumberOfIndividualFilters(entry);
+    }
+    return count + 1;
+  }, 0);
+}
+
+/* eslint-enable max-classes-per-file */

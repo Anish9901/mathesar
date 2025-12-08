@@ -13,6 +13,7 @@
     FILTER_INPUT_CLASS,
     FilterGroup,
     type IndividualFilter,
+    calcNumberOfIndividualFilters,
     makeIndividualFilter,
   } from '@mathesar/components/filter/utils';
   import { iconFiltering } from '@mathesar/icons';
@@ -39,12 +40,14 @@
 
   let filterGroup = new FilterGroup();
   function onExternalFilteringChange(_extFiltering: Filtering) {
-    if (!_extFiltering.root.equals(filterGroup)) {
-      filterGroup = _extFiltering.root.clone();
+    if (!filterGroup.equalsRaw(_extFiltering.root)) {
+      filterGroup = new FilterGroup(_extFiltering.root);
     }
   }
   $: onExternalFilteringChange($filtering);
-  $: addedFilterCount = $filtering.addedFilterCount;
+  $: individualFilterCount = calcNumberOfIndividualFilters($filtering.root);
+  $: filterGroupArgs = filterGroup.args;
+  $: displayFilterList = $filterGroupArgs.length > 0;
 
   function activateLastFilterInput() {
     const lastFilterInput = takeLast(
@@ -61,9 +64,10 @@
     }
   }
 
-  function setFilteringIfSqlExprHasChanged() {
-    const newFiltering = new Filtering(filterGroup.clone());
-    addedFilterCount = newFiltering.addedFilterCount;
+  function updateVarsAndExternalFiltering() {
+    const rawFilterGroup = filterGroup.toRaw();
+    individualFilterCount = calcNumberOfIndividualFilters(rawFilterGroup);
+    const newFiltering = new Filtering(rawFilterGroup);
     if (JSON.stringify(newFiltering.sqlExpr) !== filteringSqlExpr) {
       filtering.set(newFiltering);
     }
@@ -72,8 +76,7 @@
   function onChange(e: DndChangeDetail<IndividualFilter, FilterGroup>) {
     e.fromParent.removeArgument(e.item);
     e.toParent.addArgument(e.item, e.toIndex);
-    filterGroup = filterGroup.clone();
-    setFilteringIfSqlExprHasChanged();
+    updateVarsAndExternalFiltering();
   }
 
   function addFilter(columnId: string) {
@@ -83,9 +86,8 @@
       columnId,
     );
     if (filter) {
-      filterGroup.addArgument(filter, filterGroup.args.length);
-      filterGroup = filterGroup.clone();
-      setFilteringIfSqlExprHasChanged();
+      filterGroup.addArgument(filter);
+      updateVarsAndExternalFiltering();
     }
   }
 
@@ -112,9 +114,9 @@
   bind:isOpen
   label={$_('filter')}
   icon={{ ...iconFiltering, size: '0.8em' }}
-  badgeCount={addedFilterCount}
+  badgeCount={individualFilterCount}
   {addColumnToOperation}
-  applied={addedFilterCount > 0}
+  applied={displayFilterList}
   {...$$restProps}
 >
   <div class="filters" bind:this={content} use:dnd={{ onChange }}>
@@ -126,10 +128,8 @@
         getColumnConstraintType={(c) =>
           getColumnConstraintTypeByColumnId(c.id, $processedColumns)}
         recordSummaries={recordsData.linkedRecordSummaries}
-        getFilterGroup={() => filterGroup}
-        bind:operator={filterGroup.operator}
-        bind:args={filterGroup.args}
-        on:update={setFilteringIfSqlExprHasChanged}
+        {filterGroup}
+        on:update={updateVarsAndExternalFiltering}
       />
     </div>
   </div>

@@ -9,9 +9,9 @@ import type {
   SqlLiteral,
 } from '@mathesar/api/rpc/records';
 import { isDefinedNonNullable } from '@mathesar/component-library';
-import {
-  FilterGroup,
-  type IndividualFilter,
+import type {
+  RawFilterGroup,
+  RawIndividualFilter,
 } from '@mathesar/components/filter/utils';
 
 import type { FilterId } from '../abstract-types/types';
@@ -41,7 +41,7 @@ import type { FilterId } from '../abstract-types/types';
  * for this compatibility layer.
  */
 function individualFilterToSqlExpr(
-  individualFilter: IndividualFilter,
+  individualFilter: RawIndividualFilter,
 ): SqlExpr {
   const column: SqlColumn = {
     type: 'attnum',
@@ -108,19 +108,19 @@ type TerseIndividualFilter = ['i', string, FilterId, unknown];
 
 type TerseFilterGroup = [
   'g',
-  FilterGroup['operator'],
+  RawFilterGroup['operator'],
   (TerseIndividualFilter | TerseFilterGroup)[],
 ];
 
 export type TerseFiltering = TerseFilterGroup;
 
 function makeTerseIndividualFilter(
-  entry: IndividualFilter,
+  entry: RawIndividualFilter,
 ): TerseIndividualFilter {
   return ['i', entry.columnId, entry.conditionId, entry.value];
 }
 
-function makeTerseFilterGroup(filterGroup: FilterGroup): TerseFilterGroup {
+function makeTerseFilterGroup(filterGroup: RawFilterGroup): TerseFilterGroup {
   return [
     'g',
     filterGroup.operator,
@@ -132,9 +132,9 @@ function makeTerseFilterGroup(filterGroup: FilterGroup): TerseFilterGroup {
   ];
 }
 
-function makeIndividualFilter(
+function makeRawIndividualFilter(
   terseIndividualFilter: TerseIndividualFilter,
-): IndividualFilter {
+): RawIndividualFilter {
   return {
     type: 'individual',
     columnId: terseIndividualFilter[1],
@@ -143,13 +143,16 @@ function makeIndividualFilter(
   };
 }
 
-function makeFilterGroup(terseFilterGroup: TerseFilterGroup): FilterGroup {
-  return new FilterGroup({
+function makeRawFilterGroup(
+  terseFilterGroup: TerseFilterGroup,
+): RawFilterGroup {
+  return {
+    type: 'group',
     operator: terseFilterGroup[1],
     args: terseFilterGroup[2].map((e) =>
-      e[0] === 'i' ? makeIndividualFilter(e) : makeFilterGroup(e),
+      e[0] === 'i' ? makeRawIndividualFilter(e) : makeRawFilterGroup(e),
     ),
-  });
+  };
 }
 
 function containsLiteral(expr: SqlExpr): boolean {
@@ -200,12 +203,12 @@ function getCountOfColumnInExpr(expr: SqlExpr, columnId: string): number {
 }
 
 /** This method disregards any invalid values */
-function filterGroupToSqlExpr(group: FilterGroup): SqlExpr | undefined {
+function filterGroupToSqlExpr(group: RawFilterGroup): SqlExpr | undefined {
   if (group.args.length === 0) {
     return undefined;
   }
 
-  function toSQLExpr(entry: FilterGroup | IndividualFilter) {
+  function toSQLExpr(entry: RawFilterGroup | RawIndividualFilter) {
     if ('operator' in entry) {
       return filterGroupToSqlExpr(entry);
     }
@@ -238,32 +241,35 @@ function filterGroupToSqlExpr(group: FilterGroup): SqlExpr | undefined {
   return expr;
 }
 
-function calculateAddedFilterCount<ID>(group: FilterGroup): number {
-  return group.args.reduce((count, entry) => {
-    if (entry.type === 'group') {
-      return count + calculateAddedFilterCount(entry);
-    }
-    return count + 1;
-  }, 0);
+function rawFilterGroupWithoutColumns(
+  group: RawFilterGroup,
+  columnIds: string[],
+): RawFilterGroup {
+  return {
+    type: 'group',
+    operator: group.operator,
+    args: group.args.flatMap<RawFilterGroup | RawIndividualFilter>((e) => {
+      if ('operator' in e) {
+        return rawFilterGroupWithoutColumns(e, columnIds);
+      }
+      return columnIds.includes(e.columnId) ? [] : [e];
+    }),
+  };
 }
 
 export class Filtering {
-  readonly root: FilterGroup;
+  readonly root: RawFilterGroup;
 
   readonly sqlExpr: SqlExpr | undefined;
 
-  readonly addedFilterCount: number;
-
   readonly appliedFilterCount: number;
 
-  constructor(rootGroup?: FilterGroup) {
-    this.root =
-      rootGroup ??
-      new FilterGroup({
-        operator: 'and',
-        args: [],
-      });
-    this.addedFilterCount = calculateAddedFilterCount(this.root);
+  constructor(rootGroup?: RawFilterGroup) {
+    this.root = rootGroup ?? {
+      type: 'group',
+      operator: 'and',
+      args: [],
+    };
     this.sqlExpr = filterGroupToSqlExpr(this.root);
     this.appliedFilterCount = this.sqlExpr
       ? getCountOfNonConjunctionalExpr(this.sqlExpr)
@@ -271,11 +277,11 @@ export class Filtering {
   }
 
   withoutColumns(columnIds: string[]): Filtering {
-    return new Filtering(this.root.withoutColumns(columnIds));
+    return new Filtering(rawFilterGroupWithoutColumns(this.root, columnIds));
   }
 
   withContextualFilters(contextualFilters: Map<string, unknown>): Filtering {
-    const contextualFilterEntries: IndividualFilter[] = [
+    const contextualFilterEntries: RawIndividualFilter[] = [
       ...contextualFilters,
     ].map(([columnId, value]) => ({
       type: 'individual',
@@ -284,12 +290,11 @@ export class Filtering {
       value,
     }));
 
-    return new Filtering(
-      new FilterGroup({
-        operator: 'and',
-        args: [this.root, ...contextualFilterEntries],
-      }),
-    );
+    return new Filtering({
+      type: 'group',
+      operator: 'and',
+      args: [this.root, ...contextualFilterEntries],
+    });
   }
 
   terse(): TerseFiltering {
@@ -297,7 +302,7 @@ export class Filtering {
   }
 
   static fromTerse(terse: TerseFiltering): Filtering {
-    return new Filtering(makeFilterGroup(terse));
+    return new Filtering(makeRawFilterGroup(terse));
   }
 
   appliedFilterCountForColumn(columnId: string): number {

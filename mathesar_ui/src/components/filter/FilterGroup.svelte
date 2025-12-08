@@ -39,14 +39,13 @@
   ) => ConstraintType[] | undefined = () => undefined;
 
   export let level = 0;
-  export let getFilterGroup: () => FilterGroup;
-  export let operator: FilterGroup['operator'];
-  export let args: FilterGroup['args'];
+  export let filterGroup: FilterGroup;
+  $: ({ operator, args } = filterGroup);
 
   export let recordSummaries: AssociatedCellData<string>;
 
   function remove(filter: IndividualFilter | FilterGroup) {
-    args = args.filter((f) => f !== filter);
+    filterGroup.removeArgument(filter);
     dispatch('update');
   }
 </script>
@@ -54,9 +53,9 @@
 <div
   class="filter-group"
   class:top-level={level === 0}
-  class:empty={!args.length}
-  class:single-filter={args.length === 1}
-  class:or-connect={operator === 'or'}
+  class:empty={!$args.length}
+  class:single-filter={$args.length === 1}
+  class:or-connect={$operator === 'or'}
 >
   <div class="connecting-line"></div>
   <div class="filter-group-content">
@@ -65,7 +64,7 @@
         <Icon {...iconFilterGroup} />
       </div>
       <RichText
-        text={operator === 'or'
+        text={$operator === 'or'
           ? $_('where_condition_is_true')
           : $_('where_conditions_are_true')}
         let:slotName
@@ -75,7 +74,7 @@
             <Select
               triggerAppearance="action"
               options={filterOperators}
-              bind:value={operator}
+              bind:value={$operator}
               on:change={() => dispatch('update')}
               let:option
             >
@@ -101,15 +100,15 @@
       </div>
     </div>
 
-    {#if !args.length}
+    {#if !$args.length}
       <slot name="empty" />
     {/if}
 
     <div
       class="group-container"
-      use:dndDroppable={{ getItem: () => getFilterGroup() }}
+      use:dndDroppable={{ getItem: () => filterGroup }}
     >
-      {#each args as innerFilter, index (innerFilter)}
+      {#each $args as innerFilter, index (innerFilter)}
         <div
           class="filter"
           use:dndDraggable={{
@@ -121,7 +120,7 @@
           {/if}
           {#if index > 0}
             <div class="prefix">
-              {operator}
+              {$operator}
             </div>
           {/if}
           <div class="handle" use:dndDragHandle>
@@ -134,7 +133,7 @@
               {getColumnConstraintType}
               {recordSummaries}
               level={level + 1}
-              bind:filter={innerFilter}
+              filter={innerFilter}
               on:update
               on:remove={() => remove(innerFilter)}
             />
@@ -154,8 +153,7 @@
       {columns}
       {getColumnLabel}
       {getColumnConstraintType}
-      bind:operator
-      bind:args
+      {filterGroup}
       on:update
     />
   </div>

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
+  import { get } from 'svelte/store';
   import { _ } from 'svelte-i18n';
 
   import type { ConstraintType } from '@mathesar/api/rpc/constraints';
@@ -36,8 +37,7 @@
     column: FilterEntryColumn,
   ) => ConstraintType[] | undefined;
 
-  export let operator: FilterGroup['operator'];
-  export let args: FilterGroup['args'];
+  export let filterGroup: FilterGroup;
 
   export let showTextInButtons = false;
 
@@ -51,19 +51,19 @@
       columnInfo.id,
     );
     if (filter) {
-      args = [...args, filter];
+      filterGroup.addArgument(filter);
       dispatch('update');
     }
   }
 
   function addFilterGroup() {
-    args = [
-      ...args,
+    filterGroup.addArgument(
       new FilterGroup({
-        operator: operator === 'and' ? 'or' : 'and',
+        type: 'group',
+        operator: get(filterGroup.operator) === 'and' ? 'or' : 'and',
         args: [],
       }),
-    ];
+    );
     dispatch('update');
   }
 </script>
