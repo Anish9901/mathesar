@@ -44,6 +44,7 @@
 <style global lang="scss">
   @import 'component-library/styles.scss';
   @import 'packages/new-item-highlighter/highlightNewItems.scss';
+  @import 'components/drag-and-drop/dnd.css';
 
   $product-utility-colors: (
     'schema': $salmon,
@@ -280,12 +281,5 @@
     justify-content: center;
     display: flex;
     background-color: var(--color-bg-base);
-  }
-
-  [data-drag-handle] {
-    touch-action: none;
-    user-select: none;
-    -webkit-user-drag: none;
-    cursor: grab;
   }
 </style>

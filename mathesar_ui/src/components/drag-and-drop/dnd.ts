@@ -2,6 +2,11 @@ const DRAGGABLE_ITEM_ATTR = 'data-dnd-draggable';
 const DROPPABLE_ITEM_ATTR = 'data-dnd-droppable';
 const HANDLE_ATTR = 'data-dnd-drag-handle';
 const PLACEHOLDER_CLASS = 'dnd-placeholder';
+const DRAGGING_CLASS = 'dnd-dragging';
+const DRAG_OVER_CLASS = 'dnd-drag-over';
+
+const DRAG_THRESHOLD = 4;
+const GHOST_OPACITY_DRAGGING = '0.7';
 
 export type DndChangeDetail<Item, ParentItem> = {
   item: Item;
@@ -31,29 +36,29 @@ function isDraggable<Item>(el: Element | null): el is DndElement<Item> {
   return !!el && el.hasAttribute(DRAGGABLE_ITEM_ATTR);
 }
 
-function ancestor(
+function findAncestor(
   el: Element | null,
-  pred: (e: Element) => boolean,
+  predicate: (e: Element) => boolean,
 ): HTMLElement | null {
-  let cur: Element | null = el;
-  while (cur) {
-    if (pred(cur)) return cur as HTMLElement;
-    cur = cur.parentElement;
+  let current: Element | null = el;
+  while (current) {
+    if (predicate(current)) return current as HTMLElement;
+    current = current.parentElement;
   }
   return null;
 }
 
-function directDraggableChildren(container: Element) {
+function getDraggableChildren(container: Element) {
   return Array.from(container.children).filter(isDraggable);
 }
 
-function rect(el: Element) {
-  const r = el.getBoundingClientRect();
+function getElementRect(el: Element) {
+  const rect = el.getBoundingClientRect();
   return {
-    w: r.width,
-    h: r.height,
-    top: r.top + window.scrollY,
-    left: r.left + window.scrollX,
+    width: rect.width,
+    height: rect.height,
+    top: rect.top + window.scrollY,
+    left: rect.left + window.scrollX,
   };
 }
 
@@ -61,178 +66,219 @@ export function dnd<Item, ParentItem>(
   node: HTMLElement,
   controller: DndController<Item, ParentItem>,
 ) {
-  const threshold = 4;
-
   let pointerId: number | null = null;
   let startX = 0;
   let startY = 0;
-  let dragging = false;
+  let isDragging = false;
+  let isEndingDrag = false;
 
-  let dragEl: DndElement<Item> | null = null;
-  let fromParentEl: DndElement<ParentItem> | null = null;
-  let fromIndex = -1;
+  let dragElement: DndElement<Item> | null = null;
+  let sourceParent: DndElement<ParentItem> | null = null;
+  let sourceIndex = -1;
 
-  let ghostEl: HTMLElement | null = null;
-  let placeholderEl: HTMLElement | null = null;
-  let phHeight = 0;
+  let ghostElement: HTMLElement | null = null;
+  let placeholderElement: HTMLElement | null = null;
+  let placeholderHeight = 0;
 
-  let lastParent: DndElement<ParentItem> | null = null;
-  let lastIndex = -1;
+  let targetParent: DndElement<ParentItem> | null = null;
+  let targetIndex = -1;
+  let cleanupTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  function makeGhost(src: HTMLElement) {
-    const { w, h, top, left } = rect(src);
-    const g = src.cloneNode(true) as HTMLElement;
-    Object.assign(g.style, {
+  function createGhost(source: HTMLElement): HTMLElement {
+    ghostElement?.remove();
+
+    const { width, height, top, left } = getElementRect(source);
+    const ghost = source.cloneNode(true) as HTMLElement;
+
+    Object.assign(ghost.style, {
       position: 'absolute',
       left: `${left}px`,
       top: `${top}px`,
-      width: `${w}px`,
-      height: `${Math.max(1, Math.min(20, h))}px`,
+      width: `${width}px`,
+      height: `${height}px`,
       transform: 'translate(0,0)',
       pointerEvents: 'none',
-      opacity: '0.7',
+      opacity: GHOST_OPACITY_DRAGGING,
       zIndex: '999999',
       boxSizing: 'border-box',
     });
-    g.dataset.ghost = 'true';
-    document.body.appendChild(g);
-    return g;
+
+    ghost.dataset.ghost = 'true';
+    document.body.appendChild(ghost);
+    ghostElement = ghost;
+    return ghost;
   }
 
-  function ensurePlaceholder(height: number) {
-    if (placeholderEl) return placeholderEl;
-    const ph = document.createElement('div');
-    ph.className = PLACEHOLDER_CLASS;
-    Object.assign(ph.style, {
-      height: `${height - 4}px`,
-      border: '2px dashed #999',
-      borderRadius: '8px',
+  function ensurePlaceholder(height: number): HTMLElement {
+    if (placeholderElement) return placeholderElement;
+
+    const placeholder = document.createElement('div');
+    placeholder.className = PLACEHOLDER_CLASS;
+    Object.assign(placeholder.style, {
+      height: `${Math.max(0, height)}px`,
+      border: '2px dashed var(--color-fg-subtle-2-muted)',
+      borderRadius: 'var(--border-radius-m)',
       background: 'transparent',
       boxSizing: 'border-box',
     });
-    placeholderEl = ph;
-    return ph;
+
+    placeholderElement = placeholder;
+    return placeholder;
   }
 
-  function cleanupVisuals() {
-    ghostEl?.remove();
-    ghostEl = null;
-    if (placeholderEl?.parentElement) placeholderEl.remove();
-    placeholderEl = null;
-    phHeight = 0;
-    lastParent = null;
-    lastIndex = -1;
-  }
-
-  function illegalTarget(targetContainer: HTMLElement, dragged: HTMLElement) {
-    return dragged === targetContainer || dragged.contains(targetContainer);
-  }
-
-  function findDropIndex(container: HTMLElement, pointerY: number) {
-    const all = directDraggableChildren(container).filter(
-      (el) => el !== dragEl,
-    );
-    if (all.length === 0) return 0;
-
-    for (let i = 0; i < all.length; i += 1) {
-      const r = all[i].getBoundingClientRect();
-      const mid = r.top + r.height / 2;
-      if (pointerY < mid) return i;
+  function cleanupVisuals(): void {
+    if (cleanupTimeout) {
+      clearTimeout(cleanupTimeout);
+      cleanupTimeout = null;
     }
-    return all.length;
+
+    if (placeholderElement?.parentElement) {
+      placeholderElement.remove();
+    }
+    placeholderElement = null;
+
+    ghostElement?.remove();
+    ghostElement = null;
+
+    placeholderHeight = 0;
+    targetParent = null;
+    targetIndex = -1;
+  }
+
+  function isValidTarget(
+    targetContainer: HTMLElement,
+    draggedElement: HTMLElement,
+  ): boolean {
+    return (
+      draggedElement !== targetContainer &&
+      !draggedElement.contains(targetContainer)
+    );
+  }
+
+  function findDropIndex(container: HTMLElement, pointerY: number): number {
+    const children = getDraggableChildren(container).filter(
+      (el) => el !== dragElement,
+    );
+
+    if (children.length === 0) return 0;
+
+    for (let i = 0; i < children.length; i += 1) {
+      const rect = children[i].getBoundingClientRect();
+      const midpoint = rect.top + rect.height / 2;
+      if (pointerY < midpoint) return i;
+    }
+
+    return children.length;
   }
 
   function insertPlaceholderAt(container: HTMLElement, index: number) {
-    const kids = directDraggableChildren(container).filter(
-      (el) => el !== dragEl,
+    if (!placeholderElement) return;
+
+    const children = getDraggableChildren(container).filter(
+      (el) => el !== dragElement,
     );
-    const before = kids[index] ?? null;
+    const insertBefore = children[index] ?? null;
 
-    if (!placeholderEl) return;
-    placeholderEl.style.height = `${phHeight}px`;
+    const wasInDifferentContainer =
+      placeholderElement.parentElement !== container;
+    const needsMove =
+      wasInDifferentContainer ||
+      (insertBefore
+        ? placeholderElement.nextSibling !== insertBefore
+        : placeholderElement.nextSibling !== null);
 
-    if (before) {
-      if (
-        placeholderEl.nextSibling === before &&
-        placeholderEl.parentElement === container
-      ) {
-        return;
+    if (needsMove) {
+      placeholderElement.style.height = `${Math.max(0, placeholderHeight)}px`;
+
+      if (insertBefore) {
+        container.insertBefore(placeholderElement, insertBefore);
+      } else {
+        container.appendChild(placeholderElement);
       }
-      container.insertBefore(placeholderEl, before);
-    } else {
-      if (
-        placeholderEl.parentElement === container &&
-        placeholderEl.nextSibling === null
-      ) {
-        return;
-      }
-      container.appendChild(placeholderEl);
     }
   }
 
   function startDrag() {
-    if (!dragEl || !fromParentEl) return;
+    if (!dragElement || !sourceParent) return;
 
-    ghostEl = makeGhost(dragEl);
-    dragEl.style.display = 'none';
-    dragEl.style.height = '1px';
+    createGhost(dragElement);
+
+    dragElement.classList.add(DRAGGING_CLASS);
+    dragElement.style.display = 'none';
 
     document.body.style.userSelect = 'none';
     document.body.style.cursor = 'grabbing';
-    dragging = true;
+    isDragging = true;
 
-    ensurePlaceholder(phHeight);
-    insertPlaceholderAt(fromParentEl, fromIndex);
+    ensurePlaceholder(placeholderHeight);
+    insertPlaceholderAt(sourceParent, sourceIndex);
   }
 
-  function endDrag(commit: boolean) {
+  function notifyChange() {
+    if (!dragElement?.dndData || !sourceParent?.dndData) {
+      console.error('DnD: Missing dndData on element');
+      return;
+    }
+
+    const finalIndex = targetIndex < 0 ? sourceIndex : targetIndex;
+    const destinationParent = targetParent || sourceParent;
+
+    if (!destinationParent.dndData) {
+      console.error('DnD: Missing dndData on target parent element');
+      return;
+    }
+
+    controller.onChange({
+      item: dragElement.dndData.getItem(),
+      fromParent: sourceParent.dndData.getItem(),
+      fromIndex: sourceIndex,
+      toParent: destinationParent.dndData.getItem(),
+      toIndex: finalIndex,
+    });
+  }
+
+  function endDrag(shouldCommit: boolean) {
+    if (isEndingDrag) return;
+    isEndingDrag = true;
+
     document.body.style.userSelect = '';
     document.body.style.cursor = '';
 
-    // release capture if still held
-    if (dragEl && pointerId != null) {
-      dragEl.releasePointerCapture(pointerId);
+    if (dragElement && pointerId !== null) {
+      dragElement.releasePointerCapture(pointerId);
     }
 
-    if (commit && dragging && dragEl && fromParentEl) {
-      let finalIndex = lastIndex;
-      if (
-        lastParent &&
-        dragEl.parentElement === lastParent &&
-        fromIndex < lastIndex
-      ) {
-        finalIndex = Math.max(0, lastIndex);
-      }
-      const toParentElement = lastParent || fromParentEl;
-
-      controller.onChange({
-        item: dragEl.dndData.getItem(),
-        fromParent: fromParentEl.dndData.getItem(),
-        fromIndex,
-        toParent: toParentElement.dndData.getItem(),
-        toIndex: finalIndex < 0 ? fromIndex : finalIndex,
-      });
+    if (shouldCommit && isDragging && dragElement && sourceParent) {
+      notifyChange();
     }
 
-    if (dragEl) {
-      dragEl.style.display = '';
-      dragEl.style.height = '';
+    if (dragElement) {
+      dragElement.classList.remove(DRAGGING_CLASS);
+      dragElement.style.display = '';
     }
+
+    document
+      .querySelectorAll(`[${DROPPABLE_ITEM_ATTR}].${DRAG_OVER_CLASS}`)
+      .forEach((el) => el.classList.remove(DRAG_OVER_CLASS));
+
     cleanupVisuals();
 
-    dragging = false;
+    isDragging = false;
     pointerId = null;
-    dragEl = null;
-    fromParentEl = null;
-    fromIndex = -1;
+    dragElement = null;
+    sourceParent = null;
+    sourceIndex = -1;
+    isEndingDrag = false;
   }
 
   function onPointerDown(e: PointerEvent) {
     if (!e.isPrimary) return;
 
     if (!e.target || !(e.target instanceof Element)) return;
+
     const handle = e.target.closest(`[${HANDLE_ATTR}]`);
     if (!handle || !(handle instanceof HTMLElement)) return;
+
     const draggableElement = handle.closest(`[${DRAGGABLE_ITEM_ATTR}]`);
     if (!isDraggable<Item>(draggableElement)) return;
 
@@ -242,89 +288,117 @@ export function dnd<Item, ParentItem>(
     startX = e.clientX;
     startY = e.clientY;
 
-    dragEl = draggableElement;
-    phHeight = draggableElement.getBoundingClientRect().height;
+    dragElement = draggableElement;
+    placeholderHeight = draggableElement.getBoundingClientRect().height;
 
-    fromParentEl = ancestor(
+    sourceParent = findAncestor(
       draggableElement.parentElement,
       isDroppable<ParentItem>,
     ) as DndElement<ParentItem>;
-    if (!fromParentEl) return;
-    fromIndex = directDraggableChildren(fromParentEl).indexOf(draggableElement);
+    if (!sourceParent) return;
 
-    lastParent = fromParentEl;
-    lastIndex = fromIndex;
+    sourceIndex = getDraggableChildren(sourceParent).indexOf(draggableElement);
 
-    // On some browsers this reduces accidental scroll before drag threshold
-    // passive:false is added on the listener
-    // TODO: Re-test in mobile
+    targetParent = sourceParent;
+    targetIndex = sourceIndex;
+
     e.preventDefault?.();
   }
 
   function onPointerMove(e: PointerEvent) {
-    if (pointerId == null || e.pointerId !== pointerId || !dragEl) return;
+    if (pointerId === null || e.pointerId !== pointerId || !dragElement) return;
 
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
+    const deltaX = e.clientX - startX;
+    const deltaY = e.clientY - startY;
 
-    if (!dragging && Math.hypot(dx, dy) > threshold) startDrag();
-    if (!dragging) return;
-    if (ghostEl) ghostEl.style.transform = `translate(${dx}px, ${dy}px)`;
+    if (!isDragging && Math.hypot(deltaX, deltaY) > DRAG_THRESHOLD) {
+      startDrag();
+    }
+    if (!isDragging) return;
 
-    const under = document.elementFromPoint(e.clientX, e.clientY);
-    const container = ancestor(under, isDroppable) as DndElement<ParentItem>;
-    if (!container) return;
-    if (illegalTarget(container, dragEl)) return;
-
-    const toIndex = findDropIndex(container, e.clientY);
-
-    if (container !== lastParent || toIndex !== lastIndex) {
-      lastParent = container;
-      lastIndex = toIndex;
-
-      ensurePlaceholder(phHeight);
-      insertPlaceholderAt(container, toIndex);
+    if (ghostElement) {
+      requestAnimationFrame(() => {
+        if (ghostElement) {
+          ghostElement.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+        }
+      });
     }
 
-    // While dragging, prevent page from scrolling if touch-action wasn't set globally
+    const elementUnderPointer = document.elementFromPoint(e.clientX, e.clientY);
+    const container = findAncestor(
+      elementUnderPointer,
+      isDroppable,
+    ) as DndElement<ParentItem>;
+    if (!container || !isValidTarget(container, dragElement)) return;
+
+    const dropIndex = findDropIndex(container, e.clientY);
+
+    if (container !== targetParent || dropIndex !== targetIndex) {
+      if (targetParent && targetParent !== container) {
+        targetParent.classList.remove(DRAG_OVER_CLASS);
+      }
+      if (!container.classList.contains(DRAG_OVER_CLASS)) {
+        container.classList.add(DRAG_OVER_CLASS);
+      }
+
+      targetParent = container;
+      targetIndex = dropIndex;
+
+      ensurePlaceholder(placeholderHeight);
+      insertPlaceholderAt(container, dropIndex);
+    }
+
     e.preventDefault?.();
   }
 
   function onPointerUp(e: PointerEvent) {
-    if (pointerId == null || e.pointerId !== pointerId) return;
+    if (pointerId === null || e.pointerId !== pointerId) return;
     endDrag(true);
   }
 
   function onPointerCancel(e: PointerEvent) {
-    if (pointerId == null || e.pointerId !== pointerId) return;
+    if (pointerId === null || e.pointerId !== pointerId) return;
     endDrag(false);
   }
 
   function onLostPointerCapture(e: PointerEvent) {
-    if (pointerId == null || e.pointerId !== pointerId) return;
-    // If capture is lost mid-drag (mobile? safari?), end drag
+    if (pointerId === null || e.pointerId !== pointerId) return;
     endDrag(false);
   }
 
-  node.addEventListener('pointerdown', onPointerDown, { passive: false });
-  window.addEventListener('pointermove', onPointerMove, { passive: false });
-  window.addEventListener('pointerup', onPointerUp, { passive: false });
-  window.addEventListener('pointercancel', onPointerCancel);
-  window.addEventListener('lostpointercapture', onLostPointerCapture);
-  const onBlur = () =>
+  function onWindowBlur() {
     onPointerCancel(
       new PointerEvent('pointercancel', { pointerId: pointerId ?? 0 }),
     );
-  window.addEventListener('blur', onBlur);
+  }
+
+  const eventOptions = { passive: false };
+
+  node.addEventListener('pointerdown', onPointerDown, eventOptions);
+  window.addEventListener('pointermove', onPointerMove, eventOptions);
+  window.addEventListener('pointerup', onPointerUp, eventOptions);
+  window.addEventListener('pointercancel', onPointerCancel, eventOptions);
+  window.addEventListener(
+    'lostpointercapture',
+    onLostPointerCapture,
+    eventOptions,
+  );
+  window.addEventListener('blur', onWindowBlur);
 
   return {
     destroy() {
+      if (isDragging || dragElement) {
+        endDrag(false);
+      } else {
+        cleanupVisuals();
+      }
+
       node.removeEventListener('pointerdown', onPointerDown);
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
       window.removeEventListener('pointercancel', onPointerCancel);
       window.removeEventListener('lostpointercapture', onLostPointerCapture);
-      window.removeEventListener('blur', onBlur);
+      window.removeEventListener('blur', onWindowBlur);
     },
   };
 }
