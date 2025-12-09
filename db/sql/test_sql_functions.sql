@@ -2114,6 +2114,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+
 CREATE OR REPLACE FUNCTION test_alter_columns_single_name() RETURNS SETOF TEXT AS $f$
 DECLARE
   col_alters_jsonb jsonb := '[{"attnum": 2, "name": "blah"}]';
@@ -2125,25 +2126,6 @@ BEGIN
     'col_alters',
     ARRAY['id', 'blah', 'col2', 'Col sp', 'col_opts', 'coltim']
   );
-END;
-$f$ LANGUAGE plpgsql;
-
-
-CREATE OR REPLACE FUNCTION test_alter_mathesar_id_column_name()
-RETURNS SETOF TEXT AS $f$
-DECLARE
-  tab_oid oid;
-  col_alters_jsonb jsonb := '[{"attnum": 1, "name": "new_id"}]';
-BEGIN
-  PERFORM __setup_column_alter();
-  tab_oid := 'test_schema.col_alters'::regclass::oid;
-
-  BEGIN
-    PERFORM msar.alter_columns(tab_oid, col_alters_jsonb);
-  EXCEPTION
-    WHEN OTHERS THEN
-      RETURN NEXT pass('Exception was correctly raised when renaming Mathesar ID column.');
-  END;
 END;
 $f$ LANGUAGE plpgsql;
 
@@ -3161,6 +3143,38 @@ END;
 $$ LANGUAGE plpgsql;
 
 
+CREATE OR REPLACE FUNCTION test_get_column_info_with_multiple_indexes() RETURNS SETOF TEXT AS $$
+DECLARE
+  col_info jsonb;
+BEGIN
+  CREATE TABLE index_test (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    col_a text NOT NULL
+  );
+  -- Add a unique index on the primary key column (in addition to the PK index)
+  CREATE UNIQUE INDEX idx_test_id ON index_test(id);
+
+  col_info = msar.get_column_info('index_test');
+
+  RETURN NEXT is(
+    jsonb_array_length(col_info), 2, 'Should have exactly 2 columns, not duplicates.'
+  );
+  RETURN NEXT is(
+    col_info -> 0 ->> 'name', 'id', 'First column should be id'
+  );
+  RETURN NEXT is(
+    (col_info -> 0 ->> 'primary_key')::boolean, true, 'id column should have primary_key=true'
+  );
+  RETURN NEXT is(
+    col_info -> 1 ->> 'name', 'col_a', 'Second column should be col_a'
+  );
+  RETURN NEXT is(
+    (col_info -> 1 ->> 'primary_key')::boolean, false, 'col_a column should have primary_key=false'
+  );
+END;
+$$ LANGUAGE plpgsql;
+
+
 CREATE OR REPLACE FUNCTION __setup_get_table_info() RETURNS SETOF TEXT AS $$
 BEGIN
   CREATE SCHEMA pi;
@@ -3188,8 +3202,9 @@ BEGIN
     -- Check if all the required keys exist in the json blob
     -- Check whether the correct name is returned
     -- Check whether the correct description is returned
+    -- Check whether the correct type is returned
   RETURN NEXT is(
-    pi_table_info->0 ?& array['oid', 'name', 'schema', 'description'], true
+    pi_table_info->0 ?& array['oid', 'name', 'schema', 'description', 'type'], true
   );
   RETURN NEXT is(
     pi_table_info->0->>'name', 'three'
@@ -3197,15 +3212,21 @@ BEGIN
   RETURN NEXT is(
     pi_table_info->0->>'description', null
   );
+  RETURN NEXT is(
+    pi_table_info->0->>'type', 'table'
+  );
 
   RETURN NEXT is(
-    pi_table_info->1 ?& array['oid', 'name', 'schema', 'description'], true
+    pi_table_info->1 ?& array['oid', 'name', 'schema', 'description', 'type'], true
   );
   RETURN NEXT is(
     pi_table_info->1->>'name', 'one'
   );
   RETURN NEXT is(
     pi_table_info->1->>'description', 'first decimal digit of pi'
+  );
+  RETURN NEXT is(
+    pi_table_info->1->>'type', 'table'
   );
 
   -- Test table info for schema 'alice' that contains no tables
@@ -3737,12 +3758,14 @@ BEGIN
         }
       ],
       "grouping": null,
+      "joined_record_summaries": null,
       "linked_record_summaries": null,
       "record_summaries": null
     }$j$
   );
 END;
 $$ LANGUAGE plpgsql;
+
 
 CREATE OR REPLACE FUNCTION test_list_records_from_table() RETURNS SETOF TEXT AS $$
 DECLARE
@@ -3767,6 +3790,7 @@ BEGIN
         {"1": 3, "2": 2, "3": "abcde", "4": "{\"k\": 3242348}", "5": "true"}
       ],
       "grouping": null,
+      "joined_record_summaries": null,
       "linked_record_summaries": null,
       "record_summaries": null
     }$j$
@@ -3787,6 +3811,7 @@ BEGIN
         {"1": 1, "2": 5, "3": "sdflkj", "4": "\"s\"", "5": "{\"a\": \"val\"}"}
       ],
       "grouping": null,
+      "joined_record_summaries": null,
       "linked_record_summaries": null,
       "record_summaries": null
     }$j$
@@ -3807,7 +3832,179 @@ BEGIN
         {"1": 1, "2": 5, "3": "sdflkj", "4": "\"s\"", "5": "{\"a\": \"val\"}"}
       ],
       "grouping": null,
+      "joined_record_summaries": null,
       "linked_record_summaries": null,
+      "record_summaries": null
+    }$j$
+  );
+  RETURN NEXT is(
+    msar.list_records_from_table(
+      tab_id => rel_id,
+      limit_ => 0,
+      offset_ => null,
+      order_ => null,
+      filter_ => null,
+      group_ => null
+    ),
+    $j${
+      "count": 0,
+      "results": [],
+      "grouping": null,
+      "joined_record_summaries": null,
+      "linked_record_summaries": null,
+      "record_summaries": null
+    }$j$
+  );
+  RETURN NEXT is(
+    msar.list_records_from_table(
+      tab_id => rel_id,
+      limit_ => 1,
+      offset_ => 1,
+      order_ => '[{"attnum": 2, "direction": "asc"}]',
+      filter_ => null,
+      group_ => null
+    ),
+    $j${
+      "count": 3,
+      "results": [
+        {"1": 1, "2": 5, "3": "sdflkj", "4": "\"s\"", "5": "{\"a\": \"val\"}"}
+      ],
+      "grouping": null,
+      "joined_record_summaries": null,
+      "linked_record_summaries": null,
+      "record_summaries": null
+    }$j$
+  );
+  RETURN NEXT is(
+    msar.list_records_from_table(
+      tab_id => rel_id,
+      limit_ => 5,
+      offset_ => 10,
+      order_ => null,
+      filter_ => null,
+      group_ => null
+    ),
+    $j${
+      "count": 0,
+      "results": [],
+      "grouping": null,
+      "joined_record_summaries": null,
+      "linked_record_summaries": null,
+      "record_summaries": null
+    }$j$
+  );
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION test_list_records_from_table_with_filter()
+RETURNS SETOF TEXT AS $$
+DECLARE
+  rel_id oid;
+BEGIN
+  PERFORM __setup_list_records_table();
+  rel_id := 'atable'::regclass::oid;
+
+  RETURN NEXT is(
+    msar.list_records_from_table(
+      tab_id => rel_id,
+      limit_ => null,
+      offset_ => null,
+      order_ => null,
+      filter_ => '{"type": "equal","args": [{ "type": "attnum", "value": 3 },{ "type": "literal", "value": "sdflkj" }]}',
+      group_ => null
+    ),
+    $j${
+      "count": 1,
+      "results": [
+        {"1": 1, "2": 5, "3": "sdflkj", "4": "\"s\"", "5": "{\"a\": \"val\"}"}
+      ],
+      "grouping": null,
+      "record_summaries": null,
+      "joined_record_summaries": null,
+      "linked_record_summaries": null
+    }$j$
+  );
+  RETURN NEXT is(
+    msar.list_records_from_table(
+      tab_id  => rel_id,
+      limit_  => null,
+      offset_ => null,
+      order_  => null,
+      filter_ => '{"type":"equal","args":[{"type":"attnum","value":5},{"type":"literal","value":"{\"a\": \"val\"}"}]}',
+      group_  => null
+    ),
+    $j${
+      "count": 1,
+      "results": [
+        {"1":1,"2":5,"3":"sdflkj","4":"\"s\"","5":"{\"a\": \"val\"}"}
+      ],
+      "grouping":null,
+      "linked_record_summaries":null,
+      "joined_record_summaries": null,
+      "record_summaries":null
+    }$j$
+  );
+  RETURN NEXT is(
+    msar.list_records_from_table(
+      tab_id => rel_id,
+      limit_ => null,
+      offset_ => null,
+      order_ => null,
+      filter_ => '{"type": "greater","args": [{ "type": "attnum", "value": 2 },{ "type": "literal", "value": 10 }]}',
+      group_ => null
+    ),
+    $j${
+      "count": 1,
+      "results": [
+        {"1": 2, "2": 34, "3": "sdflfflsk", "4": null, "5": "[1, 2, 3, 4]"}
+      ],
+      "grouping": null,
+      "linked_record_summaries": null,
+      "joined_record_summaries": null,
+      "record_summaries": null
+    }$j$
+  );
+  RETURN NEXT is(
+    msar.list_records_from_table(
+      tab_id => rel_id,
+      limit_ => null,
+      offset_ => null,
+      order_ => null,
+      filter_ =>
+        '{"type": "lesser","args": [{ "type": "attnum", "value": 2 },{ "type": "literal", "value": 10 }]}',
+      group_ => null
+    ),
+    $j${
+      "count": 2,
+      "results": [
+        {"1": 1, "2": 5, "3": "sdflkj", "4": "\"s\"", "5": "{\"a\": \"val\"}"},
+        {"1": 3, "2": 2, "3": "abcde", "4": "{\"k\": 3242348}", "5": "true"}
+      ],
+      "grouping": null,
+      "linked_record_summaries": null,
+      "joined_record_summaries": null,
+      "record_summaries": null
+    }$j$
+  );
+  RETURN NEXT is(
+    msar.list_records_from_table(
+      tab_id => rel_id,
+      limit_ => null,
+      offset_ => null,
+      order_ => null,
+      filter_ => '{"type": "lesser_or_equal","args": [{ "type": "attnum", "value": 2 },{ "type": "literal", "value": 5 }]}',
+      group_ => null
+    ),
+    $j${
+      "count": 2,
+      "results": [
+        {"1": 1, "2": 5, "3": "sdflkj", "4": "\"s\"", "5": "{\"a\": \"val\"}"},
+        {"1": 3, "2": 2, "3": "abcde", "4": "{\"k\": 3242348}", "5": "true"}
+      ],
+      "grouping": null,
+      "linked_record_summaries": null,
+      "joined_record_summaries": null,
       "record_summaries": null
     }$j$
   );
@@ -3880,6 +4077,7 @@ BEGIN
           }
         ]
       },
+      "joined_record_summaries": null,
       "linked_record_summaries": null,
       "record_summaries": null
     }$j$
@@ -3912,6 +4110,7 @@ BEGIN
           }
         ]
       },
+      "joined_record_summaries": null,
       "linked_record_summaries": null,
       "record_summaries": null
     }$j$
@@ -3940,6 +4139,7 @@ BEGIN
           {"id": 2, "count": 2, "results_eq": {"4": "2020-04 AD"}, "result_indices": [1, 2]}
         ]
       },
+      "joined_record_summaries": null,
       "linked_record_summaries": null,
       "record_summaries": null
     }$j$
@@ -3969,8 +4169,98 @@ BEGIN
           {"id": 1, "count": 8, "results_eq": {"4": "2020 AD"}, "result_indices": [0, 1, 2, 3, 4]}
         ]
       },
+      "joined_record_summaries": null,
       "linked_record_summaries": null,
       "record_summaries": null
+    }$j$
+  );
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION test_list_records_from_table_with_filter_and_order()
+RETURNS SETOF TEXT AS $$
+DECLARE
+  rel_id oid;
+BEGIN
+  PERFORM __setup_list_records_table();
+  rel_id := 'atable'::regclass::oid;
+
+  RETURN NEXT is(
+    msar.list_records_from_table(
+      tab_id  => rel_id,
+      limit_  => null,
+      offset_ => null,
+      order_  => '[{"attnum":1,"direction":"asc"}]',
+      filter_ => '{"type":"greater","args":[{"type":"attnum","value":2},{"type":"literal","value":2}]}',
+      group_  => null
+    ),
+    $j${
+      "count": 2,
+      "results": [
+        {"1":1,"2":5,"3":"sdflkj","4":"\"s\"","5":"{\"a\": \"val\"}"},
+        {"1":2,"2":34,"3":"sdflfflsk","4":null,"5":"[1, 2, 3, 4]"}
+      ],
+      "grouping":null,
+      "linked_record_summaries":null,
+      "joined_record_summaries": null,
+      "record_summaries":null
+    }$j$
+  );
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION test_list_records_from_table_with_filter_grouping_and_order()
+RETURNS SETOF TEXT AS $$
+DECLARE
+  rel_id oid;
+BEGIN
+  PERFORM __setup_customers_table();
+  rel_id := '"Customers"'::regclass::oid;
+
+  RETURN NEXT is(
+    msar.list_records_from_table(
+      tab_id  => rel_id,
+      limit_  => null,
+      offset_ => null,
+      order_  => '[{"attnum":4,"direction":"asc"}]',
+      filter_ => '{"type":"equal","args":[
+                    {"type":"attnum","value":2},
+                    {"type":"literal","value":"Abigail"}
+                  ]}',
+      group_  => '{"columns":[3]}'
+    ),
+    $j${
+      "count": 12,
+      "results": [
+        {"1":2,"2":"Abigail","3":"Acosta","4":"2020-04-16 AD"},
+        {"1":4,"2":"Abigail","3":"Adams","4":"2020-05-29 AD"},
+        {"1":5,"2":"Abigail","3":"Abbott","4":"2020-07-05 AD"},
+        {"1":8,"2":"Abigail","3":"Abbott","4":"2020-10-30 AD"},
+        {"1":9,"2":"Abigail","3":"Adams","4":"2021-02-14 AD"},
+        {"1":10,"2":"Abigail","3":"Acevedo","4":"2021-03-29 AD"},
+        {"1":13,"2":"Abigail","3":"Adkins","4":"2021-09-12 AD"},
+        {"1":15,"2":"Abigail","3":"Abbott","4":"2021-11-30 AD"},
+        {"1":18,"2":"Abigail","3":"Abbott","4":"2022-03-23 AD"},
+        {"1":19,"2":"Abigail","3":"Adkins","4":"2022-03-27 AD"},
+        {"1":20,"2":"Abigail","3":"Abbott","4":"2022-04-29 AD"},
+        {"1":21,"2":"Abigail","3":"Adams","4":"2022-05-24 AD"}
+      ],
+      "grouping":{
+        "columns":[3],
+        "preproc":null,
+        "groups":[
+          {"id":1,"count":5,"results_eq":{"3":"Abbott"},"result_indices":[2,3,7,8,10]},
+          {"id":2,"count":1,"results_eq":{"3":"Acevedo"},"result_indices":[5]},
+          {"id":3,"count":1,"results_eq":{"3":"Acosta"},"result_indices":[0]},
+          {"id":4,"count":3,"results_eq":{"3":"Adams"},"result_indices":[1,4,11]},
+          {"id":5,"count":2,"results_eq":{"3":"Adkins"},"result_indices":[6,9]}
+        ]
+      },
+      "linked_record_summaries":null,
+      "joined_record_summaries": null,
+      "record_summaries":null
     }$j$
   );
 END;
@@ -4004,6 +4294,7 @@ BEGIN
      ],
      "grouping": null,
      "record_summaries": null,
+     "joined_record_summaries": null,
      "linked_record_summaries": {
         "3": {
           "1": "Tools",
@@ -4012,6 +4303,341 @@ BEGIN
         }
      }
     }$j$
+  );
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION test_list_records_self_fk_filter_group()
+RETURNS SETOF TEXT AS $$
+DECLARE
+  rel_id oid;
+BEGIN
+  PERFORM __setup_table_with_self_referential_fk();
+  rel_id := 'categories'::regclass::oid;
+
+  RETURN NEXT is(
+    msar.list_records_from_table(
+      tab_id  => rel_id,
+      limit_  => null,
+      offset_ => null,
+      order_  => null,
+      filter_ => '{"type":"equal","args":[{"type":"attnum","value":3},{"type":"literal","value":1}]}',
+      group_  => '{"columns":[3]}'
+    ),
+    $j${
+      "count": 2,
+      "results": [
+        {"1":2,"2":"Power tools","3":1},
+        {"1":3,"2":"Hand tools","3":1}
+      ],
+      "grouping":{
+        "columns":[3],
+        "preproc":null,
+        "groups":[
+          {"id":1,"count":2,"results_eq":{"3":1},"result_indices":[0,1]}
+        ]
+      },
+      "linked_record_summaries":{
+        "3":{
+          "1":"Tools"
+        }
+      },
+      "joined_record_summaries": null,
+      "record_summaries":null
+    }$j$
+  );
+END;
+$$ LANGUAGE plpgsql;
+
+-- msar.list_records_from_table listing joined columns ------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION __setup_list_records_table_joined_columns()
+RETURNS SETOF TEXT AS $$
+BEGIN
+  CREATE TABLE vehicles (
+    id int primary key,
+    name text,
+    wheel_count int
+  );
+
+  INSERT INTO vehicles VALUES
+    (1, 'Airplane', 10),
+    (2, 'Bicycle', 2),
+    (3, 'Boat', 0),
+    (4, 'Car', 4),
+    (5, 'Tricycle', 3),
+    (6, 'Truck', 4),
+    (7, 'Semi', 18),
+    (8, 'Unicycle', 1);
+
+  -- setup linkages
+  CREATE TABLE colors (id int primary key, name text);
+  CREATE TABLE windows_ (id int primary key, count text);
+
+  CREATE TABLE vehicles_colors (
+    id int primary key, vehicle int references vehicles, color int references colors
+  );
+
+  CREATE TABLE vehicles_windows (
+    id int primary key, vehicle int references vehicles, windows_ int references windows_
+  );
+
+  INSERT INTO colors VALUES
+    (1, 'blue'),
+    (2, 'green'),
+    (3, 'red');
+
+  INSERT INTO windows_ VALUES
+    (1, 'two'),
+    (2, 'four'),
+    (3, '>4');
+
+  INSERT INTO vehicles_colors VALUES
+    (1, 1, 1),
+    (2, 1, 2),
+    (4, 2, 1),
+    (5, 2, 2),
+    (6, 2, 2),
+    (8, 3, 1),
+    (9, 7, 3),
+    (10, 8, 1),
+    (11, 8, 2),
+    (12, 8, 3),
+    (13, 5, 2);
+
+  INSERT INTO vehicles_windows VALUES
+    (1, 1, 3),
+    (3, 3, 1),
+    (4, 3, 2),
+    (5, 3, 3),
+    (6, 4, 1),
+    (7, 4, 2),
+    (9, 6, 2),
+    (10, 7, 2);
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION test_list_records_table_joined_columns()
+RETURNS SETOF TEXT AS $$
+BEGIN
+  PERFORM __setup_list_records_table_joined_columns();
+  RETURN NEXT is(
+    msar.list_records_from_table(
+      'vehicles'::regclass,
+      3, 0, null, null, null,
+      joined_columns => jsonb_build_array(
+        jsonb_build_object(
+          'alias', 'colors_alias',
+          'join_path', jsonb_build_array(
+            jsonb_build_array(
+              jsonb_build_array('vehicles'::regclass::oid::bigint, 1),
+              jsonb_build_array('vehicles_colors'::regclass::oid::bigint, 2)
+            ),
+            jsonb_build_array(
+              jsonb_build_array('vehicles_colors'::regclass::oid::bigint, 3),
+              jsonb_build_array('colors'::regclass::oid::bigint, 1)
+            )
+          )
+        ),
+        jsonb_build_object(
+          'alias', 'windows_alias',
+          'join_path', jsonb_build_array(
+            jsonb_build_array(
+              jsonb_build_array('vehicles'::regclass::oid::bigint, 1),
+              jsonb_build_array('vehicles_windows'::regclass::oid::bigint, 2)
+            ),
+            jsonb_build_array(
+              jsonb_build_array('vehicles_windows'::regclass::oid::bigint, 3),
+              jsonb_build_array('windows_'::regclass::oid::bigint, 1)
+            )
+          ) 
+        )
+      )
+    ),
+    jsonb_build_object(
+      'count', 8,
+      'results', '[
+        {
+          "1": 1,
+          "2": "Airplane",
+          "3": 10,
+          "colors_alias": {"count": 2, "result": [1, 2]},
+          "windows_alias": {"count": 1, "result": [3]}
+        },
+        {
+          "1": 2,
+          "2": "Bicycle",
+          "3": 2,
+          "colors_alias": {"count": 2, "result": [1, 2]},
+          "windows_alias": {"count": 0, "result": []}
+        },
+        {
+          "1": 3,
+          "2": "Boat",
+          "3": 0,
+          "colors_alias": {"count": 1, "result": [1]},
+          "windows_alias": {"count": 3, "result": [1, 2, 3]}
+        }
+      ]'::jsonb,
+      'grouping', null,
+      'record_summaries', null,
+      'joined_record_summaries', '{
+        "colors_alias": {
+          "1": "blue",
+          "2": "green"
+        },
+        "windows_alias": {
+          "1": "two",
+          "2": "four",
+          "3": ">4"
+        }
+      }'::jsonb,
+      'linked_record_summaries', null
+    )
+  );
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION test_get_record_from_table_joined_columns()
+RETURNS SETOF TEXT AS $$
+BEGIN
+  PERFORM __setup_list_records_table_joined_columns();
+  RETURN NEXT is(
+    msar.get_record_from_table(
+      'vehicles'::regclass,
+      3, joined_columns => jsonb_build_array(
+        jsonb_build_object(
+          'alias', 'colors_alias',
+          'join_path', jsonb_build_array(
+            jsonb_build_array(
+              jsonb_build_array('vehicles'::regclass::oid::bigint, 1),
+              jsonb_build_array('vehicles_colors'::regclass::oid::bigint, 2)
+            ),
+            jsonb_build_array(
+              jsonb_build_array('vehicles_colors'::regclass::oid::bigint, 3),
+              jsonb_build_array('colors'::regclass::oid::bigint, 1)
+            )
+          )
+        ),
+        jsonb_build_object(
+          'alias', 'windows_alias',
+          'join_path', jsonb_build_array(
+            jsonb_build_array(
+              jsonb_build_array('vehicles'::regclass::oid::bigint, 1),
+              jsonb_build_array('vehicles_windows'::regclass::oid::bigint, 2)
+            ),
+            jsonb_build_array(
+              jsonb_build_array('vehicles_windows'::regclass::oid::bigint, 3),
+              jsonb_build_array('windows_'::regclass::oid::bigint, 1)
+            )
+          ) 
+        )
+      )
+    ),
+    jsonb_build_object(
+      'count', 1,
+      'results', '[
+        {
+          "1": 3,
+          "2": "Boat",
+          "3": 0,
+          "colors_alias": {"count": 1, "result": [1]},
+          "windows_alias": {"count": 3, "result": [1, 2, 3]}
+        }
+      ]'::jsonb,
+      'grouping', null,
+      'record_summaries', null,
+      'joined_record_summaries', '{
+        "colors_alias": {
+          "1": "blue"
+        },
+        "windows_alias": {
+          "1": "two",
+          "2": "four",
+          "3": ">4"
+        }
+      }'::jsonb,
+      'linked_record_summaries', null
+    )
+  );
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION test_get_joined_columns_expr_json()
+RETURNS SETOF TEXT AS $$
+BEGIN
+  PERFORM __setup_list_records_table_joined_columns();
+  RETURN NEXT is(
+    msar.get_joined_columns_expr_json(
+      joined_columns => jsonb_build_array(
+        jsonb_build_object(
+          'alias', 'colors_alias',
+          'join_path', jsonb_build_array(
+            jsonb_build_array(
+              jsonb_build_array('vehicles'::regclass::oid::bigint, 1),
+              jsonb_build_array('vehicles_colors'::regclass::oid::bigint, 2)
+            ),
+            jsonb_build_array(
+              jsonb_build_array('vehicles_colors'::regclass::oid::bigint, 3),
+              jsonb_build_array('colors'::regclass::oid::bigint, 1)
+            )
+          )
+        ),
+        jsonb_build_object(
+          'alias', 'windows_alias',
+          'join_path', jsonb_build_array(
+            jsonb_build_array(
+              jsonb_build_array('vehicles'::regclass::oid::bigint, 1),
+              jsonb_build_array('vehicles_windows'::regclass::oid::bigint, 2)
+            ),
+            jsonb_build_array(
+              jsonb_build_array('vehicles_windows'::regclass::oid::bigint, 3),
+              jsonb_build_array('windows_'::regclass::oid::bigint, 1)
+            )
+          ) 
+        )
+      )
+    ),
+    jsonb_build_object(
+      'join_sql_expr', CONCAT_WS(
+        E'\n','LEFT JOIN public.vehicles_colors ON vehicles.id = vehicles_colors.vehicle',
+              'LEFT JOIN public.colors ON vehicles_colors.color = colors.id',
+              'LEFT JOIN public.vehicles_windows ON vehicles.id = vehicles_windows.vehicle',
+              'LEFT JOIN public.windows_ ON vehicles_windows.windows_ = windows_.id'
+      ),
+      'join_group_by_expr', 'GROUP BY vehicles.id',
+      'selectable_joined_columns_expr', $q$
+          jsonb_build_object(
+            'count', COUNT(DISTINCT colors.id),
+            'result', jsonb_path_query_array(
+              COALESCE(
+                NULLIF(
+                  jsonb_agg(DISTINCT colors.id),
+                  '[null]'::jsonb
+                ),
+                '[]'::jsonb
+              ), '$[0 to 24]'
+            ) -- limit results to 25
+          ) AS colors_alias
+          $q$ || ', ' || $q$
+          jsonb_build_object(
+            'count', COUNT(DISTINCT windows_.id),
+            'result', jsonb_path_query_array(
+              COALESCE(
+                NULLIF(
+                  jsonb_agg(DISTINCT windows_.id),
+                  '[null]'::jsonb
+                ),
+                '[]'::jsonb
+              ), '$[0 to 24]'
+            ) -- limit results to 25
+          ) AS windows_alias
+          $q$
+    )
   );
 END;
 $$ LANGUAGE plpgsql;
@@ -4262,7 +4888,7 @@ BEGIN
         'type', 'equal', 'args', jsonb_build_array(
           jsonb_build_object('type', 'attnum', 'value', 2),
           jsonb_build_object('type', 'literal', 'value', 500)))),
-    '(col1) = (''500'')'
+    '(atable.col1) = (''500'')'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4271,7 +4897,7 @@ BEGIN
         'type', 'lesser', 'args', jsonb_build_array(
           jsonb_build_object('type', 'attnum', 'value', 2),
           jsonb_build_object('type', 'literal', 'value', 500)))),
-    '(col1) < (''500'')'
+    '(atable.col1) < (''500'')'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4280,7 +4906,7 @@ BEGIN
         'type', 'greater', 'args', jsonb_build_array(
           jsonb_build_object('type', 'attnum', 'value', 2),
           jsonb_build_object('type', 'literal', 'value', 500)))),
-    '(col1) > (''500'')'
+    '(atable.col1) > (''500'')'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4289,7 +4915,7 @@ BEGIN
         'type', 'lesser_or_equal', 'args', jsonb_build_array(
           jsonb_build_object('type', 'attnum', 'value', 2),
           jsonb_build_object('type', 'literal', 'value', 500)))),
-    '(col1) <= (''500'')'
+    '(atable.col1) <= (''500'')'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4298,7 +4924,7 @@ BEGIN
         'type', 'greater_or_equal', 'args', jsonb_build_array(
           jsonb_build_object('type', 'attnum', 'value', 2),
           jsonb_build_object('type', 'literal', 'value', 500)))),
-    '(col1) >= (''500'')'
+    '(atable.col1) >= (''500'')'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4306,7 +4932,7 @@ BEGIN
       jsonb_build_object(
         'type', 'null', 'args', jsonb_build_array(
           jsonb_build_object('type', 'attnum', 'value', 2)))),
-    '(col1) IS NULL'
+    '(atable.col1) IS NULL'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4314,7 +4940,7 @@ BEGIN
       jsonb_build_object(
         'type', 'not_null', 'args', jsonb_build_array(
           jsonb_build_object('type', 'attnum', 'value', 2)))),
-    '(col1) IS NOT NULL'
+    '(atable.col1) IS NOT NULL'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4323,7 +4949,7 @@ BEGIN
         'type', 'contains_case_insensitive', 'args', jsonb_build_array(
           jsonb_build_object('type', 'attnum', 'value', 2),
           jsonb_build_object('type', 'literal', 'value', 'ABc')))),
-    'strpos(lower(col1), lower(''ABc''))::boolean'
+    'strpos(lower(atable.col1), lower(''ABc''))::boolean'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4332,7 +4958,7 @@ BEGIN
         'type', 'starts_with_case_insensitive', 'args', jsonb_build_array(
           jsonb_build_object('type', 'attnum', 'value', 2),
           jsonb_build_object('type', 'literal', 'value', 'a''bc')))),
-    'starts_with(lower(col1), lower(''a''''bc''))'
+    'starts_with(lower(atable.col1), lower(''a''''bc''))'
   );
   RETURN NEXT is(
     -- composition for json_array_length_equals
@@ -4346,7 +4972,7 @@ BEGIN
             )
           ),
           jsonb_build_object('type', 'literal', 'value', 500)))),
-    '(jsonb_array_length((col1)::jsonb)) = (''500'')'
+    '(jsonb_array_length((atable.col1)::jsonb)) = (''500'')'
   );
   RETURN NEXT is(
     -- composition for json_array_length_greater_than
@@ -4360,7 +4986,7 @@ BEGIN
             )
           ),
           jsonb_build_object('type', 'literal', 'value', 500)))),
-    '(jsonb_array_length((col1)::jsonb)) > (''500'')'
+    '(jsonb_array_length((atable.col1)::jsonb)) > (''500'')'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4374,7 +5000,7 @@ BEGIN
             )
           ),
           jsonb_build_object('type', 'literal', 'value', 500)))),
-    '(jsonb_array_length((col1)::jsonb)) >= (''500'')'
+    '(jsonb_array_length((atable.col1)::jsonb)) >= (''500'')'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4388,7 +5014,7 @@ BEGIN
             )
           ),
           jsonb_build_object('type', 'literal', 'value', 500)))),
-    '(jsonb_array_length((col1)::jsonb)) < (''500'')'
+    '(jsonb_array_length((atable.col1)::jsonb)) < (''500'')'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4402,7 +5028,7 @@ BEGIN
             )
           ),
           jsonb_build_object('type', 'literal', 'value', 500)))),
-    '(jsonb_array_length((col1)::jsonb)) <= (''500'')'
+    '(jsonb_array_length((atable.col1)::jsonb)) <= (''500'')'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4416,7 +5042,7 @@ BEGIN
             )
           ),
           jsonb_build_object('type', 'literal', 'value', 0)))),
-    '(jsonb_array_length((col1)::jsonb)) > (''0'')'
+    '(jsonb_array_length((atable.col1)::jsonb)) > (''0'')'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4425,7 +5051,7 @@ BEGIN
         'type', 'json_array_contains', 'args', jsonb_build_array(
           jsonb_build_object('type', 'attnum', 'value', 2),
           jsonb_build_object('type', 'literal', 'value', '"500"')))),
-    '(col1)::jsonb @> (''"500"'')::jsonb'
+    '(atable.col1)::jsonb @> (''"500"'')::jsonb'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4439,7 +5065,7 @@ BEGIN
             )
           ),
           jsonb_build_object('type', 'literal', 'value', 'https')))),
-    '(msar.uri_scheme(col1)) = (''https'')'
+    '(msar.uri_scheme(atable.col1)) = (''https'')'
   );
   RETURN NEXT is(
     -- composition for uri_authority_contains
@@ -4453,7 +5079,7 @@ BEGIN
             )
           ),
           jsonb_build_object('type', 'literal', 'value', 'google')))),
-    'strpos((msar.uri_authority(col1)), (''google''))::boolean'
+    'strpos((msar.uri_authority(atable.col1)), (''google''))::boolean'
   );
   RETURN NEXT is(
     -- composition for email_domain_equals
@@ -4467,7 +5093,7 @@ BEGIN
             )
           ),
           jsonb_build_object('type', 'literal', 'value', 'gmail.com')))),
-    '(msar.email_domain_name(col1)) = (''gmail.com'')'
+    '(msar.email_domain_name(atable.col1)) = (''gmail.com'')'
   );
   RETURN NEXT is(
     -- composition for email_domain_contains
@@ -4481,7 +5107,7 @@ BEGIN
             )
           ),
           jsonb_build_object('type', 'literal', 'value', 'mail')))),
-    'strpos((msar.email_domain_name(col1)), (''mail''))::boolean'
+    'strpos((msar.email_domain_name(atable.col1)), (''mail''))::boolean'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4505,7 +5131,7 @@ BEGIN
         )
       )
     ),
-    '(strpos((msar.email_domain_name(col1)), (''mail''))::boolean) OR ((col2) = (''500''))'
+    '(strpos((msar.email_domain_name(atable.col1)), (''mail''))::boolean) OR ((atable.col2) = (''500''))'
   );
   RETURN NEXT is(
     msar.build_expr(
@@ -4534,7 +5160,7 @@ BEGIN
         )
       )
     ),
-    '(((col2) = (''500'')) AND ((col3) < (''abcde''))) OR ((id) > (''20''))'
+    '(((atable.col2) = (''500'')) AND ((atable.col3) < (''abcde''))) OR ((atable.id) > (''20''))'
   );
 END;
 $$ LANGUAGE plpgsql;
@@ -5304,6 +5930,7 @@ BEGIN
           "4": "Neil Smith"
         }
       },
+      "joined_record_summaries": null,
       "record_summaries":  {
         "1": "Fred Fredrickson",
         "2": "Gabby Gabberson",
@@ -5342,6 +5969,7 @@ BEGIN
           "2": "Dave Davidson"
         }
       },
+      "joined_record_summaries": null,
       "record_summaries": null
     }$j$
   );
@@ -5374,6 +6002,7 @@ BEGIN
           "2": "Dave Davidson"
         }
       },
+      "joined_record_summaries": null,
       "record_summaries": null
     }$j$
   );
@@ -5577,30 +6206,6 @@ BEGIN
       '/'           -- ❌ widget.projection.sensitivity (❌ because can't join)
     )
   );
-END;
-$$ LANGUAGE plpgsql;
-
-
-CREATE OR REPLACE FUNCTION test_record_summary_after_dropped_referenced_column()
-RETURNS SETOF TEXT AS $$
-BEGIN
-  PERFORM __setup_preview_fkey_cols();
-
-  ALTER TABLE "Counselors" DROP COLUMN "Name";
-  RETURN NEXT is(
-    msar.get_record_from_table(
-      tab_id => '"Students"'::regclass::oid,
-      rec_id => 4,
-      return_record_summaries => true,
-      table_record_summary_templates => jsonb_build_object(
-        '"Students"'::regclass::oid,
-        '[[4], " ", [5], "% - (", [3, 3], " / ", [3, 2, 2], ")"]'::jsonb
-      )
-    ) -> 'record_summaries' ->> '4',
-    'Ida Idalia 90% - (Carol Carlson / )',
-    'record summary executes fine after dropping referenced FK column "Counselors"."Name"'
-  );
-
 END;
 $$ LANGUAGE plpgsql;
 
@@ -6745,7 +7350,7 @@ BEGIN
   );
   RETURN NEXT throws_ok(
     format(
-      'SELECT msar.get_record_from_table(%s, 1, true);',
+      'SELECT msar.get_record_from_table(%s, 1, null, true);',
       rel_id
     ),
     '42501',
@@ -7018,7 +7623,7 @@ BEGIN
   -- Empty table behavior
   RETURN NEXT is(
     msar.list_by_record_summaries('vehicles'::regclass, 10, 0),
-    '{"count": 0, "results": []}'
+    '{"count": 0, "mapping": null, "results": []}'::jsonb
   );
 
   INSERT INTO vehicles VALUES
@@ -7030,30 +7635,105 @@ BEGIN
     (6, 'Boat', 0),
     (7, 'Semi', 18),
     (8, 'Airplane', 10);
+
+  -- setup linkages
+  CREATE TABLE colors (id int primary key, name text);
+
+  CREATE TABLE vehicles_colors (
+    id int primary key, vehicle int references vehicles, color int references colors
+  );
+
+  INSERT INTO colors VALUES
+    (1, 'red'),
+    (2, 'blue'),
+    (3, 'green');
+
+  INSERT INTO vehicles_colors VALUES
+    (1, 1, 1),
+    (2, 2, 2),
+    (3, 2, 3),
+    (4, 4, 1),
+    (5, 4, 2),
+    (6, 5, 2),
+    (7, 6, 3),
+    (8, 7, 1),
+    (9, 7, 3),
+    (10, 8, 1),
+    (11, 8, 2),
+    (12, 8, 3),
+    (13, 5, 2);
   
   -- Basic test
   RETURN NEXT is(
     msar.list_by_record_summaries('vehicles'::regclass, 2, 0),
     '{
       "count": 8,
+      "mapping": null,
       "results": [
         {"key": 8, "summary": "Airplane"},
         {"key": 4, "summary": "Bicycle"}
       ]
-    }'
+    }'::jsonb
+  );
+
+  RETURN NEXT is(
+    msar.list_by_record_summaries(
+      'vehicles'::regclass, 2, 0,
+      linked_record_path => jsonb_build_object(
+        'record_pkey', 2,
+        'join_path', jsonb_build_array(
+          jsonb_build_array(
+            jsonb_build_array('colors'::regclass::oid::bigint, 1),
+            jsonb_build_array('vehicles_colors'::regclass::oid::bigint, 3)
+          ),
+          jsonb_build_array(
+            jsonb_build_array('vehicles_colors'::regclass::oid::bigint, 2),
+            jsonb_build_array('vehicles'::regclass::oid::bigint, 1)
+          )
+        )
+      )
+    ),
+    jsonb_build_object(
+      'count', 8,
+      'mapping', jsonb_build_object(
+        'join_table', 'vehicles_colors'::regclass::oid::bigint,
+        'joined_values', jsonb_build_object('4', '[5]'::jsonb, '8', '[11]'::jsonb)
+      ),
+      'results', '[{"key": 8, "summary": "Airplane"}, {"key": 4, "summary": "Bicycle"}]'::jsonb
+    )
   );
 
   -- Pagination
   RETURN NEXT is(
-    msar.list_by_record_summaries('vehicles'::regclass, 3, 3),
-    '{
-      "count": 8,
-      "results": [
+    msar.list_by_record_summaries(
+      'vehicles'::regclass, 3, 3,
+      linked_record_path => jsonb_build_object(
+        'record_pkey', 2,
+        'join_path', jsonb_build_array(
+          jsonb_build_array(
+            jsonb_build_array('colors'::regclass::oid::bigint, 1),
+            jsonb_build_array('vehicles_colors'::regclass::oid::bigint, 3)
+          ),
+          jsonb_build_array(
+            jsonb_build_array('vehicles_colors'::regclass::oid::bigint, 2),
+            jsonb_build_array('vehicles'::regclass::oid::bigint, 1)
+          )
+        )
+      )
+    ),
+    jsonb_build_object(
+      'count', 8,
+      'mapping', jsonb_build_object(
+        'join_table', 'vehicles_colors'::regclass::oid::bigint,
+        'joined_values', jsonb_build_object('5', '[6, 13]'::jsonb)
+      ),
+      'results',
+      '[
         {"key": 1, "summary": "Car"},
         {"key": 7, "summary": "Semi"},
         {"key": 5, "summary": "Tricycle"}
-      ]
-    }'
+      ]'::jsonb
+    )
   );
 
   -- Search query
@@ -7061,6 +7741,7 @@ BEGIN
     msar.list_by_record_summaries('vehicles'::regclass, 2, 0, 'cycle'),
     '{
       "count": 3,
+      "mapping": null,
       "results": [
         {"key": 4, "summary": "Bicycle"},
         {"key": 5, "summary": "Tricycle"}
@@ -7071,7 +7752,7 @@ BEGIN
   -- Empty search query
   RETURN NEXT is(
     msar.list_by_record_summaries('vehicles'::regclass, 2, 0, 'NOPE'),
-    '{"count": 0, "results": []}'
+    '{"count": 0, "mapping": null, "results": []}'
   );
 
   -- Search in custom record summary template
@@ -7083,7 +7764,7 @@ BEGIN
       '18 wheels',
       format('{ "%s": [ [2], " with ", [3], " wheels" ] }', 'vehicles'::regclass::oid)::jsonb
     ),
-    '{"count": 1, "results": [{"key": 7, "summary": "Semi with 18 wheels"}]}'
+    '{"count": 1, "mapping": null, "results": [{"key": 7, "summary": "Semi with 18 wheels"}]}'
   );
 END;
 $$ LANGUAGE plpgsql;
@@ -7268,7 +7949,7 @@ BEGIN
   SELECT jsonb_agg(to_jsonb(i)) FROM "Items" i INTO items_table_record;
 
   RETURN NEXT is(
-    authors_table_record, 
+    authors_table_record,
     $j$[
       {
         "id": 1,
@@ -7279,7 +7960,7 @@ BEGIN
     ]$j$
   );
   RETURN NEXT is(
-    books_table_record, 
+    books_table_record,
     $j$[
       {
         "id": 1,
@@ -7293,7 +7974,7 @@ BEGIN
     ]$j$
   );
   RETURN NEXT is(
-    items_table_record, 
+    items_table_record,
     $j$[
       {
         "id": 1,
@@ -7319,7 +8000,7 @@ BEGIN
   PERFORM __setup_items_books_authors_insert();
 
   authors_table_oid := '"Authors"'::regclass::oid;
-  
+
   field_info_list := jsonb_build_array(
     jsonb_build_object(
       'key', '_id-609eefde-cfcc-4ebf-97a4-62992c210312',
@@ -7355,7 +8036,7 @@ BEGIN
   SELECT jsonb_agg(to_jsonb(a)) FROM "Authors" a INTO authors_table_record;
 
   RETURN NEXT is(
-    authors_table_record, 
+    authors_table_record,
     $j$[
       {
         "id": 1,
@@ -7446,7 +8127,7 @@ BEGIN
     files jsonb
   );
 
-  INSERT INTO a(name, files) VALUES 
+  INSERT INTO a(name, files) VALUES
   ('cat', '{"uri": "s3://msar/cat.png", "mash": "bad_mash"}'::jsonb),
   ('dog', '{"uri": "s3://msar/dog.png", "mash": "outdated_mash_34b801f337ee016d21"}'::jsonb),
   ('elephant', '{"uri": "s3://msar/elephant.png", "mash": ""}'::jsonb), -- empty mash
@@ -7468,9 +8149,9 @@ DECLARE
 BEGIN
   PERFORM __setup_files_table_with_bad_mash();
   tab_a_oid := 'a'::regclass::oid;
-  
+
   PERFORM msar.reset_mash(tab_a_oid, 3::smallint, uri_mash_map);
-  
+
   SELECT jsonb_agg(to_jsonb(a)) FROM a INTO results;
 
   RETURN NEXT is(
