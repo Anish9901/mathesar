@@ -63,6 +63,7 @@
     allColumns,
     columnsDataStore,
   } = $tabularData);
+  $: $tabularData, (tableInspectorTab = 'table');
   $: clipboardHandler = new SheetClipboardHandler({
     copyingContext: {
       getRows: () =>
@@ -142,6 +143,7 @@
 <div class="table-view">
   <WithTableInspector
     {context}
+    {table}
     {showTableInspector}
     bind:activeTabId={tableInspectorTab}
   >
