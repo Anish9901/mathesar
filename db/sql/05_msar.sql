@@ -2154,7 +2154,52 @@ CREATE TYPE __msar.col_def AS (
 
 
 CREATE OR REPLACE FUNCTION
-msar.get_fresh_copy_name(tab_id oid, col_id smallint) RETURNS text AS $$/*
+msar.build_unique_column_name(tab_id regclass, base text, idx integer) RETURNS text AS $$/*
+This function creates a version of the given `base` column name which is unique in a table.
+
+Given an original column name 'abc', the resulting copies will be named 'abc <n>', where <n> is
+minimal (at least 1) subject to the restriction that 'abc <n>' is not already a column of the table
+given. The given idx is attempted as a suffix to make the column name unique. If the result isn't
+unique after all, it's incremented by further calls.
+
+Args:
+  tab_id: the table for which we'll generate a column name.
+  base: the original column name we'll use to build a unique name.
+  idx: an integer to use as a suffix for making the name unique.
+*/
+  SELECT CASE
+    WHEN NOT EXISTS(
+      SELECT 1 FROM pg_catalog.pg_attribute pga
+      WHERE attrelid=tab_id AND attname=concat(base, ' ', idx)
+    ) THEN concat(base, ' ', idx)
+    ELSE msar.build_unique_column_name(tab_id, base, idx + 1)
+  END;
+$$ LANGUAGE SQL RETURNS NULL ON NULL INPUT;
+
+
+CREATE OR REPLACE FUNCTION
+msar.build_unique_column_name(tab_id regclass, base text) RETURNS text AS $$ /*
+This function creates a version of the given `base` column name which is unique in a table.
+
+Given an original column name 'abc', the resulting copies will be named 'abc <n>', where <n> is
+minimal (at least 1) subject to the restriction that 'abc <n>' is not already a column of the table
+given.
+
+Args:
+  tab_id: the table for which we'll generate a column name.
+  base: the original column name we'll use to build a unique name.
+*/
+  SELECT CASE
+    WHEN NOT EXISTS(
+      SELECT 1 FROM pg_catalog.pg_attribute pga WHERE attrelid=tab_id AND attname=base
+    ) THEN base
+    ELSE msar.build_unique_column_name(tab_id, base, 1)
+  END;
+$$ LANGUAGE SQL RETURNS NULL ON NULL INPUT;
+
+
+CREATE OR REPLACE FUNCTION
+msar.build_unique_column_name(tab_id oid, col_id smallint) RETURNS text AS $$/*
 This function generates a name to be used for a duplicated column.
 
 Given an original column name 'abc', the resulting copies will be named 'abc <n>', where <n> is
@@ -2165,19 +2210,10 @@ Args:
   tab_id: the table for which we'll generate a column name.
   col_id: the original column whose name we'll use as the prefix in our copied column name.
 */
-DECLARE
-  original_col_name text;
-  idx integer := 1;
-BEGIN
-  original_col_name := attname FROM pg_attribute WHERE attrelid=tab_id AND attnum=col_id;
-  WHILE format('%s %s', original_col_name, idx) IN (
-    SELECT attname FROM pg_attribute WHERE attrelid=tab_id
-  ) LOOP
-    idx = idx + 1;
-  END LOOP;
-  RETURN format('%s %s', original_col_name, idx);
-END;
-$$ LANGUAGE plpgsql RETURNS NULL ON NULL INPUT;
+  SELECT msar.build_unique_column_name(tab_id, attname)
+  FROM pg_catalog.pg_attribute pga
+  WHERE attrelid=tab_id AND attnum=col_id;
+$$ LANGUAGE SQL RETURNS NULL ON NULL INPUT;
 
 
 CREATE OR REPLACE FUNCTION __msar.get_duplicate_col_defs(
@@ -2198,7 +2234,7 @@ Args:
 SELECT array_agg(
   (
     -- build a name for the duplicate column
-    quote_ident(COALESCE(new_name, msar.get_fresh_copy_name(tab_id, pg_columns.attnum))),
+    quote_ident(COALESCE(new_name, msar.build_unique_column_name(tab_id, pg_columns.attnum))),
     -- build text specifying the type of the duplicate column
     format_type(atttypid, atttypmod),
     -- set the duplicate column to be nullable, since it will initially be empty
@@ -2217,27 +2253,6 @@ FROM pg_attribute AS pg_columns
     ON pg_column_defaults.adnum=pg_columns.attnum AND pg_columns.attrelid=pg_column_defaults.adrelid
 WHERE pg_columns.attrelid=tab_id;
 $$ LANGUAGE sql RETURNS NULL ON NULL INPUT;
-
-
-CREATE OR REPLACE FUNCTION
-msar.build_unique_column_name(tab_id oid, col_name text) RETURNS text AS $$/*
-Get a unique column name based on the given name.
-
-Args:
-  tab_id: The OID of the table where the column name should be unique.
-  col_name: The resulting column name will be equal to or at least based on this.
-
-See the msar.get_fresh_copy_name function for how unique column names are generated.
-*/
-DECLARE
-  col_attnum smallint;
-BEGIN
-  col_attnum := msar.get_attnum(tab_id, col_name);
-  RETURN CASE
-    WHEN col_attnum IS NOT NULL THEN msar.get_fresh_copy_name(tab_id, col_attnum) ELSE col_name
-  END;
-END;
-$$ LANGUAGE plpgsql RETURNS NULL ON NULL INPUT;
 
 
 CREATE OR REPLACE FUNCTION
