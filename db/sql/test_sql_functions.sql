@@ -406,8 +406,11 @@ $f$ LANGUAGE plpgsql;
 
 -- msar.insert_from_select -----------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION __setup_msar_insert_from_select() RETURNS SETOF TEXT AS $$
+CREATE OR REPLACE FUNCTION test_msar_insert_from_select_success() RETURNS SETOF TEXT AS $f$
+DECLARE
+  records jsonb;
 BEGIN
+  -- Create temporary tables inline (cannot use setup function due to scope issues)
   CREATE TEMPORARY TABLE tmp_src_insert (
     text_col text,
     num_col text,
@@ -428,14 +431,6 @@ BEGIN
     email mathesar_types.email,
     price mathesar_types.mathesar_money
   );
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION test_msar_insert_from_select_success() RETURNS SETOF TEXT AS $f$
-DECLARE
-  records jsonb;
-BEGIN
-  PERFORM __setup_msar_insert_from_select();
 
   -- Shuffle mappings: src column 3 -> dst column 1, src 1 -> dst 2, etc.
   RETURN NEXT lives_ok($$
@@ -485,7 +480,27 @@ $f$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION test_msar_insert_from_select_error() RETURNS SETOF TEXT AS $f$
 BEGIN
-  PERFORM __setup_msar_insert_from_select();
+  -- Create temporary tables inline (cannot use setup function due to scope issues)
+  CREATE TEMPORARY TABLE tmp_src_insert (
+    text_col text,
+    num_col text,
+    bool_col text,
+    numeric_col text,
+    email_col text,
+    money_col text
+  );
+  INSERT INTO tmp_src_insert VALUES 
+    ('100', '10', 'true', '123.45', 'test@example.com', '$50.00'),
+    ('200', '20', 'false', '678.90', 'user@test.org', '$100.50');
+  
+  CREATE TEMPORARY TABLE insert_dest_table (
+    id integer,
+    value integer,
+    is_active boolean,
+    amount numeric,
+    email mathesar_types.email,
+    price mathesar_types.mathesar_money
+  );
   
   -- Add uncastable data to test error handling
   INSERT INTO tmp_src_insert VALUES ('not_a_number', 'invalid', 'bad', 'data', 'test', 'fail');
