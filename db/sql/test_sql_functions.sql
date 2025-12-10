@@ -411,9 +411,6 @@ DECLARE
   records jsonb;
 BEGIN
   -- Create temporary tables inline (cannot use setup function due to scope issues)
-  DROP TABLE IF EXISTS tmp_src_insert_success;
-  DROP TABLE IF EXISTS insert_dest_table_success;
-  
   CREATE TEMPORARY TABLE tmp_src_insert_success (
     text_col text,
     num_col text,
@@ -484,9 +481,6 @@ $f$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION test_msar_insert_from_select_error() RETURNS SETOF TEXT AS $f$
 BEGIN
   -- Create temporary tables inline (cannot use setup function due to scope issues)
-  DROP TABLE IF EXISTS tmp_src_insert_error;
-  DROP TABLE IF EXISTS insert_dest_table_error;
-  
   CREATE TEMPORARY TABLE tmp_src_insert_error (
     text_col text,
     num_col text,
