@@ -454,7 +454,14 @@ BEGIN
   $$, 'insert_from_select runs for castable mappings with shuffled columns');
 
   -- Check actual records using msar.list_records_from_table
-  records := msar.list_records_from_table('insert_dest_table'::regclass, NULL, NULL, NULL, NULL);
+  records := msar.list_records_from_table(
+    tab_id => 'insert_dest_table'::regclass::oid,
+    limit_ => NULL,
+    offset_ => NULL,
+    order_ => NULL,
+    filter_ => NULL,
+    group_ => NULL
+  );
   
   RETURN NEXT is(
     (records->'count')::bigint,
@@ -463,15 +470,15 @@ BEGIN
   );
   
   RETURN NEXT is(
-    records->'results'->0->>'value',
+    records->'results'->0->>'2',
     '100',
-    'first record value column matches (src text_col -> dst value)'
+    'first record value column (attnum 2) matches (src text_col -> dst value)'
   );
   
   RETURN NEXT is(
-    records->'results'->0->>'id',
+    records->'results'->0->>'1',
     '10',
-    'first record id column matches (src num_col -> dst id)'
+    'first record id column (attnum 1) matches (src num_col -> dst id)'
   );
 
   DROP TABLE insert_dest_table;
