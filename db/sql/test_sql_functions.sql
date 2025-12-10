@@ -411,7 +411,10 @@ DECLARE
   records jsonb;
 BEGIN
   -- Create temporary tables inline (cannot use setup function due to scope issues)
-  CREATE TEMPORARY TABLE tmp_src_insert (
+  DROP TABLE IF EXISTS tmp_src_insert_success;
+  DROP TABLE IF EXISTS insert_dest_table_success;
+  
+  CREATE TEMPORARY TABLE tmp_src_insert_success (
     text_col text,
     num_col text,
     bool_col text,
@@ -419,11 +422,11 @@ BEGIN
     email_col text,
     money_col text
   );
-  INSERT INTO tmp_src_insert VALUES 
+  INSERT INTO tmp_src_insert_success VALUES 
     ('100', '10', 'true', '123.45', 'test@example.com', '$50.00'),
     ('200', '20', 'false', '678.90', 'user@test.org', '$100.50');
   
-  CREATE TEMPORARY TABLE insert_dest_table (
+  CREATE TEMPORARY TABLE insert_dest_table_success (
     id integer,
     value integer,
     is_active boolean,
@@ -435,8 +438,8 @@ BEGIN
   -- Shuffle mappings: src column 3 -> dst column 1, src 1 -> dst 2, etc.
   RETURN NEXT lives_ok($$
     SELECT msar.insert_from_select(
-      'tmp_src_insert'::regclass,
-      'insert_dest_table'::regclass,
+      'tmp_src_insert_success'::regclass,
+      'insert_dest_table_success'::regclass,
       jsonb_build_array(
         jsonb_build_object('src_table_attnum', 1, 'dst_table_attnum', 2),
         jsonb_build_object('src_table_attnum', 2, 'dst_table_attnum', 1),
@@ -450,7 +453,7 @@ BEGIN
 
   -- Check actual records using msar.list_records_from_table
   records := msar.list_records_from_table(
-    tab_id => 'insert_dest_table'::regclass::oid,
+    tab_id => 'insert_dest_table_success'::regclass::oid,
     limit_ => NULL,
     offset_ => NULL,
     order_ => '[{"attnum": 1, "direction": "asc"}]'::jsonb,
@@ -481,7 +484,10 @@ $f$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION test_msar_insert_from_select_error() RETURNS SETOF TEXT AS $f$
 BEGIN
   -- Create temporary tables inline (cannot use setup function due to scope issues)
-  CREATE TEMPORARY TABLE tmp_src_insert (
+  DROP TABLE IF EXISTS tmp_src_insert_error;
+  DROP TABLE IF EXISTS insert_dest_table_error;
+  
+  CREATE TEMPORARY TABLE tmp_src_insert_error (
     text_col text,
     num_col text,
     bool_col text,
@@ -489,11 +495,11 @@ BEGIN
     email_col text,
     money_col text
   );
-  INSERT INTO tmp_src_insert VALUES 
+  INSERT INTO tmp_src_insert_error VALUES 
     ('100', '10', 'true', '123.45', 'test@example.com', '$50.00'),
     ('200', '20', 'false', '678.90', 'user@test.org', '$100.50');
   
-  CREATE TEMPORARY TABLE insert_dest_table (
+  CREATE TEMPORARY TABLE insert_dest_table_error (
     id integer,
     value integer,
     is_active boolean,
@@ -503,12 +509,12 @@ BEGIN
   );
   
   -- Add uncastable data to test error handling
-  INSERT INTO tmp_src_insert VALUES ('not_a_number', 'invalid', 'bad', 'data', 'test', 'fail');
+  INSERT INTO tmp_src_insert_error VALUES ('not_a_number', 'invalid', 'bad', 'data', 'test', 'fail');
 
   RETURN NEXT throws_like($$
     SELECT msar.insert_from_select(
-      'tmp_src_insert'::regclass,
-      'insert_dest_table'::regclass,
+      'tmp_src_insert_error'::regclass,
+      'insert_dest_table_error'::regclass,
       jsonb_build_array(
         jsonb_build_object('src_table_attnum', 1, 'dst_table_attnum', 1)
       )
