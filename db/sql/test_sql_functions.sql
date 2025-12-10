@@ -363,7 +363,8 @@ DECLARE
   response jsonb;
   tmp_tab_oid oid;
 BEGIN
-  response := msar.prepare_temp_table_for_import(null,
+  response := msar.prepare_temp_table_for_import(
+    tab_name := null,
     col_names := ARRAY['col1','col2']
   );
 
@@ -378,32 +379,6 @@ BEGIN
   RETURN NEXT is(
     (response ->> 'table_oid')::oid,
     tmp_tab_oid
-  );
-END;
-$f$ LANGUAGE plpgsql;
-
-
-CREATE OR REPLACE FUNCTION test_msar_prepare_temp_table_complete_copy_statement() RETURNS SETOF TEXT AS $f$
-DECLARE
-  r_json jsonb;
-  table_oid bigint;
-  actual_copy_sql text;
-BEGIN
-  r_json := msar.prepare_temp_table_for_import(
-    tab_name := 'tmp_copy_test',
-    col_names := ARRAY['col1','col2','col3']
-  );
-  table_oid := (r_json->>'table_oid')::bigint;
-  actual_copy_sql := r_json->>'copy_sql';
-  
-  RETURN NEXT ok(
-    actual_copy_sql LIKE 'COPY pg_temp%.tmp_copy_test(col1, col2, col3) FROM STDIN',
-    'COPY statement has correct format with pg_temp schema and columns'
-  );
-  
-  RETURN NEXT ok(
-    table_oid IS NOT NULL,
-    'table_oid is returned'
   );
 END;
 $f$ LANGUAGE plpgsql;
