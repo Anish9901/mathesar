@@ -420,7 +420,7 @@ BEGIN
     ('100', '10', 'true', '123.45', 'test@example.com', '$50.00'),
     ('200', '20', 'false', '678.90', 'user@test.org', '$100.50');
   
-  CREATE TABLE insert_dest_table (
+  CREATE TEMPORARY TABLE insert_dest_table (
     id integer,
     value integer,
     is_active boolean,
@@ -480,8 +480,6 @@ BEGIN
     '10',
     'first record id column (attnum 1) matches (src num_col -> dst id)'
   );
-
-  DROP TABLE insert_dest_table;
 END;
 $f$ LANGUAGE plpgsql;
 
@@ -501,8 +499,6 @@ BEGIN
       )
     );
   $$, '%invalid input syntax for%integer%', 'insert_from_select raises when uncastable text to integer mapping exists');
-
-  DROP TABLE insert_dest_table;
 END;
 $f$ LANGUAGE plpgsql;
 
