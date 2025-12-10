@@ -8,8 +8,6 @@ $$ LANGUAGE plpgsql;
 CALL raise_notice('Creating testing DB');
 CREATE DATABASE mathesar_testing;
 \c mathesar_testing
-ALTER DATABASE mathesar_testing SET timezone TO 'UTC';
-SET TIME ZONE 'UTC';
 \ir 00_msar_all_objects_table.sql
 \ir 01_msar_types.sql
 \ir 02_msar_remove.sql

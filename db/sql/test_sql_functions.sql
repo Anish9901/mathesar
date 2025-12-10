@@ -300,39 +300,105 @@ $f$ LANGUAGE plpgsql;
 
 -- msar.prepare_temp_table_for_import -------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION test_msar_prepare_temp_table_for_import() RETURNS SETOF TEXT AS $f$
+CREATE OR REPLACE FUNCTION test_msar_prepare_temp_table_multiple_id_columns() RETURNS SETOF TEXT AS $f$
+DECLARE
+  r_json jsonb;
+  table_oid bigint;
+  col_names_result text[];
+BEGIN
+  r_json := msar.prepare_temp_table_for_import(
+    tab_name := 'tmp_multi_id',
+    col_names := ARRAY['id', 'id', 'id', 'other']
+  );
+  table_oid := (r_json->>'table_oid')::bigint;
+  
+  RETURN NEXT ok(
+    table_oid IS NOT NULL,
+    'prepare_temp_table_for_import handles multiple id columns'
+  );
+  
+  SELECT array_agg(attname::text ORDER BY attnum)
+  INTO col_names_result
+  FROM pg_attribute
+  WHERE attrelid = table_oid AND attnum > 0 AND NOT attisdropped;
+  
+  RETURN NEXT is(
+    col_names_result,
+    ARRAY['id', 'id 1', 'id 2', 'other'],
+    'multiple id columns are renamed correctly'
+  );
+  
+  RETURN NEXT ok(
+    (r_json->>'table_oid')::bigint IS NOT NULL AND
+    (r_json->>'copy_sql') IS NOT NULL,
+    'returned json contains table_oid and copy_sql'
+  );
+END;
+$f$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION test_msar_prepare_temp_table_with_and_without_tab_name() RETURNS SETOF TEXT AS $f$
 DECLARE
   r_json jsonb;
   table_oid bigint;
 BEGIN
-  r_json := msar.prepare_temp_table_for_import(
-    tab_name := 'tmp_test_table',
-    col_names := ARRAY['id','other']
-  );
-  table_oid := (r_json->>'table_oid')::bigint;
-  RETURN NEXT ok(
-    table_oid IS NOT NULL,
-    'prepare_temp_table_for_import returns table_oid'
-  );
-
+  -- Test with tab_name provided
   r_json := msar.prepare_temp_table_for_import(
     tab_name := 'tmp_explicit_table',
-    col_names := ARRAY['id','other']
+    col_names := ARRAY['col1','col2']
   );
   table_oid := (r_json->>'table_oid')::bigint;
+  
   RETURN NEXT ok(
     (SELECT relpersistence = 't' FROM pg_class WHERE oid = table_oid),
-    'explicit tab_name created as temporary table'
+    'explicit tab_name creates temporary table'
   );
-
+  
+  -- Test without tab_name (NULL)
   r_json := msar.prepare_temp_table_for_import(
-    tab_name := 'tmp_copy_check',
-    col_names := ARRAY['id','other']
+    tab_name := NULL,
+    col_names := ARRAY['col1','col2']
   );
-  RETURN NEXT matches(
-    r_json->>'copy_sql',
-    '^COPY ',
-    'copy_sql returned and starts with COPY'
+  table_oid := (r_json->>'table_oid')::bigint;
+  
+  RETURN NEXT ok(
+    (SELECT relpersistence = 't' FROM pg_class WHERE oid = table_oid),
+    'NULL tab_name creates temporary table'
+  );
+  
+  RETURN NEXT ok(
+    table_oid IS NOT NULL,
+    'table_oid returned when tab_name is NULL'
+  );
+END;
+$f$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION test_msar_prepare_temp_table_complete_copy_statement() RETURNS SETOF TEXT AS $f$
+DECLARE
+  r_json jsonb;
+  table_oid bigint;
+  table_name text;
+  expected_copy_sql text;
+  actual_copy_sql text;
+BEGIN
+  r_json := msar.prepare_temp_table_for_import(
+    tab_name := 'tmp_copy_test',
+    col_names := ARRAY['col1','col2','col3']
+  );
+  table_oid := (r_json->>'table_oid')::bigint;
+  actual_copy_sql := r_json->>'copy_sql';
+  
+  SELECT relname INTO table_name FROM pg_class WHERE oid = table_oid;
+  expected_copy_sql := format('COPY %I (col1, col2, col3) FROM STDIN WITH (FORMAT CSV, HEADER true);', table_name);
+  
+  RETURN NEXT is(
+    actual_copy_sql,
+    expected_copy_sql,
+    'complete COPY statement matches expected format'
+  );
+  
+  RETURN NEXT ok(
+    table_oid IS NOT NULL,
+    'table_oid is returned'
   );
 END;
 $f$ LANGUAGE plpgsql;
@@ -366,28 +432,46 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION test_msar_insert_from_select_success() RETURNS SETOF TEXT AS $f$
+DECLARE
+  records jsonb;
 BEGIN
   PERFORM __setup_msar_insert_from_select();
 
+  -- Shuffle mappings: src column 3 -> dst column 1, src 1 -> dst 2, etc.
   RETURN NEXT lives_ok($$
     SELECT msar.insert_from_select(
       'tmp_src_insert'::regclass,
       'insert_dest_table'::regclass,
       jsonb_build_array(
-        jsonb_build_object('src_table_attnum', 1, 'dst_table_attnum', 1),
-        jsonb_build_object('src_table_attnum', 2, 'dst_table_attnum', 2),
+        jsonb_build_object('src_table_attnum', 1, 'dst_table_attnum', 2),
+        jsonb_build_object('src_table_attnum', 2, 'dst_table_attnum', 1),
         jsonb_build_object('src_table_attnum', 3, 'dst_table_attnum', 3),
         jsonb_build_object('src_table_attnum', 4, 'dst_table_attnum', 4),
         jsonb_build_object('src_table_attnum', 5, 'dst_table_attnum', 5),
         jsonb_build_object('src_table_attnum', 6, 'dst_table_attnum', 6)
       )
     );
-  $$, 'insert_from_select runs for castable mappings with various types');
+  $$, 'insert_from_select runs for castable mappings with shuffled columns');
 
+  -- Check actual records using msar.list_records_from_table
+  records := msar.list_records_from_table('insert_dest_table'::regclass, NULL, NULL, NULL, NULL);
+  
   RETURN NEXT is(
-    (SELECT COUNT(*)::bigint FROM insert_dest_table WHERE id IN (100,200)),
+    (records->'count')::bigint,
     2::bigint,
     'two rows inserted successfully'
+  );
+  
+  RETURN NEXT is(
+    records->'results'->0->>'value',
+    '100',
+    'first record value column matches (src text_col -> dst value)'
+  );
+  
+  RETURN NEXT is(
+    records->'results'->0->>'id',
+    '10',
+    'first record id column matches (src num_col -> dst id)'
   );
 
   DROP TABLE insert_dest_table;
@@ -396,21 +480,22 @@ $f$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION test_msar_insert_from_select_error() RETURNS SETOF TEXT AS $f$
 BEGIN
-  CREATE TEMPORARY TABLE tmp_src_error (text_col text, num_col text);
-  INSERT INTO tmp_src_error VALUES ('not_a_number','30');
-  CREATE TABLE insert_error_dest (id integer, value integer);
+  PERFORM __setup_msar_insert_from_select();
+  
+  -- Add uncastable data to test error handling
+  INSERT INTO tmp_src_insert VALUES ('not_a_number', 'invalid', 'bad', 'data', 'test', 'fail');
 
   RETURN NEXT throws_like($$
     SELECT msar.insert_from_select(
-      'tmp_src_error'::regclass,
-      'insert_error_dest'::regclass,
+      'tmp_src_insert'::regclass,
+      'insert_dest_table'::regclass,
       jsonb_build_array(
         jsonb_build_object('src_table_attnum', 1, 'dst_table_attnum', 1)
       )
     );
   $$, '%invalid input syntax for%integer%', 'insert_from_select raises when uncastable text to integer mapping exists');
 
-  DROP TABLE insert_error_dest;
+  DROP TABLE insert_dest_table;
 END;
 $f$ LANGUAGE plpgsql;
 
