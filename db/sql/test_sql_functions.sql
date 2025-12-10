@@ -300,42 +300,35 @@ $f$ LANGUAGE plpgsql;
 
 -- msar.prepare_temp_table_for_import -------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION test_msar_prepare_temp_table_multiple_id_columns() RETURNS SETOF TEXT AS $f$
+CREATE OR REPLACE FUNCTION test_prepare_temp_table_multiple_id_cols()
+RETURNS SETOF TEXT AS $f$
 DECLARE
-  r_json jsonb;
-  table_oid bigint;
-  col_names_result text[];
-  col_count integer;
+  response jsonb;
+  tmp_tab_oid oid;
 BEGIN
-  r_json := msar.prepare_temp_table_for_import(
+  response := msar.prepare_temp_table_for_import(
     tab_name := 'tmp_multi_id',
     col_names := ARRAY['id', 'id', 'id', 'other']
   );
-  table_oid := (r_json->>'table_oid')::bigint;
-  
-  RETURN NEXT ok(
-    table_oid IS NOT NULL,
-    'prepare_temp_table_for_import handles multiple id columns'
+
+  -- id columns are renamed to 'Column 1', 'Column 2' and 'Column 3' respectively.
+  RETURN NEXT has_column('tmp_multi_id', 'Column 1');
+  RETURN NEXT has_column('tmp_multi_id', 'Column 2');
+  RETURN NEXT has_column('tmp_multi_id', 'Column 3');
+  RETURN NEXT has_column('tmp_multi_id', 'other');
+
+  RETURN NEXT alike(
+    response ->> 'copy_sql',
+    'COPY pg_temp_%.tmp_multi_id("Column 1", "Column 2", "Column 3", other) FROM STDIN'
   );
-  
-  SELECT COUNT(*)
-  INTO col_count
-  FROM pg_attribute
-  WHERE attrelid = table_oid AND attnum > 0 AND NOT attisdropped;
-  
+  SELECT oid INTO tmp_tab_oid FROM pg_catalog.pg_class WHERE relname = 'tmp_multi_id';
   RETURN NEXT is(
-    col_count,
-    4,
-    'table created with 4 columns'
-  );
-  
-  RETURN NEXT ok(
-    (r_json->>'table_oid')::bigint IS NOT NULL AND
-    (r_json->>'copy_sql') IS NOT NULL,
-    'returned json contains table_oid and copy_sql'
+    (response ->> 'table_oid')::oid,
+    tmp_tab_oid
   );
 END;
 $f$ LANGUAGE plpgsql;
+
 
 CREATE OR REPLACE FUNCTION test_msar_prepare_temp_table_with_and_without_tab_name() RETURNS SETOF TEXT AS $f$
 DECLARE
