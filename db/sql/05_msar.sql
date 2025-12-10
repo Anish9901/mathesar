@@ -2601,6 +2601,64 @@ $$ LANGUAGE SQL;
 
 
 CREATE OR REPLACE FUNCTION
+msar.add_column(tab_id regclass, col_def jsonb, raw_default boolean DEFAULT false)
+  RETURNS smallint AS $$/*
+Add a column to a table.
+
+Args:
+  tab_id: The OID of the table where we'll create the columns.
+  col_def: An object defining the new column. See below for details.
+  raw_default: This boolean tells us whether we chould reproduce the default with or without quoting
+               and escaping. True means we don't quote or escape, but just use the raw value.
+
+Returns:
+  The attnum of the newly created column.
+
+
+col_def should have the form:
+  {
+    "name": <str> (optional),
+    "type": {
+      "name": <str> (optional),
+      "options": <obj> (optional),
+    },
+    "not_null": <bool> (optional; default false),
+    "default": <any> (optional),
+    "description": <str> (optional)
+  }
+*/
+DECLARE
+  unique_col_name text;
+  sanitized_default text;
+  created_attnum smallint;
+BEGIN
+  unique_col_name = msar.build_unique_column_name(tab_id, coalesce(col_def ->> 'name', 'Column'));
+  sanitized_default = CASE
+    WHEN col_def ->> 'default' IS NULL THEN null
+    WHEN raw_default THEN col_def ->> 'default'
+    ELSE format('%L', col_def ->> 'default')
+  END;
+  EXECUTE format(
+    'ALTER TABLE %1$I.%2$I ADD COLUMN %3$I %4$s %5$s %6$s',
+    msar.get_relation_schema_name(tab_id),
+    msar.get_relation_name(tab_id),
+    unique_col_name,
+    msar.build_type_text(col_def -> 'type'),
+    CASE WHEN (col_def -> 'not_null')::boolean THEN 'NOT NULL' END,
+    'DEFAULT ' || sanitized_default
+  );
+  created_attnum = attnum
+    FROM pg_catalog.pg_attribute
+    WHERE attrelid = tab_id AND attname = unique_col_name;
+  IF col_def ? 'description' THEN
+    PERFORM msar.comment_on_column(tab_id, created_attnum, col_def ->> 'description');
+  END IF;
+  RETURN created_attnum;
+END;
+$$ LANGUAGE plpgsql RETURNS NULL ON NULL INPUT;
+
+
+CREATE OR REPLACE FUNCTION
 msar.add_pkey_column(
   tab_id regclass,
   pkey_type msar.pkey_kind,
