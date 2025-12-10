@@ -386,114 +386,113 @@ $f$ LANGUAGE plpgsql;
 
 -- msar.insert_from_select -----------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION test_msar_insert_from_select_success() RETURNS SETOF TEXT AS $f$
+CREATE OR REPLACE FUNCTION __setup_insert_from_select() RETURNS SETOF TEXT AS $$
+BEGIN
+  CREATE TEMPORARY TABLE src (
+    text_col text, -- 1
+    email_col text, -- 2
+    numeric_col text, -- 3
+    money_col text, -- 4 
+    bool_col text, -- 5
+    num_col text -- 6
+  );
+  INSERT INTO src VALUES 
+    ('100', 'test@example.com', '123.45', '$50.00', 'true', '1'),
+    ('200', 'user@test.org', '678.90', '$100.50', 'false', '2');
+
+  CREATE TABLE dest (
+    id integer, -- 1
+    value integer, -- 2
+    is_active boolean, -- 3
+    amount numeric, -- 4
+    email mathesar_types.email, -- 5
+    price mathesar_types.mathesar_money -- 6
+  );
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION test_insert_from_select_success() RETURNS SETOF TEXT AS $f$
 DECLARE
+  insert_count bigint;
   records jsonb;
 BEGIN
-  -- Create temporary tables inline (cannot use setup function due to scope issues)
-  CREATE TEMPORARY TABLE tmp_src_insert_success (
-    text_col text,
-    num_col text,
-    bool_col text,
-    numeric_col text,
-    email_col text,
-    money_col text
-  );
-  INSERT INTO tmp_src_insert_success VALUES 
-    ('100', '10', 'true', '123.45', 'test@example.com', '$50.00'),
-    ('200', '20', 'false', '678.90', 'user@test.org', '$100.50');
-  
-  CREATE TEMPORARY TABLE insert_dest_table_success (
-    id integer,
-    value integer,
-    is_active boolean,
-    amount numeric,
-    email mathesar_types.email,
-    price mathesar_types.mathesar_money
-  );
+  PERFORM __setup_insert_from_select();
+  SELECT msar.insert_from_select(
+    src_tab_id := 'src'::regclass,
+    dst_tab_id := 'dest'::regclass,
+    mappings := jsonb_build_array(
+      jsonb_build_object('src_table_attnum', 6, 'dst_table_attnum', 1),
+      jsonb_build_object('src_table_attnum', 1, 'dst_table_attnum', 2),
+      jsonb_build_object('src_table_attnum', 5, 'dst_table_attnum', 3),
+      jsonb_build_object('src_table_attnum', 3, 'dst_table_attnum', 4),
+      jsonb_build_object('src_table_attnum', 2, 'dst_table_attnum', 5),
+      jsonb_build_object('src_table_attnum', 4, 'dst_table_attnum', 6)
+    )
+  ) INTO insert_count;
 
-  -- Shuffle mappings: src column 3 -> dst column 1, src 1 -> dst 2, etc.
-  RETURN NEXT lives_ok($$
-    SELECT msar.insert_from_select(
-      'tmp_src_insert_success'::regclass,
-      'insert_dest_table_success'::regclass,
-      jsonb_build_array(
-        jsonb_build_object('src_table_attnum', 1, 'dst_table_attnum', 2),
-        jsonb_build_object('src_table_attnum', 2, 'dst_table_attnum', 1),
-        jsonb_build_object('src_table_attnum', 3, 'dst_table_attnum', 3),
-        jsonb_build_object('src_table_attnum', 4, 'dst_table_attnum', 4),
-        jsonb_build_object('src_table_attnum', 5, 'dst_table_attnum', 5),
-        jsonb_build_object('src_table_attnum', 6, 'dst_table_attnum', 6)
-      )
-    );
-  $$, 'insert_from_select runs for castable mappings with shuffled columns');
-
-  -- Check actual records using msar.list_records_from_table
-  records := msar.list_records_from_table(
-    tab_id => 'insert_dest_table_success'::regclass::oid,
-    limit_ => NULL,
-    offset_ => NULL,
-    order_ => '[{"attnum": 1, "direction": "asc"}]'::jsonb,
-    filter_ => NULL,
-    group_ => NULL
-  );
-  
+  RETURN NEXT is(insert_count, 2::bigint);
   RETURN NEXT is(
-    (records->'count')::bigint,
-    2::bigint,
-    'two rows inserted successfully'
-  );
-  
-  RETURN NEXT is(
-    records->'results'->0->>'2',
-    '100',
-    'first record value column (attnum 2) matches (src text_col -> dst value)'
-  );
-  
-  RETURN NEXT is(
-    records->'results'->0->>'1',
-    '10',
-    'first record id column (attnum 1) matches (src num_col -> dst id)'
+    msar.list_records_from_table(
+      tab_id => 'dest'::regclass::oid,
+      limit_ => NULL,
+      offset_ => NULL,
+      order_ => NULL,
+      filter_ => NULL,
+      group_ => NULL
+    ) -> 'results',
+    $j$[
+      {
+        "1": 1, "2": 100, "3": true, "4": 123.45, "5": "test@example.com", "6": 50.00
+      },
+      {
+        "1": 2, "2": 200, "3": false, "4": 678.90, "5": "user@test.org", "6": 100.50
+      }
+    ]$j$::jsonb, 'insert_from_select() succeeds with appropriate type casts'
   );
 END;
 $f$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION test_msar_insert_from_select_error() RETURNS SETOF TEXT AS $f$
-BEGIN
-  -- Create temporary tables inline (cannot use setup function due to scope issues)
-  CREATE TEMPORARY TABLE tmp_src_insert_error (
-    text_col text,
-    num_col text,
-    bool_col text,
-    numeric_col text,
-    email_col text,
-    money_col text
-  );
-  INSERT INTO tmp_src_insert_error VALUES 
-    ('100', '10', 'true', '123.45', 'test@example.com', '$50.00'),
-    ('200', '20', 'false', '678.90', 'user@test.org', '$100.50');
-  
-  CREATE TEMPORARY TABLE insert_dest_table_error (
-    id integer,
-    value integer,
-    is_active boolean,
-    amount numeric,
-    email mathesar_types.email,
-    price mathesar_types.mathesar_money
-  );
-  
-  -- Add uncastable data to test error handling
-  INSERT INTO tmp_src_insert_error VALUES ('not_a_number', 'invalid', 'bad', 'data', 'test', 'fail');
 
-  RETURN NEXT throws_like($$
-    SELECT msar.insert_from_select(
-      'tmp_src_insert_error'::regclass,
-      'insert_dest_table_error'::regclass,
-      jsonb_build_array(
-        jsonb_build_object('src_table_attnum', 1, 'dst_table_attnum', 1)
+CREATE OR REPLACE FUNCTION test_insert_from_select_failure() RETURNS SETOF TEXT AS $f$
+BEGIN
+  PERFORM __setup_insert_from_select();
+  /* Invaid mappings, as the type of src col can't be type casted to dest col type */
+  RETURN NEXT throws_ok(
+    $$SELECT msar.insert_from_select(
+      src_tab_id := 'src'::regclass,
+      dst_tab_id := 'dest'::regclass,
+      mappings := jsonb_build_array(
+        jsonb_build_object('src_table_attnum', 3, 'dst_table_attnum', 5)
       )
-    );
-  $$, '%invalid input syntax for%integer%', 'insert_from_select raises when uncastable text to integer mapping exists');
+    )$$,
+    '23514',
+    'value for domain mathesar_types.email violates check constraint "email_check"'
+  );
+
+  RETURN NEXT throws_ok(
+    $$SELECT msar.insert_from_select(
+      src_tab_id := 'src'::regclass,
+      dst_tab_id := 'dest'::regclass,
+      mappings := jsonb_build_array(
+        jsonb_build_object('src_table_attnum', 3, 'dst_table_attnum', 2)
+      ) 
+    )$$,
+    '22P02',
+    'invalid input syntax for type integer: "123.45"'
+  );
+
+  RETURN NEXT throws_ok(
+    $$SELECT msar.insert_from_select(
+      src_tab_id := 'src'::regclass,
+      dst_tab_id := 'dest'::regclass,
+      mappings := jsonb_build_array(
+        jsonb_build_object('src_table_attnum', 1, 'dst_table_attnum', 3)
+      )
+    )$$,
+    'P0001',
+    '100 is not a boolean'
+  );
 END;
 $f$ LANGUAGE plpgsql;
 
