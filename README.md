@@ -121,11 +121,11 @@ We actively encourage contribution! Get started by reading our [Contributor Guid
 
 ### Building a form
 
-![form-builder](docs/docs/assets/releases/0.5.0/form-builder.png)
+![form-builder](https://raw.githubusercontent.com/mathesar-foundation/mathesar/develop/docs/docs/assets/releases/0.5.0/form-builder.png)
 
 ### Filling out a form
 
-![form-fill-example](docs/docs/assets/releases/0.5.0/form-fill-example.png)
+![form-fill-example](https://raw.githubusercontent.com/mathesar-foundation/mathesar/develop/docs/docs/assets/releases/0.5.0/form-fill-example.png)
 
 ### Viewing an Exploration (query result)
 
