@@ -166,6 +166,10 @@ export class ColumnsDataStore extends EventHandler<{
     /** Key is column id, value is display options */
     changes: Map<number, ColumnMetadata | null>,
   ): Promise<void> {
+    if (!changes.size) {
+      return;
+    }
+
     const { apiContext } = this;
     function* getApiRequests() {
       for (const [columnId, displayOptions] of changes.entries()) {
