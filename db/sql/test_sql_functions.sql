@@ -330,53 +330,58 @@ END;
 $f$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION test_msar_prepare_temp_table_with_and_without_tab_name() RETURNS SETOF TEXT AS $f$
+CREATE OR REPLACE FUNCTION test_prepare_temp_table_with_tab_name()
+RETURNS SETOF TEXT AS $f$
 DECLARE
-  r_json jsonb;
-  table_oid bigint;
-  table_name text;
+  response jsonb;
+  tmp_tab_oid oid;
 BEGIN
-  -- Test with tab_name provided
-  r_json := msar.prepare_temp_table_for_import(
+  response := msar.prepare_temp_table_for_import(
     tab_name := 'tmp_explicit_table',
     col_names := ARRAY['col1','col2']
   );
-  table_oid := (r_json->>'table_oid')::bigint;
-  
-  RETURN NEXT ok(
-    (SELECT relpersistence = 't' FROM pg_class WHERE oid = table_oid),
-    'explicit tab_name creates temporary table'
+
+  RETURN NEXT has_column('tmp_explicit_table', 'col1');
+  RETURN NEXT has_column('tmp_explicit_table', 'col2');
+
+  RETURN NEXT alike(
+    response ->> 'copy_sql',
+    'COPY pg_temp_%.tmp_explicit_table(col1, col2) FROM STDIN'
   );
-  
-  SELECT relname INTO table_name FROM pg_class WHERE oid = table_oid;
-  
+  SELECT oid INTO tmp_tab_oid FROM pg_catalog.pg_class WHERE relname = 'tmp_explicit_table';
   RETURN NEXT is(
-    table_name,
-    'tmp_explicit_table',
-    'table created with specified name'
-  );
-  
-  -- Test with different tab_name to ensure temp table persistence
-  r_json := msar.prepare_temp_table_for_import(
-    tab_name := 'tmp_another_table',
-    col_names := ARRAY['colA','colB','colC']
-  );
-  table_oid := (r_json->>'table_oid')::bigint;
-  
-  RETURN NEXT ok(
-    (SELECT relpersistence = 't' FROM pg_class WHERE oid = table_oid),
-    'another temp table created successfully'
-  );
-  
-  SELECT relname INTO table_name FROM pg_class WHERE oid = table_oid;
-  
-  RETURN NEXT is(
-    table_name,
-    'tmp_another_table',
-    'second table created with specified name'
+    (response ->> 'table_oid')::oid,
+    tmp_tab_oid
   );
 END;
 $f$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION test_prepare_temp_table_without_tab_name()
+RETURNS SETOF TEXT AS $f$
+DECLARE
+  response jsonb;
+  tmp_tab_oid oid;
+BEGIN
+  response := msar.prepare_temp_table_for_import(null,
+    col_names := ARRAY['col1','col2']
+  );
+
+  RETURN NEXT has_column('Temp Table 1', 'col1');
+  RETURN NEXT has_column('Temp Table 1', 'col2');
+
+  RETURN NEXT alike(
+    response ->> 'copy_sql',
+    'COPY pg_temp_%.\"Temp Table 1\"(col1, col2) FROM STDIN'
+  );
+  SELECT oid INTO tmp_tab_oid FROM pg_catalog.pg_class WHERE relname = 'Temp Table 1';
+  RETURN NEXT is(
+    (response ->> 'table_oid')::oid,
+    tmp_tab_oid
+  );
+END;
+$f$ LANGUAGE plpgsql;
+
 
 CREATE OR REPLACE FUNCTION test_msar_prepare_temp_table_complete_copy_statement() RETURNS SETOF TEXT AS $f$
 DECLARE
