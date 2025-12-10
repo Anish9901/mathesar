@@ -458,7 +458,7 @@ BEGIN
     tab_id => 'insert_dest_table'::regclass::oid,
     limit_ => NULL,
     offset_ => NULL,
-    order_ => NULL,
+    order_ => '[{"attnum": 1, "direction": "asc"}]',
     filter_ => NULL,
     group_ => NULL
   );
