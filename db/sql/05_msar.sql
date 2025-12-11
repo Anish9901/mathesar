@@ -2216,45 +2216,6 @@ Args:
 $$ LANGUAGE SQL RETURNS NULL ON NULL INPUT;
 
 
-CREATE OR REPLACE FUNCTION __msar.get_duplicate_col_defs(
-  tab_id oid,
-  col_ids smallint[],
-  new_names text[],
-  copy_defaults boolean
-) RETURNS __msar.col_def[] AS $$/*
-Get an array of __msar.col_def from given columns in a table.
-
-Args:
-  tab_id: The OID of the table containing the column whose definition we want.
-  col_ids: The attnums of the columns whose definitions we want.
-  new_names: The desired names of the column defs. Must be in same order as col_ids, and same
-    length.
-  copy_defaults: Whether or not we should copy the defaults
-*/
-SELECT array_agg(
-  (
-    -- build a name for the duplicate column
-    quote_ident(COALESCE(new_name, msar.build_unique_column_name(tab_id, pg_columns.attnum))),
-    -- build text specifying the type of the duplicate column
-    format_type(atttypid, atttypmod),
-    -- set the duplicate column to be nullable, since it will initially be empty
-    false,
-    -- set the default value for the duplicate column if specified
-    CASE WHEN copy_defaults THEN pg_get_expr(adbin, tab_id) END,
-    -- We don't set a duplicate column as a primary key, since that would cause an error.
-    null,
-    msar.col_description(tab_id, pg_columns.attnum)
-  )::__msar.col_def
-)
-FROM pg_attribute AS pg_columns
-  JOIN unnest(col_ids, new_names) AS columns_to_copy(col_id, new_name)
-    ON pg_columns.attnum=columns_to_copy.col_id
-  LEFT JOIN pg_attrdef AS pg_column_defaults
-    ON pg_column_defaults.adnum=pg_columns.attnum AND pg_columns.attrelid=pg_column_defaults.adrelid
-WHERE pg_columns.attrelid=tab_id;
-$$ LANGUAGE sql RETURNS NULL ON NULL INPUT;
-
-
 CREATE OR REPLACE FUNCTION
 msar.build_unique_fkey_column_name(tab_id oid, fk_col_name text, frel_name text)
   RETURNS text AS $$/*
