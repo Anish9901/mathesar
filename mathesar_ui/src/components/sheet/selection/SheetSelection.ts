@@ -553,7 +553,10 @@ export default class SheetSelection {
     }
 
     // "Anchor" of the rectangle that contains all selected cells
-    const { rowId: anchorRowId, columnId: anchorColumnId } = parseCellId(this.activeCellId);
+    const {
+      rowId: anchorRowId, 
+      columnId: anchorColumnId,
+    } = parseCellId(this.activeCellId);
 
     // Array for row/col ids
     const rowOrder = [...this.plane.rowIds];
@@ -583,24 +586,30 @@ export default class SheetSelection {
       .sort((a, b) => a - b);
 
     // Top-left and Bottom-right coordinates
-    const topRowIndex = selectedRowIndices.length > 0
+    const topRowIndex = 
+      selectedRowIndices.length > 0
       ? selectedRowIndices[0]
       : anchorRowIndex;
-    const bottomRowIndex = selectedRowIndices.length > 0
+    const bottomRowIndex = 
+      selectedRowIndices.length > 0
       ? selectedRowIndices[selectedRowIndices.length - 1]
       : anchorRowIndex;
-    const leftColIndex = selectedColIndices.length > 0
+    const leftColIndex = 
+      selectedColIndices.length > 0
       ? selectedColIndices[0]
       : anchorColIndex;
-    const rightColIndex = selectedColIndices.length > 0
+    const rightColIndex = 
+      selectedColIndices.length > 0
       ? selectedColIndices[selectedColIndices.length - 1]
       : anchorColIndex;
 
     // Extent is the diagonal opposite for Anchor
-    let extentRowIndex = anchorRowIndex === topRowIndex
+    let extentRowIndex = 
+      anchorRowIndex === topRowIndex
       ? bottomRowIndex
       : topRowIndex;
-    let extentColIndex = anchorColIndex === leftColIndex
+    let extentColIndex = 
+      anchorColIndex === leftColIndex
       ? rightColIndex
       : leftColIndex;
 
@@ -636,8 +645,8 @@ export default class SheetSelection {
     if (!newExtentRowId || !newExtentColId) {
       return this;
     }
-    const newExtentCellId = makeCellId( newExtentRowId, newExtentColId );
+    const newExtentCellId = makeCellId(newExtentRowId, newExtentColId);
 
-    return this.ofDataCellRange( this.activeCellId, newExtentCellId );
+    return this.ofDataCellRange(this.activeCellId, newExtentCellId);
   }
 }
