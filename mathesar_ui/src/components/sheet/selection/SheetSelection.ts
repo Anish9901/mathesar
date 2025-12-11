@@ -553,10 +553,9 @@ export default class SheetSelection {
     }
 
     // "Anchor" of the rectangle that contains all selected cells
-    const {
-      rowId: anchorRowId,
-      columnId: anchorColumnId,
-    } = parseCellId(this.activeCellId);
+    const { rowId: anchorRowId, columnId: anchorColumnId } = parseCellId(
+      this.activeCellId,
+    );
 
     // Array for row/col ids
     const rowOrder = [...this.plane.rowIds];
@@ -587,31 +586,23 @@ export default class SheetSelection {
 
     // Top-left and Bottom-right coordinates
     const topRowIndex =
-      selectedRowIndices.length > 0
-      ? selectedRowIndices[0]
-      : anchorRowIndex;
+      selectedRowIndices.length > 0 ? selectedRowIndices[0] : anchorRowIndex;
     const bottomRowIndex =
       selectedRowIndices.length > 0
-      ? selectedRowIndices[selectedRowIndices.length - 1]
-      : anchorRowIndex;
+        ? selectedRowIndices[selectedRowIndices.length - 1]
+        : anchorRowIndex;
     const leftColIndex =
-      selectedColIndices.length > 0
-      ? selectedColIndices[0]
-      : anchorColIndex;
+      selectedColIndices.length > 0 ? selectedColIndices[0] : anchorColIndex;
     const rightColIndex =
       selectedColIndices.length > 0
-      ? selectedColIndices[selectedColIndices.length - 1]
-      : anchorColIndex;
+        ? selectedColIndices[selectedColIndices.length - 1]
+        : anchorColIndex;
 
     // Extent is the diagonal opposite for Anchor
     let extentRowIndex =
-      anchorRowIndex === topRowIndex
-      ? bottomRowIndex
-      : topRowIndex;
+      anchorRowIndex === topRowIndex ? bottomRowIndex : topRowIndex;
     let extentColIndex =
-      anchorColIndex === leftColIndex
-      ? rightColIndex
-      : leftColIndex;
+      anchorColIndex === leftColIndex ? rightColIndex : leftColIndex;
 
     // Move extent point with a direction
     switch (direction) {
