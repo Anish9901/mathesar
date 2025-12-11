@@ -369,8 +369,8 @@ export default class SheetSelection {
    * is simpler.
    */
   resized(direction: Direction): SheetSelection {
-    // If there is no active cell, then select first cell -- same in Google sheet
     if (!this.activeCellId) {
+      // If there is no active cell, then select first cell -- same in Google sheet
       return this.ofFirstDataCell();
     }
 
@@ -426,7 +426,7 @@ export default class SheetSelection {
       ? rightColIndex
       : leftColIndex;
 
-    // move extent point with a direction
+    // Move extent point with a direction
     switch (direction) {
       case 'up': {
         if (extentRowIndex <= 0) return this;
@@ -449,7 +449,7 @@ export default class SheetSelection {
         break;
       }
       default:
-        return assertExhaustive(direction);
+        return this;
     }
 
     // Make cell id for Extent point
