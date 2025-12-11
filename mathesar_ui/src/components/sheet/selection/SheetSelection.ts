@@ -370,34 +370,35 @@ export default class SheetSelection {
    */
   resized(direction: Direction): SheetSelection {
     // If there is no active cell, then select first cell -- same in Google sheet
-    if (!this.activeCellId){
+    if (!this.activeCellId) {
       return this.ofFirstDataCell();
     }
 
     // "Anchor" of the rectangle that contains all selected cells
-    const {rowId: anchorRowId, columnId: anchorColumnId} = parseCellId(this.activeCellId);
+    const { rowId: anchorRowId, columnId: anchorColumnId } = parseCellId(this.activeCellId);
 
-    // array for row/col ids
+    // Array for row/col ids
     const rowOrder = [...this.plane.rowIds];
     const colOrder = [...this.plane.columnIds];
 
-    // row/col id string to index
+    // Row/col id string to index
     const rowIndex = (id: string) => rowOrder.indexOf(id);
     const colIndex = (id: string) => colOrder.indexOf(id);
 
-    // anchor row/col index
+    // Anchor row/col index
     const anchorRowIndex = rowIndex(anchorRowId);
     const anchorColIndex = colIndex(anchorColumnId);
 
-    // boundary
+    // Boundary
     if (anchorRowIndex === -1 || anchorColIndex === -1) {
       return this;
     }
 
-    const selectedRowIndices = [...this.rowIds] // array for row ids
-      .map(rowIndex) // convert to index
-      .filter((i) => i !== -1) // filter boundary cases
-      .sort((a, b) => a - b); // top to bottom (left to right)
+    // Row or Col ids to indices in ascending order
+    const selectedRowIndices = [...this.rowIds]
+      .map(rowIndex)
+      .filter((i) => i !== -1)
+      .sort((a, b) => a - b);
     const selectedColIndices = [...this.columnIds]
       .map(colIndex)
       .filter((i) => i !== -1)
@@ -447,8 +448,8 @@ export default class SheetSelection {
         extentColIndex += 1;
         break;
       }
-      //default:
-        //return assertExhaustive(direction);
+      default:
+        return assertExhaustive(direction);
     }
 
     // Make cell id for Extent point
@@ -457,8 +458,8 @@ export default class SheetSelection {
     if (!newExtentRowId || !newExtentColId) {
       return this;
     }
-    const newExtentCellId = makeCellId(newExtentRowId, newExtentColId);
+    const newExtentCellId = makeCellId( newExtentRowId, newExtentColId );
 
-    return this.ofDataCellRange(this.activeCellId, newExtentCellId);
+    return this.ofDataCellRange( this.activeCellId, newExtentCellId );
   }
 }
