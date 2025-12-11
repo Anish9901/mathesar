@@ -554,7 +554,7 @@ export default class SheetSelection {
 
     // "Anchor" of the rectangle that contains all selected cells
     const {
-      rowId: anchorRowId, 
+      rowId: anchorRowId,
       columnId: anchorColumnId,
     } = parseCellId(this.activeCellId);
 
@@ -586,29 +586,29 @@ export default class SheetSelection {
       .sort((a, b) => a - b);
 
     // Top-left and Bottom-right coordinates
-    const topRowIndex = 
+    const topRowIndex =
       selectedRowIndices.length > 0
       ? selectedRowIndices[0]
       : anchorRowIndex;
-    const bottomRowIndex = 
+    const bottomRowIndex =
       selectedRowIndices.length > 0
       ? selectedRowIndices[selectedRowIndices.length - 1]
       : anchorRowIndex;
-    const leftColIndex = 
+    const leftColIndex =
       selectedColIndices.length > 0
       ? selectedColIndices[0]
       : anchorColIndex;
-    const rightColIndex = 
+    const rightColIndex =
       selectedColIndices.length > 0
       ? selectedColIndices[selectedColIndices.length - 1]
       : anchorColIndex;
 
     // Extent is the diagonal opposite for Anchor
-    let extentRowIndex = 
+    let extentRowIndex =
       anchorRowIndex === topRowIndex
       ? bottomRowIndex
       : topRowIndex;
-    let extentColIndex = 
+    let extentColIndex =
       anchorColIndex === leftColIndex
       ? rightColIndex
       : leftColIndex;
