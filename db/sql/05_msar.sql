@@ -2751,25 +2751,6 @@ $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION
-__msar.add_columns(tab_name text, col_defs variadic __msar.col_def[]) RETURNS text AS $$/*
-Add the given columns to the given table.
-
-Args:
-  tab_name: Fully-qualified, quoted table name.
-  col_defs: The columns to be added.
-*/
-WITH ca_cte AS (
-  SELECT string_agg(
-    'ADD COLUMN ' || __msar.build_col_def_text(col),
-      ', '
-    ) AS col_additions
-  FROM unnest(col_defs) AS col
-)
-SELECT __msar.exec_ddl('ALTER TABLE %s %s', tab_name, col_additions) FROM ca_cte;
-$$ LANGUAGE SQL RETURNS NULL ON NULL INPUT;
-
-
-CREATE OR REPLACE FUNCTION
 msar.add_columns(tab_id oid, col_defs jsonb, raw_default boolean DEFAULT false)
   RETURNS smallint[] AS $$/*
 Add columns to a table.
@@ -2779,28 +2760,12 @@ Args:
   col_defs: a JSONB array defining columns to add. See __msar.process_col_def_jsonb for details.
   raw_default: Whether to treat defaults as raw SQL. DANGER!
 */
-DECLARE
-  col_create_defs __msar.col_def[];
-  fq_table_name text := __msar.get_qualified_relation_name(tab_id);
-BEGIN
-  col_create_defs := __msar.process_col_def_jsonb(tab_id, col_defs, raw_default);
-  PERFORM __msar.add_columns(fq_table_name, variadic col_create_defs);
-
-  PERFORM
-  __msar.comment_on_column(
-      fq_table_name,
-      col_create_def.name_,
-      col_create_def.description
-    )
-  FROM unnest(col_create_defs) AS col_create_def
-  WHERE col_create_def.description IS NOT NULL;
-
-  RETURN array_agg(attnum)
-    FROM (SELECT * FROM pg_attribute WHERE attrelid=tab_id) L
-    INNER JOIN unnest(col_create_defs) R
-    ON quote_ident(L.attname) = R.name_;
-END;
-$$ LANGUAGE plpgsql RETURNS NULL ON NULL INPUT;
+  WITH perf_cte AS (
+    SELECT msar.add_column(tab_id, col_def, raw_default) AS attnum
+    FROM jsonb_array_elements(col_defs) AS col_def
+  )
+  SELECT array_agg(attnum) FROM perf_cte;
+$$ LANGUAGE SQL RETURNS NULL ON NULL INPUT;
 
 
 ----------------------------------------------------------------------------------------------------
@@ -3067,19 +3032,28 @@ DECLARE
   col_name text;
   created_col_id smallint;
 BEGIN
-  col_defs := __msar.get_duplicate_col_defs(
-    tab_id, ARRAY[col_id], ARRAY[copy_name], copy_data
-  );
-  tab_name := __msar.get_qualified_relation_name(tab_id);
-  col_name := quote_ident(msar.get_column_name(tab_id, col_id));
-  PERFORM __msar.add_columns(tab_name, VARIADIC col_defs);
-  created_col_id := attnum
-    FROM pg_attribute
-    WHERE attrelid=tab_id AND quote_ident(attname)=col_defs[1].name_;
+  created_col_id = msar.add_column(
+    tab_id,
+    jsonb_build_object(
+      'name', coalesce(copy_name, msar.build_unique_column_name(tab_id, col_id)),
+      'type', jsonb_build_object('id', atttypid, 'modifier', atttypmod),
+      'not_null', false,  -- Required since the column will initially be empty.
+      'default', CASE WHEN copy_data THEN pg_get_expr(adbin, tab_id) END,
+      'description', msar.col_description(tab_id, attnum)
+    ),
+    raw_default => true
+  )
+    FROM pg_catalog.pg_attribute LEFT JOIN pg_catalog.pg_attrdef
+      ON adnum=attnum AND adrelid=attrelid
+    WHERE attrelid=tab_id AND attnum=col_id;
+
   IF copy_data THEN
-    PERFORM __msar.exec_ddl(
-      'UPDATE %s SET %s=%s',
-      tab_name, col_defs[1].name_, quote_ident(msar.get_column_name(tab_id, col_id))
+    EXECUTE format(
+      'UPDATE %I.%I SET %I=%I',
+      msar.get_relation_schema_name(tab_id),
+      msar.get_relation_name(tab_id),
+      msar.get_column_name(tab_id, created_col_id),
+      msar.get_column_name(tab_id, col_id)
     );
   END IF;
   IF copy_constraints THEN
