@@ -29,6 +29,7 @@ import type {
   RecordRow,
   RecordSummariesForSheet,
 } from '@mathesar/stores/table-data';
+import { castColumnIdToNumber } from '@mathesar/utils/columnUtils';
 import { orderProcessedColumns } from '@mathesar/utils/tables';
 import { ImmutableSet, defined } from '@mathesar-component-library';
 
@@ -47,7 +48,6 @@ import {
   type ProcessedColumnsStore,
 } from './processedColumns';
 import { RecordsData } from './records';
-import { castColumnIdToNumber } from '@mathesar/utils/columnUtils';
 
 function getSelectedCellData(
   selection: SheetSelection,

@@ -7,10 +7,10 @@ import {
   type SortDirection,
   allowedSortDirections,
 } from '@mathesar/components/sort-entry/utils';
+import { castColumnIdToNumber } from '@mathesar/utils/columnUtils';
 import { ImmutableMap } from '@mathesar-component-library';
 
 import type { Grouping } from './grouping';
-import { castColumnIdToNumber } from '@mathesar/utils/columnUtils';
 
 function sortDirectionIsValid(d: string): boolean {
   return (allowedSortDirections as string[]).includes(d);

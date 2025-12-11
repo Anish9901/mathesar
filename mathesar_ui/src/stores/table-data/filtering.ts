@@ -13,9 +13,9 @@ import type {
   RawFilterGroup,
   RawIndividualFilter,
 } from '@mathesar/components/filter/utils';
+import { castColumnIdToNumber } from '@mathesar/utils/columnUtils';
 
 import type { FilterId } from '../abstract-types/types';
-import { castColumnIdToNumber } from '@mathesar/utils/columnUtils';
 
 /**
  * This function is glue code between the old filtering system (circa 2023) and

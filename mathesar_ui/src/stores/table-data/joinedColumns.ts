@@ -1,11 +1,11 @@
 import type { RawColumnWithMetadata } from '@mathesar/api/rpc/columns';
 import type { JoinPath, JoinableTablesResult } from '@mathesar/api/rpc/tables';
 import { getCellCap } from '@mathesar/components/cell-fabric/utils';
+import { castColumnIdToNumber } from '@mathesar/utils/columnUtils';
 import type { ComponentAndProps } from '@mathesar-component-library/types';
 
 import type { Joining } from './joining';
 import type { ProcessedColumn } from './processedColumns';
-import { castColumnIdToNumber } from '@mathesar/utils/columnUtils';
 
 type TargetTableJoinedColumn = Pick<
   RawColumnWithMetadata,

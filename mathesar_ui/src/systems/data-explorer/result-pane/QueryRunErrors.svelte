@@ -7,11 +7,11 @@
   import { getExplorationPageUrl } from '@mathesar/routes/urls';
   import { databasesStore } from '@mathesar/stores/databases';
   import { currentSchema } from '@mathesar/stores/schemas';
+  import { castColumnIdToNumber } from '@mathesar/utils/columnUtils';
   import { Button, hasProperty } from '@mathesar-component-library';
 
   import QueryManager from '../QueryManager';
   import type { QueryRunner } from '../QueryRunner';
-  import { castColumnIdToNumber } from '@mathesar/utils/columnUtils';
 
   const { currentDatabase } = databasesStore;
 
