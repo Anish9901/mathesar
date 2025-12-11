@@ -305,15 +305,10 @@ def list_(
         offset: The number of rows to skip before returning records from
             following rows.
         order: An array of ordering definition objects.
-<<<<<<< HEAD
         filter: An array of filter definition objects.
         grouping: An array of group definition objects.
-        joined_columns: An array of dict(s) that include an "alias" and "join_path" where,
+        joined_columns: An array of dict(s) that include an "alias" and "join_path" where
             "join_path" represents linkages via a simple many-to-many mapping to a column in another table.
-=======
-        filter: A filter definition object.
-        grouping: A group definition object.
->>>>>>> a12d1f06c42905f9b9ca6b44bd2549a3ba34ceaa
         return_record_summaries: Whether to return summaries of retrieved
             records.
 
