@@ -11,6 +11,7 @@
 
   import QueryManager from '../QueryManager';
   import type { QueryRunner } from '../QueryRunner';
+  import { castColumnIdToNumber } from '@mathesar/utils/columnUtils';
 
   const { currentDatabase } = databasesStore;
 
@@ -35,7 +36,7 @@
       {#each errors.errors as apierror}
         <ul>
           {#if apierror.code === QUERY_CONTAINS_DELETED_COLUMN && hasProperty(apierror.detail, 'column_id')}
-            {@const columnId = Number(apierror.detail.column_id)}
+            {@const columnId = castColumnIdToNumber(apierror.detail.column_id)}
             <li class="error">
               <p class="strong">
                 {$_('some_columns_in_query_missing')}

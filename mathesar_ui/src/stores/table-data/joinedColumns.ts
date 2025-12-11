@@ -5,6 +5,7 @@ import type { ComponentAndProps } from '@mathesar-component-library/types';
 
 import type { Joining } from './joining';
 import type { ProcessedColumn } from './processedColumns';
+import { castColumnIdToNumber } from '@mathesar/utils/columnUtils';
 
 type TargetTableJoinedColumn = Pick<
   RawColumnWithMetadata,
@@ -82,7 +83,7 @@ export class SimpleManyToManyJoinedColumn {
 
         const [attnum, info] = pkColumnEntry;
         const joinedColumn = {
-          id: Number(attnum),
+          id: castColumnIdToNumber(attnum),
           type: '_array',
           type_options: {
             item_type: info.type,

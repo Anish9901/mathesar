@@ -10,6 +10,7 @@ import {
 import { ImmutableMap } from '@mathesar-component-library';
 
 import type { Grouping } from './grouping';
+import { castColumnIdToNumber } from '@mathesar/utils/columnUtils';
 
 function sortDirectionIsValid(d: string): boolean {
   return (allowedSortDirections as string[]).includes(d);
@@ -48,7 +49,7 @@ export class Sorting extends ImmutableMap<string, SortDirection> {
   private recordsRequestParams(): Pick<RecordsListParams, 'order'> {
     const sortingEntries: ApiSortingEntry[] = [...this].map(
       ([columnId, sortDirection]) => ({
-        attnum: Number(columnId),
+        attnum: castColumnIdToNumber(columnId),
         direction: getApiSortDirection(sortDirection),
       }),
     );

@@ -101,3 +101,15 @@ export function columnTypeOptionsAreEqual(
   }
   return true;
 }
+
+export function castColumnIdToNumber(columnId?: any) {
+  const numericId =
+    columnId === undefined || columnId === null || columnId === ''
+      ? NaN
+      : Number(columnId);
+  if (isNaN(numericId)) {
+    throw new Error(`Invalid columnId: ${columnId}`);
+  } else {
+    return numericId;
+  }
+}

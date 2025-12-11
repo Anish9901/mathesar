@@ -15,6 +15,7 @@ import type {
 } from '@mathesar/components/filter/utils';
 
 import type { FilterId } from '../abstract-types/types';
+import { castColumnIdToNumber } from '@mathesar/utils/columnUtils';
 
 /**
  * This function is glue code between the old filtering system (circa 2023) and
@@ -45,7 +46,7 @@ function individualFilterToSqlExpr(
 ): SqlExpr {
   const column: SqlColumn = {
     type: 'attnum',
-    value: Number(individualFilter.columnId),
+    value: castColumnIdToNumber(individualFilter.columnId),
   };
 
   /** Generate an SqlLiteral value */
@@ -190,7 +191,7 @@ function getCountOfNonConjunctionalExpr(expr: SqlExpr) {
 }
 
 function getCountOfColumnInExpr(expr: SqlExpr, columnId: string): number {
-  if (expr.type === 'attnum' && expr.value === Number(columnId)) {
+  if (expr.type === 'attnum' && expr.value === castColumnIdToNumber(columnId)) {
     return 1;
   }
   let count = 0;

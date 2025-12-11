@@ -47,6 +47,7 @@ import {
   type ProcessedColumnsStore,
 } from './processedColumns';
 import { RecordsData } from './records';
+import { castColumnIdToNumber } from '@mathesar/utils/columnUtils';
 
 function getSelectedCellData(
   selection: SheetSelection,
@@ -172,7 +173,7 @@ export class TabularData {
       database: props.database,
       table: this.table,
       hiddenColumns: Array.from(contextualFilters.keys()).map((id) =>
-        Number(id),
+        castColumnIdToNumber(id),
       ),
     });
     this.constraintsDataStore = new ConstraintsDataStore({
