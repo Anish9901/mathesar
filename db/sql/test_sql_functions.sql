@@ -417,9 +417,9 @@ DECLARE
 BEGIN
   PERFORM __setup_add_columns();
   PERFORM msar.add_columns('add_col_testable'::regclass::oid, col_create_arr);
-  RETURN NEXT col_is_null('add_col_testable', 'Column 4');
-  RETURN NEXT col_type_is('add_col_testable', 'Column 4', 'text');
-  RETURN NEXT col_hasnt_default('add_col_testable', 'Column 4');
+  RETURN NEXT col_is_null('add_col_testable', 'Column');
+  RETURN NEXT col_type_is('add_col_testable', 'Column', 'text');
+  RETURN NEXT col_hasnt_default('add_col_testable', 'Column');
 END;
 $f$ LANGUAGE plpgsql;
 
@@ -457,8 +457,8 @@ BEGIN
   RETURN NEXT is(
     msar.add_columns('add_col_testable'::regclass::oid, col_create_arr), '{4, 5}'::smallint[]
   );
-  RETURN NEXT col_type_is('add_col_testable', 'Column 4', 'text');
-  RETURN NEXT col_type_is('add_col_testable', 'Column 5', 'numeric');
+  RETURN NEXT col_type_is('add_col_testable', 'Column', 'text');
+  RETURN NEXT col_type_is('add_col_testable', 'Column 1', 'numeric');
 END;
 $f$ LANGUAGE plpgsql;
 
@@ -469,8 +469,8 @@ DECLARE
 BEGIN
   PERFORM __setup_add_columns();
   PERFORM msar.add_columns('add_col_testable'::regclass::oid, col_create_arr);
-  RETURN NEXT col_type_is('add_col_testable', 'Column 4', 'numeric');
-  RETURN NEXT col_default_is('add_col_testable', 'Column 4', 3.14159);
+  RETURN NEXT col_type_is('add_col_testable', 'Column', 'numeric');
+  RETURN NEXT col_default_is('add_col_testable', 'Column', 3.14159);
 END;
 $f$ LANGUAGE plpgsql;
 
@@ -481,7 +481,7 @@ DECLARE
 BEGIN
   PERFORM __setup_add_columns();
   PERFORM msar.add_columns('add_col_testable'::regclass::oid, col_create_arr);
-  RETURN NEXT col_type_is('add_col_testable', 'Column 4', 'numeric(3,0)');
+  RETURN NEXT col_type_is('add_col_testable', 'Column', 'numeric(3,0)');
 END;
 $f$ LANGUAGE plpgsql;
 
@@ -494,7 +494,7 @@ DECLARE
 BEGIN
   PERFORM __setup_add_columns();
   PERFORM msar.add_columns('add_col_testable'::regclass::oid, col_create_arr);
-  RETURN NEXT col_type_is('add_col_testable', 'Column 4', 'numeric(3,2)');
+  RETURN NEXT col_type_is('add_col_testable', 'Column', 'numeric(3,2)');
 END;
 $f$ LANGUAGE plpgsql;
 
@@ -505,7 +505,7 @@ DECLARE
 BEGIN
   PERFORM __setup_add_columns();
   PERFORM msar.add_columns('add_col_testable'::regclass::oid, col_create_arr);
-  RETURN NEXT col_type_is('add_col_testable', 'Column 4', 'numeric');
+  RETURN NEXT col_type_is('add_col_testable', 'Column', 'numeric');
 END;
 $f$ LANGUAGE plpgsql;
 
@@ -516,7 +516,7 @@ DECLARE
 BEGIN
   PERFORM __setup_add_columns();
   PERFORM msar.add_columns('add_col_testable'::regclass::oid, col_create_arr);
-  RETURN NEXT col_type_is('add_col_testable', 'Column 4', 'character varying(128)');
+  RETURN NEXT col_type_is('add_col_testable', 'Column', 'character varying(128)');
 END;
 $f$ LANGUAGE plpgsql;
 
@@ -526,7 +526,7 @@ DECLARE
 BEGIN
   PERFORM __setup_add_columns();
   PERFORM msar.add_columns('add_col_testable'::regclass::oid, col_create_arr);
-  RETURN NEXT col_type_is('add_col_testable', 'Column 4', 'interval(6)');
+  RETURN NEXT col_type_is('add_col_testable', 'Column', 'interval(6)');
 END;
 $f$ LANGUAGE plpgsql;
 
@@ -537,7 +537,7 @@ DECLARE
 BEGIN
   PERFORM __setup_add_columns();
   PERFORM msar.add_columns('add_col_testable'::regclass::oid, col_create_arr);
-  RETURN NEXT col_type_is('add_col_testable', 'Column 4', 'interval year');
+  RETURN NEXT col_type_is('add_col_testable', 'Column', 'interval year');
 END;
 $f$ LANGUAGE plpgsql;
 
@@ -550,7 +550,7 @@ DECLARE
 BEGIN
   PERFORM __setup_add_columns();
   PERFORM msar.add_columns('add_col_testable'::regclass::oid, col_create_arr);
-  RETURN NEXT col_type_is('add_col_testable', 'Column 4', 'interval second(3)');
+  RETURN NEXT col_type_is('add_col_testable', 'Column', 'interval second(3)');
 END;
 $f$ LANGUAGE plpgsql;
 
@@ -563,7 +563,7 @@ DECLARE
 BEGIN
   PERFORM __setup_add_columns();
   PERFORM msar.add_columns('add_col_testable'::regclass::oid, col_create_arr);
-  RETURN NEXT col_type_is('add_col_testable', 'Column 4', 'timestamp(3) without time zone');
+  RETURN NEXT col_type_is('add_col_testable', 'Column', 'timestamp(3) without time zone');
 END;
 $f$ LANGUAGE plpgsql;
 
@@ -577,9 +577,9 @@ DECLARE
 BEGIN
   PERFORM __setup_add_columns();
   PERFORM msar.add_columns('add_col_testable'::regclass::oid, col_create_arr, raw_default => true);
-  RETURN NEXT col_type_is('add_col_testable', 'Column 4', 'timestamp without time zone');
+  RETURN NEXT col_type_is('add_col_testable', 'Column', 'timestamp without time zone');
   RETURN NEXT col_default_is(
-    'add_col_testable', 'Column 4', '(now())::timestamp without time zone'
+    'add_col_testable', 'Column', '(now())::timestamp without time zone'
   );
 END;
 $f$ LANGUAGE plpgsql;
