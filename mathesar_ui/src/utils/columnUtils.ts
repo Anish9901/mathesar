@@ -102,7 +102,7 @@ export function columnTypeOptionsAreEqual(
   return true;
 }
 
-export function castColumnIdToNumber(columnId?: string | null) {
+export function castColumnIdToNumber(columnId?: any) {
   const numericId =
     columnId === undefined || columnId === null || columnId === ''
       ? NaN
