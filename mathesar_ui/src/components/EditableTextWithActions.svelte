@@ -10,9 +10,11 @@
   import { getErrorMessage } from '@mathesar/utils/errors';
   import {
     CancelOrProceedButtonPair,
-    TextArea,
     TextInput,
   } from '@mathesar-component-library';
+
+  // NEW — import growable textarea
+  import GrowableTextArea from '@mathesar/components/GrowableTextArea.svelte';
 
   export let initialValue = '';
   export let onSubmit: (value: string) => Promise<void>;
@@ -24,10 +26,13 @@
   let value = '';
   let isSubmitting = false;
 
+  // Dynamic component choice
+  // OLD: TextArea → remove since GrowableTextArea replaces it
+  $: inputElement = isLongText ? GrowableTextArea : TextInput;
+
   $: validationErrors =
     value === initialValue ? [] : getValidationErrors(value);
   $: canSave = validationErrors.length === 0 && value !== initialValue;
-  $: inputElement = isLongText ? TextArea : TextInput;
 
   function makeEditable() {
     value = initialValue;
@@ -69,11 +74,13 @@
         autofocus
         bind:value
       />
+
       {#if validationErrors.length}
         {#each validationErrors as error}
           <span class="error">{error}</span>
         {/each}
       {/if}
+
       <CancelOrProceedButtonPair
         onProceed={handleSave}
         onCancel={handleCancel}
