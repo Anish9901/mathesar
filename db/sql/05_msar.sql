@@ -2933,24 +2933,6 @@ CREATE TYPE __msar.not_null_def AS (
 
 
 CREATE OR REPLACE FUNCTION
-__msar.set_not_nulls(tab_name text, not_null_defs __msar.not_null_def[]) RETURNS TEXT AS $$/*
-Set or drop not null constraints on columns
-*/
-WITH not_null_cte AS (
-  SELECT string_agg(
-    CASE
-      WHEN not_null_def.not_null=true THEN format('ALTER %s SET NOT NULL', not_null_def.col_name)
-      WHEN not_null_def.not_null=false THEN format ('ALTER %s DROP NOT NULL', not_null_def.col_name)
-    END,
-    ', '
-  ) AS not_nulls
-  FROM unnest(not_null_defs) as not_null_def
-)
-SELECT __msar.exec_ddl('ALTER TABLE %s %s', tab_name, not_nulls) FROM not_null_cte;
-$$ LANGUAGE SQL RETURNS NULL ON NULL INPUT;
-
-
-CREATE OR REPLACE FUNCTION
 msar.copy_constraint(con_id oid, from_col_id smallint, to_col_id smallint)
   RETURNS oid[] AS $$/*
 Copy a single constraint associated with a column.
