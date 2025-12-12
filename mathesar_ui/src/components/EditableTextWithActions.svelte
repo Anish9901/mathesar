@@ -6,15 +6,13 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
 
+  import GrowableTextArea from '@mathesar/components/GrowableTextArea.svelte';
   import { toast } from '@mathesar/stores/toast';
   import { getErrorMessage } from '@mathesar/utils/errors';
   import {
     CancelOrProceedButtonPair,
     TextInput,
   } from '@mathesar-component-library';
-
-  // NEW — import growable textarea
-  import GrowableTextArea from '@mathesar/components/GrowableTextArea.svelte';
 
   export let initialValue = '';
   export let onSubmit: (value: string) => Promise<void>;
@@ -26,8 +24,6 @@
   let value = '';
   let isSubmitting = false;
 
-  // Dynamic component choice
-  // OLD: TextArea → remove since GrowableTextArea replaces it
   $: inputElement = isLongText ? GrowableTextArea : TextInput;
 
   $: validationErrors =
