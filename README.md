@@ -92,51 +92,39 @@ We actively encourage contribution! Get started by reading our [Contributor Guid
 ![connect-db](https://github.com/user-attachments/assets/d7188c8d-a040-4bc4-8350-28b2a6fd1661)
 
 ### Adding collaborators
-
 ![add-collaborator](https://github.com/user-attachments/assets/9bac7016-4a15-4a76-9abb-427dd6369305)
 
 ### Viewing a Postgres schema
-
 ![schema-page](https://github.com/user-attachments/assets/59c89bed-d240-4de4-ad33-91625ebe20ab)
 
 ### Working with tables
-
 ![table-inspector](https://github.com/user-attachments/assets/89212249-2fd6-4ef6-a4ef-3e4df32bfb89)
 
 ### Finding a nested record
-
 ![record-selector](https://github.com/user-attachments/assets/d88f4787-9994-4b56-a92f-322205abc6a1)
 
 ### Linking two tables together
-
 ![relationship-creation](https://github.com/user-attachments/assets/4240955e-3bc5-4f9c-ad4e-eac79cf42e63)
 
 ### Managing table permissions
-
 ![table-permissions](https://github.com/user-attachments/assets/74357082-3bf1-47c0-bf85-6c5eab77ef0f)
 
 ### Viewing a single record with related records
-
 ![record-page](https://github.com/user-attachments/assets/d2e621e3-5597-44ef-ae87-482bec0b9bcc)
 
 ### Building a form
-
 ![form-builder](https://raw.githubusercontent.com/mathesar-foundation/mathesar/develop/docs/docs/assets/releases/0.5.0/form-builder.png)
 
 ### Filling out a form
-
 ![form-fill-example](https://raw.githubusercontent.com/mathesar-foundation/mathesar/develop/docs/docs/assets/releases/0.5.0/form-fill-example.png)
 
 ### Viewing an Exploration (query result)
-
 ![viewing-exploration](https://github.com/user-attachments/assets/410cb99f-a583-411b-9706-7967bff673e6)
 
 ### Building an Exploration (query)
-
 ![building-exploration](https://github.com/user-attachments/assets/de662d3c-1efa-42e6-a960-17e00432c8db)
 
 ### Disconnecting a database
-
 ![disconnect-db](https://github.com/user-attachments/assets/f22e9c78-3c92-40c8-8ef9-dcb4cf8e8aea)
 
 ## Mathesar in action
