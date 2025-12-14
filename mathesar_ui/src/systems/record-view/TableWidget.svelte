@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { derived, writable } from 'svelte/store';
+  import { derived } from 'svelte/store';
   import { _ } from 'svelte-i18n';
 
   import type { RawColumnWithMetadata } from '@mathesar/api/rpc/columns';
@@ -41,15 +41,6 @@
   export let fkColumn: Pick<RawColumnWithMetadata, 'id' | 'name' | 'metadata'>;
   export let isInModal = false;
 
-  const tableStore = writable(table);
-
-  $: {
-    const currentTable = $currentTablesData.tablesMap.get(table.oid);
-    if (currentTable) {
-      tableStore.set(currentTable);
-    }
-  }
-
   const tabularData = new TabularData({
     database: table.schema.database,
     table,
@@ -61,13 +52,14 @@
     [
       tabularData.columnsDataStore.columns,
       tabularData.constraintsDataStore,
-      tableStore,
+      currentTablesData,
     ],
-    ([columns, constraintsData, currentTable]) =>
-      orderProcessedColumns(
+    ([columns, constraintsData, tablesData]) => {
+      const currentTable = tablesData.tablesMap.get(table.oid) || table;
+      return orderProcessedColumns(
         new Map(
           columns.map((column, columnIndex) => [
-            column.id,
+            String(column.id),
             new ProcessedColumn({
               tableOid: currentTable.oid,
               column,
@@ -78,23 +70,15 @@
           ]),
         ),
         currentTable,
-      ),
+      );
+    },
   );
 
-  const tabularDataStore = setTabularDataStoreInContext(
-    // Sacrifice type safety here since the value is initialized reactively
-    // below.
-    undefined as unknown as TabularData,
-  );
-  tabularDataStore.set(tabularData);
-
-  $: currentTable = $tableStore;
-  $: ({ currentRolePrivileges } = currentTable.currentAccess);
+  const tabularDataStore = setTabularDataStoreInContext(tabularData);
+  $: ({ currentRolePrivileges } = table.currentAccess);
   $: canViewTable = $currentRolePrivileges.has('SELECT');
   $: getTablePageUrl = $storeToGetTablePageUrl;
-  $: href = isInModal
-    ? undefined
-    : getTablePageUrl({ tableId: currentTable.oid });
+  $: href = isInModal ? undefined : getTablePageUrl({ tableId: table.oid });
 </script>
 
 <div class="table-widget">
@@ -102,15 +86,15 @@
     <h3 class="bold-header">
       {#if href}
         <a class="table-link" {href}>
-          <TableName table={currentTable} truncate={false} />
+          <TableName {table} truncate={false} />
         </a>
       {:else}
-        <TableName table={currentTable} truncate={false} />
+        <TableName {table} truncate={false} />
       {/if}
       <Help>
         <RichText text={$_('related_records_help')} let:slotName>
           {#if slotName === 'tableName'}
-            <TableName table={currentTable} truncate={false} />
+            <TableName {table} truncate={false} />
           {/if}
           {#if slotName === 'recordSummary'}
             <NameWithIcon icon={iconRecord} truncate={false} bold>
@@ -141,7 +125,7 @@
 
   <div class="results">
     {#if canViewTable}
-      <TableView context="widget" table={currentTable} />
+      <TableView context="widget" {table} />
     {:else}
       <WarningBox fullWidth>
         {$_('no_privileges_view_table')}
