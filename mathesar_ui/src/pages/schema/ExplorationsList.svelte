@@ -40,7 +40,7 @@
         const match = duplicate.name.match(suffixRegex);
         return match ? Number(match[1]) : null;
       })
-      .filter((n) => n !== null);
+      .filter((n): n is number => n !== null);
     const maxSuffix = suffixNumbers.length > 0 ? Math.max(...suffixNumbers) : 0;
 
     return `${duplicateName} (${maxSuffix + 1})`;
