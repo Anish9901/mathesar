@@ -27,28 +27,16 @@
     iconExpandDown,
   } from '@mathesar-component-library';
 
+  import Tooltip from '@mathesar-component-library-dir/tooltip/Tooltip.svelte';
   import RecordStore from './RecordStore';
 
-  /**
-   * This is used to determine whether to display a `NULL` overlay indicator.
-   * For text data types the indicator is important because otherwise the user
-   * has no way to distinguish an empty string from a `NULL` value. But for some
-   * data types (e.g. Date), we can't show the indicator because the input
-   * component already shows placeholder text to guide the user towards the
-   * required formatting.
-   *
-   * TODO: Refactor this logic. Invert control. Each data type should define a
-   * common param to indicate how a NULL value should be displayed over its
-   * input component. Then we should grab onto that param within this component.
-   * The pattern we're currently using is brittle because if we add new data
-   * types we shouldn't need to update this code here.
-   */
   const cellDataTypesThatUsePlaceholderText = new Set<CellDataType>([
     'date',
     'datetime',
     'duration',
     'time',
   ]);
+
   const labelController = new LabelController();
   const modalRecordView = modalRecordViewContext.get();
 
@@ -68,9 +56,11 @@
     $fieldIsDisabled ||
     !canUpdateTableRecords ||
     !canUpdateColumn;
+
   $: shouldDisplayNullOverlay = !cellDataTypesThatUsePlaceholderText.has(
     abstractType.cellInfo.type,
   );
+
   $: getRecordUrl = $storeToGetRecordPageUrl;
   $: fileManifest = (() => {
     if (!column.metadata?.file_backend) return undefined;
@@ -97,11 +87,22 @@
 <div class="direct-field">
   <div class="left cell">
     <div class="complex-label">
-      <div class="label">
+      <!-- LABEL + TOOLTIP -->
+      <div class="label-with-info">
         <Label controller={labelController}>
           <ProcessedColumnName {processedColumn} />
         </Label>
+
+        {#if processedColumn.column.description}
+          <Tooltip placements={['right']}>
+            <span slot="trigger" class="info-icon">ⓘ</span>
+            <div slot="content">
+              {processedColumn.column.description}
+            </div>
+          </Tooltip>
+        {/if}
       </div>
+
       <div class="options">
         <DropdownMenu
           showArrow={false}
@@ -119,16 +120,19 @@
             >
               {$_('quick_view_linked_record')}
             </ButtonMenuItem>
+
             {@const linkedRecordUrl = getRecordUrl({
               tableId: linkFk.referent_table_oid,
               recordId: value,
             })}
+
             {#if linkedRecordUrl}
               <LinkMenuItem href={linkedRecordUrl} icon={iconLinkToRecordPage}>
                 {$_('open_linked_record')}
               </LinkMenuItem>
             {/if}
           {/if}
+
           <ButtonMenuItem
             icon={iconSetToNull}
             on:click={() => field.set(null)}
@@ -154,6 +158,7 @@
         <Null />
       </div>
     {/if}
+
     <DynamicInput
       bind:value={$field}
       {disabled}
@@ -179,6 +184,7 @@
       hasError={$showsError}
       allowsHyperlinks
     />
+
     <FieldErrors {field} />
   </div>
 </div>
@@ -187,37 +193,53 @@
   .direct-field {
     display: contents;
   }
+
   .direct-field:not(:last-child) .cell {
     padding-bottom: 1rem;
-    margin-bottom: 1rem;
-    border-bottom: solid var(--color-border-section) 1px;
+    margin-bottom: 1.25rem;
+    border-bottom: 1px solid var(--color-border-section);
   }
+
   .left {
     display: flex;
     align-items: flex-start;
-    justify-content: end;
+    justify-content: flex-end;
+    padding-right: 0.75rem;
   }
+
   .complex-label {
     display: flex;
-    align-items: center;
-    justify-content: end;
+    flex-direction: column;
     max-width: 15rem;
-    overflow: hidden;
+    gap: 0.3rem;
   }
-  .label {
-    overflow: hidden;
+
+  .label-with-info {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
   }
+
+  .info-icon {
+    font-size: 0.85rem;
+    color: var(--color-fg-muted);
+    cursor: help;
+    user-select: none;
+  }
+
+  .info-icon:hover {
+    color: var(--color-fg);
+  }
+
   .options {
-    margin: 0 0.2rem;
+    align-self: flex-end;
   }
+
   .input {
     position: relative;
     isolation: isolate;
   }
-  .input > :global(*) {
-    position: relative;
-    z-index: 1;
-  }
+
   .null {
     position: absolute;
     z-index: 2;
