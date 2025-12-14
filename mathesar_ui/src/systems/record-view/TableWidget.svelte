@@ -54,7 +54,7 @@
     database: table.schema.database,
     table,
     meta,
-    contextualFilters: new Map([[fkColumn.id, recordPk]]),
+    contextualFilters: new Map([[String(fkColumn.id), recordPk]]),
   });
 
   tabularData.processedColumns = derived(
