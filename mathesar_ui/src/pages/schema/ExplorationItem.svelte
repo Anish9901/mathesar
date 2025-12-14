@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { get } from 'svelte/store';
   import { _ } from 'svelte-i18n';
 
   import type { SavedExploration } from '@mathesar/api/rpc/explorations';
@@ -25,6 +24,9 @@
   export let database: Database;
   export let schema: Schema;
   export let openEditExplorationModal: (e: SavedExploration) => void;
+  export let getExplorationDuplicateName: (
+    exploration: SavedExploration,
+  ) => string;
 
   $: baseTable = $tablesStore.tablesMap.get(exploration.base_table_oid);
   $: href = getExplorationPageUrl(database.id, schema.oid, exploration.id);
@@ -40,9 +42,7 @@
   function handleDuplicate() {
     addExploration({
       ...exploration,
-      name: get(_)('exploration_duplicate_name', {
-        values: { explorationName: exploration.name },
-      }),
+      name: getExplorationDuplicateName(exploration),
     }).catch((error) => {
       toast.error(`${$_('duplicate_exploration_failed')} ${error.message}`);
     });
