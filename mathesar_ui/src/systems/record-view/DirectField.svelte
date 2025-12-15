@@ -10,6 +10,7 @@
   import Null from '@mathesar/components/Null.svelte';
   import { RichText } from '@mathesar/components/rich-text';
   import {
+    iconInspector,
     iconLinkToRecordPage,
     iconModalRecordView,
     iconSetToNull,
@@ -21,12 +22,12 @@
   import {
     ButtonMenuItem,
     DropdownMenu,
+    Icon,
     Label,
     LabelController,
     LinkMenuItem,
     iconExpandDown,
   } from '@mathesar-component-library';
-
   import Tooltip from '@mathesar-component-library-dir/tooltip/Tooltip.svelte';
   import RecordStore from './RecordStore';
 
@@ -95,7 +96,14 @@
 
         {#if processedColumn.column.description}
           <Tooltip placements={['right']}>
-            <span slot="trigger" class="info-icon">ⓘ</span>
+            <span
+              slot="trigger"
+              class="info-icon"
+              aria-label={$_('column_description')}
+            >
+              <Icon {...iconInspector} />
+            </span>
+
             <div slot="content">
               {processedColumn.column.description}
             </div>
