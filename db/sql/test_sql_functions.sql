@@ -102,26 +102,10 @@ CREATE OR REPLACE FUNCTION test_drop_table_name() RETURNS SETOF TEXT AS $$
 BEGIN
   PERFORM __setup_drop_tables();
   PERFORM msar.drop_table(
-    sch_name => 'public',
-    tab_name => 'dropme',
-    cascade_ => false,
-    if_exists => false
+    tab_id => 'dropme'::regclass::oid,
+    cascade_ => false
   );
   RETURN NEXT hasnt_table('dropme', 'Drops table');
-END;
-$$ LANGUAGE plpgsql;
-
-
-CREATE OR REPLACE FUNCTION test_drop_table_name_missing_if_exists() RETURNS SETOF TEXT AS $$
-BEGIN
-  PERFORM __setup_drop_tables();
-  PERFORM msar.drop_table(
-    sch_name => 'public',
-    tab_name => 'dropmenew',
-    cascade_ => false,
-    if_exists => true
-  );
-  RETURN NEXT has_table('dropme', 'Drops table with IF EXISTS');
 END;
 $$ LANGUAGE plpgsql;
 
@@ -129,9 +113,9 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION test_drop_table_name_missing_no_if_exists() RETURNS SETOF TEXT AS $$
 BEGIN
   RETURN NEXT throws_ok(
-    'SELECT msar.drop_table(''public'', ''doesntexist'', false, false);',
+    'SELECT msar.drop_table(''doesntexist''::regclass::oid, false);',
     '42P01',
-    'table "doesntexist" does not exist',
+    'relation "doesntexist" does not exist',
     'Table dropper throws for missing table'
   );
 END;
@@ -1772,10 +1756,8 @@ BEGIN
   RETURN NEXT has_table('tab_create_schema'::name, 'Table 1'::name);
   RETURN NEXT has_table('tab_create_schema'::name, 'Table 2'::name);
   PERFORM msar.drop_table(
-    sch_name => 'tab_create_schema',
-    tab_name => 'Table 1',
-    cascade_ => false,
-    if_exists => false
+    tab_id => 'tab_create_schema."Table 1"'::regclass::oid,
+    cascade_ => false
   );
   RETURN NEXT hasnt_table('tab_create_schema'::name, 'Table 1'::name);
   PERFORM msar.add_mathesar_table(

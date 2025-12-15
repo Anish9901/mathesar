@@ -3055,33 +3055,6 @@ $$ LANGUAGE sql RETURNS NULL ON NULL INPUT;
 -- Drop table --------------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION
-__msar.drop_table(tab_name text, cascade_ boolean, if_exists boolean) RETURNS text AS $$/*
-Drop a table, returning the command executed.
-
-Args:
-  tab_name: The qualified, quoted name of the table we will drop.
-  cascade_: Whether to add CASCADE.
-  if_exists_: Whether to ignore an error if the table doesn't exist
-*/
-DECLARE
-  cmd_template TEXT;
-BEGIN
-  IF if_exists
-  THEN
-    cmd_template := 'DROP TABLE IF EXISTS %s';
-  ELSE
-    cmd_template := 'DROP TABLE %s';
-  END IF;
-  IF cascade_
-  THEN
-    cmd_template = cmd_template || ' CASCADE';
-  END IF;
-  RETURN __msar.exec_ddl(cmd_template, tab_name);
-END;
-$$ LANGUAGE plpgsql RETURNS NULL ON NULL INPUT;
-
-
-CREATE OR REPLACE FUNCTION
 msar.drop_table(tab_id oid, cascade_ boolean) RETURNS text AS $$/*
 Drop a table, returning the fully qualified name of the dropped table.
 
@@ -3089,33 +3062,20 @@ Args:
   tab_id: The OID of the table to drop
   cascade_: Whether to drop dependent objects.
 */
-DECLARE relation_name text;
+DECLARE
+  relation_name text;
 BEGIN
-  relation_name := __msar.get_qualified_relation_name_or_null(tab_id);
-  -- if_exists doesn't work while working with oids because
-  -- the SQL query gets parameterized with tab_id instead of relation_name
-  -- since we're unable to find the relation_name for a non existing table.
-  PERFORM __msar.drop_table(relation_name, cascade_, if_exists => false);
+  relation_name := format(
+    '%I.%I',
+    msar.get_relation_schema_name(tab_id),
+    msar.get_relation_name(tab_id)
+  );
+  EXECUTE format(
+    'DROP TABLE %s %s',
+    relation_name,
+    CASE WHEN cascade_ THEN 'CASCADE' ELSE '' END
+  );
   RETURN relation_name;
-END;
-$$ LANGUAGE plpgsql RETURNS NULL ON NULL INPUT;
-
-
-CREATE OR REPLACE FUNCTION
-msar.drop_table(sch_name text, tab_name text, cascade_ boolean, if_exists boolean)
-  RETURNS text AS $$/*
-Drop a table, returning the command executed.
-
-Args:
-  sch_name: The schema of the table to drop.
-  tab_name: The name of the table to drop.
-  cascade_: Whether to drop dependent objects.
-  if_exists_: Whether to ignore an error if the table doesn't exist
-*/
-DECLARE qualified_tab_name text;
-BEGIN
-  qualified_tab_name := __msar.build_qualified_name_sql(sch_name, tab_name);
-  RETURN __msar.drop_table(qualified_tab_name, cascade_, if_exists);
 END;
 $$ LANGUAGE plpgsql RETURNS NULL ON NULL INPUT;
 
@@ -3442,17 +3402,23 @@ Args:
   tab_name: An unqualified name for the table to be added.
   col_defs: An array of __msar.col_def defining the column set of the new table.
 */
-WITH col_cte AS (
-  SELECT string_agg(__msar.build_col_def_text(col), ', ') AS table_columns
-  FROM unnest(col_defs) AS col
-)
-SELECT __msar.exec_ddl(
-  'CREATE TEMPORARY TABLE %I (%s)',
-  tab_name,
-  table_columns
-)
-FROM col_cte;
-$$ LANGUAGE SQL;
+DECLARE
+  tmp_tab_sql text;
+BEGIN
+  WITH col_cte AS (
+    SELECT string_agg(__msar.build_col_def_text(col), ', ') AS table_columns
+    FROM unnest(col_defs) AS col
+  )
+  SELECT format(
+    'CREATE TEMPORARY TABLE %I (%s)',
+    tab_name,
+    table_columns
+  ) INTO tmp_tab_sql
+  FROM col_cte;
+  EXECUTE tmp_tab_sql;
+  RETURN tmp_tab_sql;
+END;
+$$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION
@@ -4091,7 +4057,7 @@ BEGIN
   -- Insert the data from the original table's columns into the extracted columns, and add
   -- appropriate fkey values to the new fkey column in the original table to give the proper
   -- mapping.
-  PERFORM __msar.exec_ddl($t$
+  EXECUTE format($t$
     WITH fkey_cte AS (
       SELECT id, %1$s, dense_rank() OVER (ORDER BY %1$s) AS __msar_tmp_id
       FROM %2$s
