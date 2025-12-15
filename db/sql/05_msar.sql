@@ -3908,95 +3908,32 @@ $$ LANGUAGE plpgsql RETURNS NULL ON NULL INPUT;
 
 
 CREATE OR REPLACE FUNCTION
-__msar.comment_on_column(
-  tab_name text,
-  col_name text,
+msar.comment_on_column(
+  tab_id oid,
+  col_id integer,
   comment_ text
 ) RETURNS text AS $$/*
-Change the description of a column, returning command executed. If comment_ is NULL, column's
-comment is removed.
+Change the description of a column, returning command executed.
 
 Args:
-  tab_name: The name of the table containg the column whose comment we will change.
-  col_name: The name of the column whose comment we'll change
-  comment_: The new comment. Any quotes or special characters must be escaped.
+  tab_id: The OID of the table containg the column whose comment we will change.
+  col_id: The ATTNUM of the column whose comment we will change.
+  comment_: The new comment.
 */
 DECLARE
-  comment_or_null text := COALESCE(comment_, 'NULL');
+  comment_sql text;
 BEGIN
-RETURN __msar.exec_ddl(
-  'COMMENT ON COLUMN %s.%s IS %s',
-  tab_name,
-  col_name,
-  comment_or_null
-);
+  SELECT format(
+    'COMMENT ON COLUMN %I.%I.%I IS %L',
+    msar.get_relation_schema_name(tab_id),
+    msar.get_relation_name(tab_id),
+    msar.get_column_name(tab_id, col_id),
+    comment_
+  ) INTO comment_sql;
+  EXECUTE comment_sql;
+  RETURN comment_sql;
 END;
 $$ LANGUAGE plpgsql;
-
-
-CREATE OR REPLACE FUNCTION
-msar.comment_on_column(
-  sch_name text,
-  tab_name text,
-  col_name text,
-  comment_ text
-) RETURNS text AS $$/*
-Change the description of a column, returning command executed.
-
-Args:
-  sch_name: The schema of the table whose column's comment we will change.
-  tab_name: The name of the table whose column's comment we will change.
-  col_name: The name of the column whose comment we will change.
-  comment_: The new comment.
-*/
-SELECT __msar.comment_on_column(
-  __msar.build_qualified_name_sql(sch_name, tab_name),
-  quote_ident(col_name),
-  quote_literal(comment_)
-);
-$$ LANGUAGE SQL;
-
-
-CREATE OR REPLACE FUNCTION
-__msar.comment_on_column(
-  tab_id oid,
-  col_id integer,
-  comment_ text
-) RETURNS text AS $$/*
-Change the description of a column, returning command executed.
-
-Args:
-  tab_id: The OID of the table containg the column whose comment we will change.
-  col_id: The ATTNUM of the column whose comment we will change.
-  comment_: The new comment.
-*/
-SELECT __msar.comment_on_column(
-  __msar.get_qualified_relation_name(tab_id),
-  quote_ident(msar.get_column_name(tab_id, col_id)),
-  comment_
-);
-$$ LANGUAGE SQL;
-
-
-CREATE OR REPLACE FUNCTION
-msar.comment_on_column(
-  tab_id oid,
-  col_id integer,
-  comment_ text
-) RETURNS text AS $$/*
-Change the description of a column, returning command executed.
-
-Args:
-  tab_id: The OID of the table containg the column whose comment we will change.
-  col_id: The ATTNUM of the column whose comment we will change.
-  comment_: The new comment.
-*/
-SELECT __msar.comment_on_column(
-  tab_id,
-  col_id,
-  quote_literal(comment_)
-);
-$$ LANGUAGE SQL;
 
 
 ----------------------------------------------------------------------------------------------------
