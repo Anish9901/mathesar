@@ -298,4 +298,7 @@
       flex-grow: 1;
     }
   }
+  .filter-group.not-connect .prefix {
+    display: none;
+  }
 </style>
