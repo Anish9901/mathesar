@@ -3740,14 +3740,20 @@ Args:
   col_id: The attnum of the column whose default we'll alter.
   default_: The desired default.
 */
-  SELECT __msar.exec_ddl(
+DECLARE
+  col_default_sql text;
+BEGIN
+  SELECT format(
     'ALTER TABLE %I.%I ALTER COLUMN %I SET DEFAULT %L',
     msar.get_relation_schema_name(tab_id),
     msar.get_relation_name(tab_id),
     msar.get_column_name(tab_id, col_id),
     default_
-  );
-$$ LANGUAGE SQL RETURNS NULL ON NULL INPUT;
+  ) INTO col_default_sql;
+  EXECUTE col_default_sql;
+  RETURN col_default_sql;
+END;
+$$ LANGUAGE plpgsql RETURNS NULL ON NULL INPUT;
 
 
 CREATE OR REPLACE FUNCTION
