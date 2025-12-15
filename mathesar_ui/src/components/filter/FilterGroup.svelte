@@ -276,8 +276,8 @@
     .horizontal-connecting-line {
       position: absolute;
       left: 1.2em;
-      top: 1em;
-      width: 1em;
+      top: 1.1em;
+      width: 0.6em;
       height: 1px;
       border-bottom: 1px var(--connecting-line-border-style)
         var(--connecting-line-color);
