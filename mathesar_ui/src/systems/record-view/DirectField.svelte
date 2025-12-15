@@ -29,6 +29,7 @@
     iconExpandDown,
   } from '@mathesar-component-library';
   import Tooltip from '@mathesar-component-library-dir/tooltip/Tooltip.svelte';
+
   import RecordStore from './RecordStore';
 
   const cellDataTypesThatUsePlaceholderText = new Set<CellDataType>([
