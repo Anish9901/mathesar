@@ -3142,20 +3142,26 @@ Args:
 
 Note: Even if con_defs is null, there can be some column-level constraints set in col_defs.
 */
-WITH col_cte AS (
-  SELECT string_agg(__msar.build_col_def_text(col), ', ') AS table_columns
-  FROM unnest(col_defs) AS col
-), con_cte AS (
-  SELECT string_agg(__msar.build_con_def_text(con), ', ') AS table_constraints
-  FROM unnest(con_defs) as con
-)
-SELECT __msar.exec_ddl(
-  'CREATE TABLE %s (%s)',
-  tab_name,
-  concat_ws(', ', table_columns, table_constraints)
-)
-FROM col_cte, con_cte;
-$$ LANGUAGE SQL;
+DECLARE
+  add_tab_sql text;
+BEGIN
+  WITH col_cte AS (
+    SELECT string_agg(__msar.build_col_def_text(col), ', ') AS table_columns
+    FROM unnest(col_defs) AS col
+  ), con_cte AS (
+    SELECT string_agg(__msar.build_con_def_text(con), ', ') AS table_constraints
+    FROM unnest(con_defs) as con
+  )
+  SELECT format(
+    'CREATE TABLE %s (%s)',
+    tab_name,
+    concat_ws(', ', table_columns, table_constraints)
+  ) INTO add_tab_sql
+  FROM col_cte, con_cte;
+  EXECUTE add_tab_sql;
+  RETURN add_tab_sql;
+END;
+$$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION
