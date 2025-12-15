@@ -101,41 +101,6 @@ $$ LANGUAGE plpgsql IMMUTABLE RETURNS NULL ON NULL INPUT;
 
 
 CREATE OR REPLACE FUNCTION
-__msar.exec_ddl(command text) RETURNS text AS $$/*
-Execute the given command, returning the command executed.
-
-Not useful for SELECTing from tables. Most useful when you're performing DDL.
-
-Args:
-  command: Raw string that will be executed as a command.
-*/
-BEGIN
-  EXECUTE command;
-  RETURN command;
-END;
-$$ LANGUAGE plpgsql RETURNS NULL ON NULL INPUT;
-
-
-CREATE OR REPLACE FUNCTION
-__msar.exec_ddl(command_template text, arguments variadic anyarray) RETURNS text AS $$/*
-Execute a templated command, returning the command executed.
-
-The template is given in the first argument, and all further arguments are used to fill in the
-template. Not useful for SELECTing from tables. Most useful when you're performing DDL.
-
-Args:
-  command_template: Raw string that will be executed as a command.
-  arguments: arguments that will be used to fill in the template.
-*/
-DECLARE formatted_command TEXT;
-BEGIN
-  formatted_command := format(command_template, VARIADIC arguments);
-  RETURN __msar.exec_ddl(formatted_command);
-END;
-$$ LANGUAGE plpgsql RETURNS NULL ON NULL INPUT;
-
-
-CREATE OR REPLACE FUNCTION
 __msar.build_text_tuple(text[]) RETURNS text AS $$
 SELECT '(' || string_agg(col, ', ') || ')' FROM unnest($1) x(col);
 $$ LANGUAGE sql RETURNS NULL ON NULL INPUT;
