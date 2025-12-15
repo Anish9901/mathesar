@@ -3810,15 +3810,21 @@ Args:
   new_type: The target type to which we'll alter the column.
   cast_options: Suggestions to be used while type casting.
 */
-  SELECT __msar.exec_ddl(
+DECLARE
+  retype_col_sql text;
+BEGIN
+  SELECT format(
     'ALTER TABLE %I.%I ALTER COLUMN %I TYPE %s USING %s',
     msar.get_relation_schema_name(tab_id),
     msar.get_relation_name(tab_id),
     msar.get_column_name(tab_id, col_id),
     new_type,
     msar.build_cast_expr(quote_ident(msar.get_column_name(tab_id, col_id)), new_type, cast_options)
-  );
-$$ LANGUAGE SQL RETURNS NULL ON NULL INPUT;
+  ) INTO retype_col_sql;
+  EXECUTE retype_col_sql;
+  RETURN retype_col_sql;
+END;
+$$ LANGUAGE plpgsql RETURNS NULL ON NULL INPUT;
 
 
 CREATE OR REPLACE FUNCTION
