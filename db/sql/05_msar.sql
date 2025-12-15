@@ -2897,12 +2897,18 @@ Args:
   tab_name: Fully-qualified, quoted table name.
   con_defs: The constraints to be added.
 */
-WITH con_cte AS (
-  SELECT string_agg('ADD ' || __msar.build_con_def_text(con), ', ') as con_additions
-  FROM unnest(con_defs) as con
-)
-SELECT __msar.exec_ddl('ALTER TABLE %s %s', tab_name, con_additions) FROM con_cte;
-$$ LANGUAGE SQL RETURNS NULL ON NULL INPUT;
+DECLARE
+  add_con_sql text;
+BEGIN
+  WITH con_cte AS (
+    SELECT string_agg('ADD ' || __msar.build_con_def_text(con), ', ') as con_additions
+    FROM unnest(con_defs) as con
+  )
+  SELECT format('ALTER TABLE %s %s', tab_name, con_additions) INTO add_con_sql FROM con_cte;
+  EXECUTE add_con_sql;
+  RETURN add_con_sql;
+END;
+$$ LANGUAGE plpgsql RETURNS NULL ON NULL INPUT;
 
 
 CREATE OR REPLACE FUNCTION
