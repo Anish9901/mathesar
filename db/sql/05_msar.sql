@@ -3716,13 +3716,19 @@ Args:
   tab_id: The OID of the table where the column with the default to be dropped lives.
   col_id: The attnum of the column with the undesired default.
 */
-  SELECT __msar.exec_ddl(
+DECLARE
+  drop_col_default_sql text;
+BEGIN
+  SELECT format(
     'ALTER TABLE %I.%I ALTER COLUMN %I DROP DEFAULT',
     msar.get_relation_schema_name(tab_id),
     msar.get_relation_name(tab_id),
     msar.get_column_name(tab_id, col_id)
-  );
-$$ LANGUAGE SQL RETURNS NULL ON NULL INPUT;
+  ) INTO drop_col_default_sql;
+  EXECUTE drop_col_default_sql;
+  RETURN drop_col_default_sql;
+END;
+$$ LANGUAGE plpgsql RETURNS NULL ON NULL INPUT;
 
 
 CREATE OR REPLACE FUNCTION
