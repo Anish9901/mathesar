@@ -3483,7 +3483,7 @@ DECLARE
 BEGIN
   SELECT
     string_agg(
-      __msar.build_cast_expr(
+      msar.build_cast_expr(
         quote_ident(src.attname),
         dst.atttypid::regclass::text,
         '{}'::jsonb
@@ -3567,7 +3567,7 @@ BEGIN
   WITH preview_cte AS (
     SELECT string_agg(
       'CAST(' ||
-      __msar.build_cast_expr(
+      msar.build_cast_expr(
         quote_ident(msar.get_column_name(tab_id, (col_cast ->> 'attnum')::integer)),
         col_cast -> 'type' ->> 'name',
         coalesce(col_cast -> 'cast_options', '{}'::jsonb)
@@ -3628,7 +3628,7 @@ END;
 $$ LANGUAGE plpgsql RETURNS NULL ON NULL INPUT;
 
 
-CREATE OR REPLACE FUNCTION __msar.build_cast_expr(
+CREATE OR REPLACE FUNCTION msar.build_cast_expr(
   val text,
   type_ text,
   cast_options jsonb
@@ -3771,7 +3771,7 @@ BEGIN
   IF is_default_dynamic THEN
     default_ := format('%s::%s', old_default, new_type);
   ELSE
-    EXECUTE format('SELECT %s', __msar.build_cast_expr(old_default, new_type, cast_options)) INTO default_;
+    EXECUTE format('SELECT %s', msar.build_cast_expr(old_default, new_type, cast_options)) INTO default_;
     default_ := quote_literal(default_);
   END IF;
 
@@ -3804,7 +3804,7 @@ Args:
     msar.get_relation_name(tab_id),
     msar.get_column_name(tab_id, col_id),
     new_type,
-    __msar.build_cast_expr(quote_ident(msar.get_column_name(tab_id, col_id)), new_type, cast_options)
+    msar.build_cast_expr(quote_ident(msar.get_column_name(tab_id, col_id)), new_type, cast_options)
   );
 $$ LANGUAGE SQL RETURNS NULL ON NULL INPUT;
 

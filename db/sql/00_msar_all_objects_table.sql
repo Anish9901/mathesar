@@ -584,6 +584,7 @@ INSERT INTO msar.all_mathesar_objects VALUES
   ('msar', 'msar.auto_generate_record_summary_template(oid)', 'FUNCTION', NULL),
   ('msar', 'msar.build_all_columns_expr(regclass)', 'FUNCTION', NULL),
   ('msar', 'msar.build_cast_expr(regclass,smallint,regtype)', 'FUNCTION', NULL),
+  ('msar', 'msar.build_cast_expr(text,text,jsonb)', 'FUNCTION', NULL),
   ('msar', 'msar.build_column_expr(jsonb)', 'FUNCTION', NULL),
   ('msar', 'msar.build_column_expr(text,jsonb)', 'FUNCTION', NULL),
   ('msar', 'msar.build_columns_expr(regclass,smallint[])', 'FUNCTION', NULL),
