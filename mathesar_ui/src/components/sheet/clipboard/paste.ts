@@ -15,6 +15,7 @@ import {
   DateTimeFormatter,
   DateTimeSpecification,
 } from '@mathesar/utils/date-time';
+import type { DateTimeConfig } from '@mathesar/utils/date-time/DateTimeSpecification';
 import { startingFrom } from '@mathesar/utils/iterUtils';
 import {
   type ImmutableSet,
@@ -122,51 +123,38 @@ function getDestinationColumns(
   return sheetColumns.slice(firstIndex, lastIndex + 1);
 }
 
-function parseDateTimeValue(
-  value: string,
+/**
+ * For date/datetime/time columns, parse the TSV value using DateTimeFormatter
+ * to ensure it respects the column's format metadata (e.g., European date
+ * format). This mirrors the behavior of edit-mode parsing.
+ */
+function makeDateTimeValueParser(config: DateTimeConfig) {
+  const formatter = new DateTimeFormatter(new DateTimeSpecification(config));
+  return (value: string): string => formatter.parse(value).value ?? value;
+}
+
+function getTsvValueParser(
   column: RawColumnWithMetadata,
-): string {
-  try {
-    let specification: DateTimeSpecification;
+): ((v: string) => string) | undefined {
+  const dateFormat = getColumnMetadataValue(column, 'date_format');
+  const timeFormat = getColumnMetadataValue(column, 'time_format');
 
-    if (column.type === 'date') {
-      const dateFormat = getColumnMetadataValue(column, 'date_format');
-      specification = new DateTimeSpecification({
-        type: 'date',
-        ...(dateFormat && { dateFormat }),
-      });
-    } else if (column.type === 'time') {
-      const timeFormat = getColumnMetadataValue(column, 'time_format');
-      specification = new DateTimeSpecification({
-        type: 'time',
-        ...(timeFormat && { timeFormat }),
-      });
-    } else if (column.type === 'timestamp') {
-      const dateFormat = getColumnMetadataValue(column, 'date_format');
-      const timeFormat = getColumnMetadataValue(column, 'time_format');
-      specification = new DateTimeSpecification({
-        type: 'timestamp',
-        ...(dateFormat && { dateFormat }),
-        ...(timeFormat && { timeFormat }),
-      });
-    } else if (column.type === 'timestamptz') {
-      const dateFormat = getColumnMetadataValue(column, 'date_format');
-      const timeFormat = getColumnMetadataValue(column, 'time_format');
-      specification = new DateTimeSpecification({
-        type: 'timestampWithTZ',
-        ...(dateFormat && { dateFormat }),
-        ...(timeFormat && { timeFormat }),
-      });
-    } else {
-      return value;
-    }
-
-    const formatter = new DateTimeFormatter(specification);
-    const { value: parsed } = formatter.parse(value);
-    return parsed ?? value;
-  } catch {
-    return value;
+  if (column.type === 'date') {
+    return makeDateTimeValueParser({ type: 'date', dateFormat });
   }
+  if (column.type === 'time') {
+    return makeDateTimeValueParser({ type: 'time', timeFormat });
+  }
+  if (column.type === 'timestamp') {
+    const type = 'timestamp';
+    return makeDateTimeValueParser({ type, dateFormat, timeFormat });
+  }
+  if (column.type === 'timestamptz') {
+    const type = 'timestampWithTZ';
+    return makeDateTimeValueParser({ type, dateFormat, timeFormat });
+  }
+
+  return undefined;
 }
 
 function prepareStructuredCellValue(
@@ -178,19 +166,13 @@ function prepareStructuredCellValue(
     // assume that empty strings are NULLs.
     if (cell.value === '' && column.nullable) return null;
 
-    // For date/datetime/time columns, parse the TSV value using DateTimeFormatter
-    // to ensure it respects the column's format metadata (e.g., European date format).
-    // This mirrors the behavior of edit-mode parsing.
-    if (
-      column.type === 'date' ||
-      column.type === 'timestamp' ||
-      column.type === 'timestamptz' ||
-      column.type === 'time'
-    ) {
-      return parseDateTimeValue(cell.value, column);
+    const parse = getTsvValueParser(column);
+    if (!parse) return cell.value;
+    try {
+      return parse(cell.value);
+    } catch {
+      return cell.value;
     }
-
-    return cell.value;
   }
 
   if (cell.type === 'mathesar') {
