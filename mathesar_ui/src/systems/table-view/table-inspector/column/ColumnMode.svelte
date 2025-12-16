@@ -2,7 +2,7 @@
   import { _ } from 'svelte-i18n';
 
   import InspectorSection from '@mathesar/components/InspectorSection.svelte';
-  import WarningBox from '@mathesar/components/message-boxes/WarningBox.svelte';
+  import InfoBox from '@mathesar/components/message-boxes/InfoBox.svelte';
   import TableLink from '@mathesar/components/TableLink.svelte';
   import {
     tableInspectorColumnActionsVisible,
@@ -94,9 +94,9 @@
   {/if}
   {#if joinInfo}
     <div class="joined-column-info">
-      <WarningBox>
+      <InfoBox>
         {$_('joined_column_tooltip')}
-      </WarningBox>
+      </InfoBox>
       {#if joinInfo.targetTable}
         <div class="table-link-group">
           <div class="table-link-header">
