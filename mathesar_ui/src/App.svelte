@@ -108,12 +108,12 @@
     --cell-bg-color-joined-cell: color-mix(
       in srgb,
       var(--color-highlight-d),
-      transparent 88%
+      transparent 80%
     );
     --cell-bg-color-joined-header: color-mix(
       in srgb,
       var(--color-highlight-d),
-      transparent 78%
+      transparent 50%
     );
 
     --cell-text-color-processing: var(--color-fg-base-muted);
