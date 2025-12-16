@@ -384,7 +384,7 @@
   "join": "Add related",
   "join_chat": "Join Community",
   "join_mailing_list_help": "Join our mailing list to keep on top of what's going on at the Mathesar Foundation.",
-  "joined_column_tooltip": "This column shows related data from a different table.",
+  "joined_column_tooltip": "This column shows related data from the [targetTable] table, via the [intermediateTable] mapping table.",
   "joined_table": "Joined Table",
   "keep_first_row_as_data": "Set generic column names, keeping the first row as data",
   "keep_the_database": "Keep the database",

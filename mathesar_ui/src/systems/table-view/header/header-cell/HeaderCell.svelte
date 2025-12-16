@@ -18,12 +18,14 @@
     iconSortDescending,
     iconTableLink,
   } from '@mathesar/icons';
+  import JoinedColumnTooltipContent from '@mathesar/systems/table-view/table-inspector/column/JoinedColumnTooltipContent.svelte';
   import {
     type JoinedColumn,
     type ProcessedColumn,
     getTabularDataStoreFromContext,
     isJoinedColumn,
   } from '@mathesar/stores/table-data';
+  import { currentTablesData } from '@mathesar/stores/tables';
   import { Icon, Tooltip } from '@mathesar-component-library';
 
   const tabularData = getTabularDataStoreFromContext();
@@ -46,6 +48,22 @@
   $: description = (() => {
     const col = columnFabric.column;
     return 'description' in col ? col.description : undefined;
+  })();
+
+  $: joinInfo = (() => {
+    if (!isJoinedColumn(columnFabric)) return undefined;
+    const { targetTableOid, intermediateTableOid } = columnFabric;
+    const { tablesMap } = $currentTablesData;
+
+    const targetTable = targetTableOid
+      ? tablesMap.get(targetTableOid)
+      : undefined;
+    const intermediateTable = tablesMap.get(intermediateTableOid);
+
+    return {
+      targetTable,
+      intermediateTable,
+    };
   })();
 </script>
 
@@ -73,11 +91,16 @@
     {#if sorter || hasFilter || grouped || description || isJoinedColumn(columnFabric)}
       <div class="indicator-icons">
         {#if isJoinedColumn(columnFabric)}
-          <Tooltip>
+          <Tooltip allowHover={true}>
             <span slot="trigger" class="table-link-icon">
               <Icon {...iconTableLink} />
             </span>
-            <span slot="content">{$_('joined_column_tooltip')}</span>
+            <div slot="content">
+              <JoinedColumnTooltipContent
+                targetTable={joinInfo?.targetTable}
+                intermediateTable={joinInfo?.intermediateTable}
+              />
+            </div>
           </Tooltip>
         {/if}
         {#if sorter}
@@ -92,7 +115,7 @@
           <Icon {...iconGrouping} />
         {/if}
         {#if description}
-          <Tooltip>
+          <Tooltip allowHover={true}>
             <Icon slot="trigger" {...iconDescription} />
             <div slot="content">{description}</div>
           </Tooltip>

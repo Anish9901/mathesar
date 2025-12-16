@@ -12,6 +12,7 @@
     tableInspectorColumnPropertiesVisible,
     tableInspectorColumnRecordSummaryVisible,
   } from '@mathesar/stores/localStorage';
+  import JoinedColumnTooltipContent from './JoinedColumnTooltipContent.svelte';
   import {
     type ProcessedColumn,
     getTabularDataStoreFromContext,
@@ -94,25 +95,10 @@
   {/if}
   {#if joinInfo}
     <div class="joined-column-info">
-      <InfoBox>
-        {$_('joined_column_tooltip')}
-      </InfoBox>
-      {#if joinInfo.targetTable}
-        <div class="table-link-group">
-          <div class="table-link-header">
-            {$_('joined_table')}
-          </div>
-          <TableLink table={joinInfo.targetTable} />
-        </div>
-      {/if}
-      {#if joinInfo.mappingTable}
-        <div class="table-link-group">
-          <div class="table-link-header">
-            {$_('mapping_table')}
-          </div>
-          <TableLink table={joinInfo.mappingTable} />
-        </div>
-      {/if}
+      <JoinedColumnTooltipContent
+        targetTable={joinInfo.targetTable}
+        intermediateTable={joinInfo.mappingTable}
+      />
     </div>
   {/if}
   {#if column}
