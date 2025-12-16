@@ -5045,6 +5045,45 @@ BEGIN
     ),
     '(((atable.col2) = (''500'')) AND ((atable.col3) < (''abcde''))) OR ((atable.id) > (''20''))'
   );
+  RETURN NEXT is(
+    msar.build_expr(
+      rel_id,
+      jsonb_build_object(
+        'type', 'not', 'args', jsonb_build_array(
+          jsonb_build_object(
+            'type', 'equal', 'args', jsonb_build_array(
+              jsonb_build_object('type', 'attnum', 'value', 2),
+              jsonb_build_object('type', 'literal', 'value', 500))
+          )
+        )
+      )
+    ),
+    'NOT ((atable.col1) = (''500''))'
+  );
+  RETURN NEXT is(
+    msar.build_expr(
+      rel_id,
+      jsonb_build_object(
+        'type', 'not', 'args', jsonb_build_array(
+          jsonb_build_object(
+            'type', 'or', 'args', jsonb_build_array(
+              jsonb_build_object(
+                'type', 'equal', 'args', jsonb_build_array(
+                  jsonb_build_object('type', 'attnum', 'value', 2),
+                  jsonb_build_object('type', 'literal', 'value', 500))
+              ),
+              jsonb_build_object(
+                'type', 'lesser', 'args', jsonb_build_array(
+                  jsonb_build_object('type', 'attnum', 'value', 3),
+                  jsonb_build_object('type', 'literal', 'value', 100))
+              )
+            )
+          )
+        )
+      )
+    ),
+    'NOT (((atable.col1) = (''500'')) OR ((atable.col2) < (''100'')))'
+  );
 END;
 $$ LANGUAGE plpgsql;
 

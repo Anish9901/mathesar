@@ -4474,9 +4474,10 @@ $$ LANGUAGE SQL IMMUTABLE RETURNS NULL ON NULL INPUT PARALLEL SAFE;
 
 CREATE TABLE msar.expr_templates (expr_key text PRIMARY KEY, expr_template text);
 INSERT INTO msar.expr_templates VALUES
-  -- basic composition operators
+  -- basic logical operators
   ('and', '(%s) AND (%s)'),
   ('or', '(%s) OR (%s)'),
+  ('not', 'NOT (%s)'),
   -- general comparison operators
   ('equal', '(%s) = (%s)'),
   ('lesser', '(%s) < (%s)'),
