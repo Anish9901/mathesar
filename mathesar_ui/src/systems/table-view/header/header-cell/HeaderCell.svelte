@@ -4,8 +4,6 @@
   using table inspector
 -->
 <script lang="ts">
-  import { _ } from 'svelte-i18n';
-
   import CellBackground from '@mathesar/components/CellBackground.svelte';
   import ColumnName from '@mathesar/components/column/ColumnName.svelte';
   import ProcessedColumnName from '@mathesar/components/column/ProcessedColumnName.svelte';
@@ -18,7 +16,6 @@
     iconSortDescending,
     iconTableLink,
   } from '@mathesar/icons';
-  import JoinedColumnTooltipContent from '@mathesar/systems/table-view/table-inspector/column/JoinedColumnTooltipContent.svelte';
   import {
     type JoinedColumn,
     type ProcessedColumn,
@@ -26,6 +23,7 @@
     isJoinedColumn,
   } from '@mathesar/stores/table-data';
   import { currentTablesData } from '@mathesar/stores/tables';
+  import JoinedColumnTooltipContent from '@mathesar/systems/table-view/table-inspector/column/JoinedColumnTooltipContent.svelte';
   import { Icon, Tooltip } from '@mathesar-component-library';
 
   const tabularData = getTabularDataStoreFromContext();
@@ -81,10 +79,15 @@
     on:mouseenter
   >
     {#if isJoinedColumn(columnFabric)}
-      <ColumnName
-        column={{ ...columnFabric.column, name: columnFabric.displayName }}
-        {hideIcon}
-      />
+      <span class="joined-column-name">
+        <span class="table-link-icon">
+          <Icon {...iconTableLink} />
+        </span>
+        <ColumnName
+          column={{ ...columnFabric.column, name: columnFabric.displayName }}
+          hideIcon={true}
+        />
+      </span>
     {:else}
       <ProcessedColumnName {hideIcon} processedColumn={columnFabric} />
     {/if}
@@ -92,9 +95,7 @@
       <div class="indicator-icons">
         {#if isJoinedColumn(columnFabric)}
           <Tooltip allowHover={true}>
-            <span slot="trigger" class="table-link-icon">
-              <Icon {...iconTableLink} />
-            </span>
+            <Icon slot="trigger" {...iconDescription} />
             <div slot="content">
               <JoinedColumnTooltipContent
                 targetTable={joinInfo?.targetTable}
@@ -151,7 +152,15 @@
     }
   }
 
+  .joined-column-name {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
   .table-link-icon {
     color: var(--color-table);
+    display: inline-flex;
+    align-items: center;
   }
 </style>

@@ -2,8 +2,6 @@
   import { _ } from 'svelte-i18n';
 
   import InspectorSection from '@mathesar/components/InspectorSection.svelte';
-  import InfoBox from '@mathesar/components/message-boxes/InfoBox.svelte';
-  import TableLink from '@mathesar/components/TableLink.svelte';
   import {
     tableInspectorColumnActionsVisible,
     tableInspectorColumnDataTypeVisible,
@@ -12,7 +10,6 @@
     tableInspectorColumnPropertiesVisible,
     tableInspectorColumnRecordSummaryVisible,
   } from '@mathesar/stores/localStorage';
-  import JoinedColumnTooltipContent from './JoinedColumnTooltipContent.svelte';
   import {
     type ProcessedColumn,
     getTabularDataStoreFromContext,
@@ -29,6 +26,7 @@
   import ColumnOptions from './ColumnOptions.svelte';
   import ColumnType from './ColumnType.svelte';
   import ColumnTypeSpecifierTag from './ColumnTypeSpecifierTag.svelte';
+  import JoinedColumnTooltipContent from './JoinedColumnTooltipContent.svelte';
   import SetDefaultValue from './SetDefaultValue.svelte';
 
   const tabularData = getTabularDataStoreFromContext();
@@ -193,25 +191,5 @@
 
   .columns-selected-count {
     padding: 1rem;
-  }
-
-  .joined-column-info {
-    padding: var(--sm1);
-    display: flex;
-    flex-direction: column;
-    gap: var(--sm1);
-
-    .table-link-group {
-      display: flex;
-      flex-direction: column;
-      gap: var(--sm5);
-      padding: var(--sm6);
-    }
-
-    .table-link-header {
-      color: var(--color-fg-subtle-1);
-      font-size: var(--sm1);
-      font-weight: var(--font-weight-medium);
-    }
   }
 </style>

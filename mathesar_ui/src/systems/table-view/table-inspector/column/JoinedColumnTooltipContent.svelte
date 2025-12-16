@@ -21,7 +21,7 @@
   </div>
 {:else}
   <div class="joined-column-tooltip-content">
-    This column shows related data from a different table.
+    {$_('joined_column_tooltip_fallback')}
   </div>
 {/if}
 

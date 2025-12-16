@@ -13,7 +13,7 @@ import type { SheetClipboardHandler } from '@mathesar/components/sheet/clipboard
 import type { SheetCellDetails } from '@mathesar/components/sheet/selection';
 import type SheetSelection from '@mathesar/components/sheet/selection/SheetSelection';
 import type { ImperativeFilterController } from '@mathesar/pages/table/ImperativeFilterController';
-import type { TabularData } from '@mathesar/stores/table-data';
+import { type TabularData, isJoinedColumn } from '@mathesar/stores/table-data';
 import type RecordStore from '@mathesar/systems/record-view/RecordStore';
 import { takeFirstAndOnly } from '@mathesar/utils/iterUtils';
 import { match } from '@mathesar/utils/patternMatching';
@@ -25,6 +25,7 @@ import { duplicateRecord } from './entries/duplicateRecord';
 import { modifyFilters } from './entries/modifyFilters';
 import { modifyGrouping } from './entries/modifyGrouping';
 import { modifySorting } from './entries/modifySorting';
+import { openJoinedTables } from './entries/openJoinedTables';
 import { openTable } from './entries/openTable';
 import { pasteCells } from './entries/pasteCells';
 import { selectCellRange } from './entries/selectCellRange';
@@ -75,9 +76,18 @@ export function openTableCellContextMenu({
   }
 
   function* getEntriesForOneColumn(columnId: string) {
-    const column = tabularData.getProcessedColumn(columnId);
+    const allColumns = get(tabularData.allColumns);
+    const column = allColumns.get(columnId);
     if (!column) return;
 
+    // Check if this is a joined column
+    if (isJoinedColumn(column)) {
+      // For joined columns, show links to target and intermediate tables
+      yield menuSection(...openJoinedTables({ joinedColumn: column }));
+      return;
+    }
+
+    // For regular processed columns, show the standard options
     yield* modifyFilters({ tabularData, column, imperativeFilterController });
     yield* modifySorting({ tabularData, column });
     yield* modifyGrouping({ tabularData, column });
@@ -102,28 +112,43 @@ export function openTableCellContextMenu({
   }
 
   function* getEntriesForMultipleCells(cellIds: string[]) {
-    yield* copyCells({
-      clipboardHandler,
+    // Check if any of the selected cells are joined columns
+    const allColumns = get(tabularData.allColumns);
+    const hasJoinedColumn = cellIds.some((cellId) => {
+      const { columnId } = parseCellId(cellId);
+      const column = allColumns.get(columnId);
+      return column && isJoinedColumn(column);
     });
-    yield* pasteCells({
-      selection,
-      clipboardHandler,
-    });
+
+    // Only show copy/paste for non-joined columns
+    if (!hasJoinedColumn) {
+      yield* copyCells({
+        clipboardHandler,
+      });
+      yield* pasteCells({
+        selection,
+        clipboardHandler,
+      });
+    }
     yield* setNull({ tabularData, cellIds });
     yield* selectCellRange({ beginSelectingCellRange });
   }
 
   function* getEntriesForOneCell(cellId: string) {
     const { columnId } = parseCellId(cellId);
-    const column = tabularData.getProcessedColumn(columnId);
+    const allColumns = get(tabularData.allColumns);
+    const column = allColumns.get(columnId);
     const cellValue = tabularData.recordsData.getCellValue(cellId);
 
-    yield* viewLinkedRecord({
-      tabularData,
-      column,
-      cellValue,
-      modalRecordView,
-    });
+    // Only show view linked record for non-joined columns
+    if (column && !isJoinedColumn(column)) {
+      yield* viewLinkedRecord({
+        tabularData,
+        column,
+        cellValue,
+        modalRecordView,
+      });
+    }
 
     yield* getEntriesForMultipleCells([cellId]);
   }

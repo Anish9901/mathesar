@@ -63,8 +63,12 @@
                 </RichText>
               </span>
             {:else}
-              {relationship.targetTable.name} via{' '}
-              {relationship.intermediateTable.name}
+              {relationship.targetTable.name}{' '}
+              <RichText text={$_('via_column_component')} let:slotName>
+                {#if slotName === 'columnComponent'}
+                  {relationship.intermediateTable.name}
+                {/if}
+              </RichText>
             {/if}
           </span>
           <Checkbox
