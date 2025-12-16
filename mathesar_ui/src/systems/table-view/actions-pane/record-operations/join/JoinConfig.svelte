@@ -5,12 +5,7 @@
   import type { JoinableTablesResult } from '@mathesar/api/rpc/tables';
   import TableName from '@mathesar/components/TableName.svelte';
   import type { Joining } from '@mathesar/stores/table-data';
-  import {
-    Checkbox,
-    Collapsible,
-    Help,
-    LabeledInput,
-  } from '@mathesar-component-library';
+  import { Checkbox, Help, LabeledInput } from '@mathesar-component-library';
 
   import {
     type SimpleManyToManyRelationship,
@@ -39,37 +34,44 @@
 </script>
 
 <div class="join-config">
-  <Collapsible triggerAppearance="ghost" isOpen>
-    <div slot="header">
-      {$_('simple_many_to_many_relationships')}
-      <Help>{$_('simple_many_to_many_relationships_help')}</Help>
-    </div>
-    <section slot="content">
-      {#if simpleManyToManyRelationships.length}
-        {#each simpleManyToManyRelationships as relationship}
-          <LabeledInput layout="inline-input-first">
-            <span slot="label">
-              <TableName table={{ name: relationship.targetTable.name }} />
-            </span>
-            <Checkbox
-              checked={$joining.simpleManyToMany.has(
-                relationship.intermediateTable.oid,
-              )}
-              on:change={(e) => handleCheckboxChange(relationship, e.detail)}
-            />
-          </LabeledInput>
-        {/each}
-      {:else}
-        <div class="empty">({$_('none')})</div>
-      {/if}
-    </section>
-  </Collapsible>
+  <div class="header">
+    {$_('simple_many_to_many_relationships')}
+    <Help>{$_('simple_many_to_many_relationships_help')}</Help>
+  </div>
+  <section>
+    {#if simpleManyToManyRelationships.length}
+      {#each simpleManyToManyRelationships as relationship}
+        <LabeledInput layout="inline-input-first">
+          <span slot="label">
+            <TableName table={{ name: relationship.targetTable.name }} />
+          </span>
+          <Checkbox
+            checked={$joining.simpleManyToMany.has(
+              relationship.intermediateTable.oid,
+            )}
+            on:change={(e) => handleCheckboxChange(relationship, e.detail)}
+          />
+        </LabeledInput>
+      {/each}
+    {:else}
+      <div class="empty">({$_('none')})</div>
+    {/if}
+  </section>
 </div>
 
 <style>
-  section {
-    padding-left: 2rem;
+  .header {
+    font-weight: bolder;
   }
+
+  .join-config {
+    padding: var(--sm3);
+  }
+
+  section {
+    margin-top: 1rem;
+  }
+
   .empty {
     color: var(--color-fg-subtle-2);
   }
