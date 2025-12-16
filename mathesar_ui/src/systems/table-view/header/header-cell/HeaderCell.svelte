@@ -74,7 +74,9 @@
       <div class="indicator-icons">
         {#if isJoinedColumn(columnFabric)}
           <Tooltip>
-            <Icon slot="trigger" {...iconTableLink} />
+            <span slot="trigger" class="table-link-icon">
+              <Icon {...iconTableLink} />
+            </span>
             <span slot="content">{$_('joined_column_tooltip')}</span>
           </Tooltip>
         {/if}
@@ -124,5 +126,9 @@
         margin-left: 0.25rem;
       }
     }
+  }
+
+  .table-link-icon {
+    color: var(--color-table);
   }
 </style>
