@@ -159,7 +159,7 @@
   }
 
   .table-link-icon {
-    color: var(--color-table);
+    color: var(--color-column);
     display: inline-flex;
     align-items: center;
   }
