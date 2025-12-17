@@ -12,9 +12,6 @@ import {
 
 import OpenNamedTable from '../labels/OpenNamedTable.svelte';
 
-/**
- * Get table detail with href for a given table OID
- */
 function getTableDetail(
   tableOid: number,
 ): { table: Table; href: string } | undefined {
@@ -29,9 +26,6 @@ function getTableDetail(
   };
 }
 
-/**
- * Generate context menu entries for joined tables (target table and intermediate table)
- */
 export function* openJoinedTables(p: { joinedColumn: JoinedColumn }) {
   const { targetTableOid, intermediateTableOid } = p.joinedColumn;
 

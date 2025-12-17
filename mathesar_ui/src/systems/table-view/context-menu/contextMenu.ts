@@ -80,14 +80,11 @@ export function openTableCellContextMenu({
     const column = allColumns.get(columnId);
     if (!column) return;
 
-    // Check if this is a joined column
     if (isJoinedColumn(column)) {
-      // For joined columns, show links to target and intermediate tables
       yield menuSection(...openJoinedTables({ joinedColumn: column }));
       return;
     }
 
-    // For regular processed columns, show the standard options
     yield* modifyFilters({ tabularData, column, imperativeFilterController });
     yield* modifySorting({ tabularData, column });
     yield* modifyGrouping({ tabularData, column });
@@ -120,7 +117,6 @@ export function openTableCellContextMenu({
       return column && isJoinedColumn(column);
     });
 
-    // Only show copy/paste for non-joined columns
     if (!hasJoinedColumn) {
       yield* copyCells({
         clipboardHandler,
@@ -140,7 +136,6 @@ export function openTableCellContextMenu({
     const column = allColumns.get(columnId);
     const cellValue = tabularData.recordsData.getCellValue(cellId);
 
-    // Only show view linked record for non-joined columns
     if (column && !isJoinedColumn(column)) {
       yield* viewLinkedRecord({
         tabularData,
