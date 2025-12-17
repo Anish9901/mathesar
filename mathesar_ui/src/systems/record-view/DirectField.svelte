@@ -10,7 +10,7 @@
   import Null from '@mathesar/components/Null.svelte';
   import { RichText } from '@mathesar/components/rich-text';
   import {
-    iconInspector,
+    iconDescription,
     iconLinkToRecordPage,
     iconModalRecordView,
     iconSetToNull,
@@ -89,7 +89,6 @@
 <div class="direct-field">
   <div class="left cell">
     <div class="complex-label">
-      <!-- LABEL + TOOLTIP -->
       <div class="label-with-info">
         <Label controller={labelController}>
           <ProcessedColumnName {processedColumn} />
@@ -102,7 +101,7 @@
               class="info-icon"
               aria-label={$_('column_description')}
             >
-              <Icon {...iconInspector} />
+              <Icon {...iconDescription} />
             </span>
 
             <div slot="content">
@@ -218,7 +217,8 @@
 
   .complex-label {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    justify-content: space-between;
     max-width: 15rem;
     gap: 0.3rem;
   }
@@ -241,7 +241,6 @@
   }
 
   .options {
-    align-self: flex-end;
   }
 
   .input {
