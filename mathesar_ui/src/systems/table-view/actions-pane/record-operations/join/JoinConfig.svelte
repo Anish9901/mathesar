@@ -58,7 +58,11 @@
               <span class="joined-via">
                 <RichText text={$_('via_column_component')} let:slotName>
                   {#if slotName === 'columnComponent'}
-                    <TableName truncate={false} table={intermediateTable} />
+                    <TableName
+                      bold={true}
+                      truncate={false}
+                      table={intermediateTable}
+                    />
                   {/if}
                 </RichText>
               </span>
@@ -105,7 +109,7 @@
   .joined-via {
     display: inline;
     text-wrap: nowrap;
-    color: var(--color-fg-subtle-2);
+    color: var(--color-fg-subtle-2-muted);
     font-size: var(--sm1);
   }
 </style>

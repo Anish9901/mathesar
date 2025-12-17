@@ -189,6 +189,10 @@
     padding: var(--lg4);
   }
 
+  .joined-column-info {
+    padding: var(--lg2);
+  }
+
   .columns-selected-count {
     padding: 1rem;
   }
