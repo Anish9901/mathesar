@@ -9,7 +9,7 @@
   import TableGroupCollapsible from './TableGroupCollapsible.svelte';
 
   export let queryManager: QueryManager;
-  export let linkCollapsibleOpenState: Record<ColumnWithLink['id'], boolean> =
+  export let linkCollapsibleOpenState: Record<string, boolean> =
     {};
 
   $: ({ inputColumns, query } = queryManager);
