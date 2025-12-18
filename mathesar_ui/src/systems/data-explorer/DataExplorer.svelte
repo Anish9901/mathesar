@@ -10,7 +10,6 @@
   import type QueryManager from './QueryManager';
   import ExplorationResults from './result-pane/ExplorationResults.svelte';
   import StatusBar from './StatusBar.svelte';
-  import type { ColumnWithLink } from './utils';
 
   export let queryManager: QueryManager;
   export let linkCollapsibleOpenState: Record<string, boolean> = {};

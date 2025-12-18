@@ -23,7 +23,6 @@
   } from '@mathesar-component-library';
 
   import type QueryManager from '../QueryManager';
-  import type { ColumnWithLink } from '../utils';
 
   const saveModalController = modal.spawnModalController();
 

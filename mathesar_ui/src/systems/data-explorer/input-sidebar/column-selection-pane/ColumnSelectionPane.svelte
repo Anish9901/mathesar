@@ -2,7 +2,6 @@
   import { _ } from 'svelte-i18n';
 
   import type QueryManager from '../../QueryManager';
-  import type { ColumnWithLink } from '../../utils';
 
   import SelectableColumn from './SelectableColumn.svelte';
   import SelectableColumnTree from './SelectableColumnTree.svelte';

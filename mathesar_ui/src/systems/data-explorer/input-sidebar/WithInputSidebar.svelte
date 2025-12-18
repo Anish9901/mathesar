@@ -1,7 +1,6 @@
 <script lang="ts">
   import { dataExplorerLeftSidebarWidth } from '@mathesar/stores/localStorage';
   import type QueryManager from '@mathesar/systems/data-explorer/QueryManager';
-  import type { ColumnWithLink } from '@mathesar/systems/data-explorer/utils';
   import { WithPanel } from '@mathesar-component-library';
 
   import InputSidebar from './InputSidebar.svelte';
