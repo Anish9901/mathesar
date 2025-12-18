@@ -119,12 +119,7 @@
     }
   }
 
-  async function toggleRecordSelector(event: MouseEvent | KeyboardEvent) {
-    if (event.shiftKey) {
-      // Ignore when Shift is pressed to allow multi-selection
-      event.stopPropagation();
-      return;
-    }
+  async function toggleRecordSelector() {
     // I added `tick` because I was observing a race condition when opening a
     // nested record selector. It would open correctly about 80% of the time.
     // But 20% of the time it would not open because it would cancel.
@@ -141,7 +136,7 @@
     switch (e.key) {
       case 'Enter':
         if (e.target === element) {
-          void toggleRecordSelector(e);
+          void toggleRecordSelector();
         }
         break;
       case 'Delete':
