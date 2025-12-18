@@ -13,8 +13,7 @@
   import type { ColumnWithLink } from './utils';
 
   export let queryManager: QueryManager;
-  export let linkCollapsibleOpenState: Record<string, boolean> =
-    {};
+  export let linkCollapsibleOpenState: Record<string, boolean> = {};
 
   $: ({ query } = queryManager);
   $: hasColumns = !!$query.initial_columns.length;

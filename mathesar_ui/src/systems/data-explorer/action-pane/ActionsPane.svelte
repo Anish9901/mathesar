@@ -28,8 +28,7 @@
   const saveModalController = modal.spawnModalController();
 
   export let queryManager: QueryManager;
-  export let linkCollapsibleOpenState: Record<string, boolean> =
-    {};
+  export let linkCollapsibleOpenState: Record<string, boolean> = {};
   export let isInspectorOpen: boolean;
 
   $: ({ rowsData, query, queryHasUnsavedChanges } = queryManager);

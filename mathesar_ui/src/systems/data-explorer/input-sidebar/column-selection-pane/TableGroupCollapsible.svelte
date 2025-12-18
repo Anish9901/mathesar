@@ -19,7 +19,8 @@
 
 <div class="table-group">
   <Collapsible
-    bind:isOpen={linkCollapsibleOpenState[`${tableName}.${column.name}`]}>
+    bind:isOpen={linkCollapsibleOpenState[`${tableName}.${column.name}`]}
+  >
     <!--
       A fragment is used here because sveltecheck does not seem to
       recognize toggle as a defined variable when directly using the

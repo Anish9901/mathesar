@@ -7,8 +7,7 @@
   import InputSidebar from './InputSidebar.svelte';
 
   export let queryManager: QueryManager;
-  export let linkCollapsibleOpenState: Record<string, boolean> =
-    {};
+  export let linkCollapsibleOpenState: Record<string, boolean> = {};
 </script>
 
 <WithPanel
