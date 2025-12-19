@@ -46,14 +46,12 @@
    * The pattern we're currently using is brittle because if we add new data
    * types we shouldn't need to update this code here.
    */
-
   const cellDataTypesThatUsePlaceholderText = new Set<CellDataType>([
     'date',
     'datetime',
     'duration',
     'time',
   ]);
-
   const labelController = new LabelController();
   const modalRecordView = modalRecordViewContext.get();
 
@@ -73,11 +71,9 @@
     $fieldIsDisabled ||
     !canUpdateTableRecords ||
     !canUpdateColumn;
-
   $: shouldDisplayNullOverlay = !cellDataTypesThatUsePlaceholderText.has(
     abstractType.cellInfo.type,
   );
-
   $: getRecordUrl = $storeToGetRecordPageUrl;
   $: fileManifest = (() => {
     if (!column.metadata?.file_backend) return undefined;
@@ -234,6 +230,15 @@
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  .label-with-info :global(label) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
   }
 
   .info-icon {
@@ -241,6 +246,7 @@
     color: var(--color-fg-muted);
     cursor: help;
     user-select: none;
+    flex-shrink: 0;
   }
 
   .info-icon:hover {
