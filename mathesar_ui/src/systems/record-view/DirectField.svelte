@@ -9,16 +9,19 @@
   import FieldErrors from '@mathesar/components/form/FieldErrors.svelte';
   import Null from '@mathesar/components/Null.svelte';
   import { RichText } from '@mathesar/components/rich-text';
+
   import {
     iconDescription,
     iconLinkToRecordPage,
     iconModalRecordView,
     iconSetToNull,
   } from '@mathesar/icons';
+
   import { storeToGetRecordPageUrl } from '@mathesar/stores/storeBasedUrls';
   import type { ProcessedColumn } from '@mathesar/stores/table-data';
   import { currentTablesMap } from '@mathesar/stores/tables';
   import { modalRecordViewContext } from '@mathesar/systems/record-view-modal/modalRecordViewContext';
+  
   import {
     ButtonMenuItem,
     DropdownMenu,
@@ -29,7 +32,7 @@
     iconExpandDown,
   } from '@mathesar-component-library';
 
-      /**
+  /**
    * This is used to determine whether to display a `NULL` overlay indicator.
    * For text data types the indicator is important because otherwise the user
    * has no way to distinguish an empty string from a `NULL` value. But for some
@@ -43,7 +46,7 @@
    * The pattern we're currently using is brittle because if we add new data
    * types we shouldn't need to update this code here.
    */
-  
+
   import Tooltip from '@mathesar-component-library-dir/tooltip/Tooltip.svelte';
 
   import RecordStore from './RecordStore';
@@ -100,7 +103,8 @@
     });
     modalRecordView.open(recordStore);
   }
-</script>
+</script>/code/mathesar_ui/src/systems/record-view/DirectField.svelte
+  22:3  error  There should be no empty line within import group
 
 <div class="direct-field">
   <div class="left cell">
