@@ -5,7 +5,6 @@ from typing import Optional, TypedDict
 
 from modernrpc.core import REQUEST_KEY
 
-from mathesar.models.base import Explorations
 from mathesar.rpc.decorators import mathesar_rpc_method
 from mathesar.rpc.utils import connect
 from mathesar.utils.explorations import (
