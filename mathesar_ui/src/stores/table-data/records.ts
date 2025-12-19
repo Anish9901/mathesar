@@ -34,6 +34,7 @@ import {
   ImmutableMap,
   WritableMap,
   defined,
+  getGloballyUniqueId,
 } from '@mathesar-component-library';
 
 import AssociatedCellData, {
@@ -57,6 +58,7 @@ import {
 import type { SearchFuzzy } from './searchFuzzy';
 import type { Sorting } from './sorting';
 import {
+  type CellKey,
   type RecordGrouping,
   type RowKey,
   buildGrouping,
@@ -203,8 +205,7 @@ export class RecordsData {
   // @ts-ignore: https://github.com/centerofci/mathesar/issues/1055
   private createPromises: Map<unknown, CancellablePromise<unknown>>;
 
-  // @ts-ignore: https://github.com/centerofci/mathesar/issues/1055
-  private updatePromises: Map<unknown, CancellablePromise<unknown>>;
+  private latestCellUpdateRequestId: Map<CellKey, string> = new Map();
 
   private requestParamsUnsubscriber: Unsubscriber;
 
@@ -529,6 +530,41 @@ export class RecordsData {
     this.joinedRecordSummaries.addBespokeValues(newJoinedRecordSummaries);
   }
 
+  /**
+   * Why are we merging?
+   * - We have some attributes of a record like joined columns, that are not provided
+   *   in the response by all requests.
+   *   Eg., records.patch only provides columns in the table, not joined columns.
+   */
+  private mergeUpdatedRecord(
+    rowIdentifier: string,
+    record: ApiRecord,
+    updatedRecord: ApiRecord,
+  ): ApiRecord {
+    const cellsLoading = get(this.meta.cellsLoading);
+
+    const mergedResult = { ...record };
+    for (const [columnId, newValue] of Object.entries(updatedRecord)) {
+      const cellKey = getCellKey(rowIdentifier, columnId);
+
+      // Ignore any loading cells. This is to handle the case where
+      // a user is updating multiple cells in one record faster than the
+      // network can respond. For example if the user updates cell A, then
+      // updates B in the same row, and _then_ we receive the response for
+      // cell A, we don't want to mutate cell B with the response from
+      // update A because that would wipe out the optimistic UI updates that
+      // we did at the start of operation B.
+      // The user may also have updated the same cell again.
+
+      const shouldStoreNewValue = !cellsLoading.has(cellKey);
+      if (shouldStoreNewValue) {
+        mergedResult[columnId] = newValue;
+      }
+    }
+
+    return mergedResult;
+  }
+
   async bulkDml({
     modificationRecipes,
     additionRecipes,
@@ -605,15 +641,16 @@ export class RecordsData {
       forEachRow((r) => validateRowModificationRecipe(r, pkColumn));
     }
 
+    const requestId = getGloballyUniqueId();
+
     forEachCell((cellKey) => {
       cellStatus.set(cellKey, { state: 'processing' });
-      this.updatePromises?.get(cellKey)?.cancel();
+      this.latestCellUpdateRequestId.set(cellKey, requestId);
     });
     forEachRow(({ row }) => {
       if (isDraftRecordRow(row)) {
         rowCreationStatus.set(row.identifier, { state: 'processing' });
       }
-      this.updatePromises?.get(row.identifier)?.cancel();
     });
 
     const requests = recipes.map(({ row, cells }) => {
@@ -644,12 +681,6 @@ export class RecordsData {
           { blueprint, response },
         ]),
       ),
-    );
-
-    const cellsLoading = new Set(
-      [...cellStatus.getEntries()]
-        .filter(([, requestStatus]) => requestStatus.state === 'processing')
-        .map(([cellId]) => cellId),
     );
 
     /**
@@ -693,40 +724,24 @@ export class RecordsData {
         });
         return makeFallbackRow();
       }
+
       const result = first(response.value.results);
       if (!result) return makeFallbackRow();
 
-      const mergedResult = { ...row.record };
-      for (const [columnId, newValue] of Object.entries(result)) {
-        const cellId = makeCellId(row.identifier, columnId);
-        const shouldStoreNewValue = (() => {
-          // If the cell is part of the blueprint, then store the new value
-          if (blueprint.cells.some((r) => r.columnId === columnId)) return true;
-
-          // Ignore any _other_ loading cells. This is to handle the case where
-          // a user is updating multiple cells in one record faster than the
-          // network can respond. For example if the user updates cell A, then
-          // updates B in the same row, and _then_ we receive the response for
-          // cell A, we don't want to mutate cell B with the response from
-          // update A because that would wipe out the optimistic UI updates that
-          // we did at the start of operation B.
-          if (cellsLoading.has(cellId)) return false;
-
-          // Fall back to storing the new value. This case is necessary to store
-          // newly-acquired PK values for provisional record rows being inserted
-          // when editing cells.
-          return true;
-        })();
-        if (shouldStoreNewValue) {
-          mergedResult[columnId] = newValue;
+      forEachCell((cellKey) => {
+        // If no other request is updating the same cell, update the status
+        if (this.latestCellUpdateRequestId.get(cellKey) === requestId) {
+          cellStatus.set(cellKey, { state: 'success' });
+          cellClientSideErrors.delete(cellKey);
+          this.latestCellUpdateRequestId.delete(cellKey);
         }
-      }
+      });
 
-      for (const columnId of Object.keys(row.record)) {
-        const cellKey = getCellKey(row.identifier, columnId);
-        cellStatus.set(cellKey, { state: 'success' });
-        cellClientSideErrors.delete(cellKey);
-      }
+      const mergedResult = this.mergeUpdatedRecord(
+        row.identifier,
+        row.record,
+        result,
+      );
 
       if (isDraftRecordRow(row)) {
         return PersistedRecordRow.fromDraft(row.withRecord(mergedResult)) as R;
@@ -769,14 +784,20 @@ export class RecordsData {
     if (response.status === 'error') return;
     const result = response.value;
 
-    this.updateSummaryStores([{ status: 'ok', value: result }]);
-
     const updatedRecord = result.results[0];
-    this.fetchedRecordRows.update((rows) =>
-      rows.map((r) =>
-        r.identifier === rowId ? r.withRecord(updatedRecord) : r,
-      ),
-    );
+
+    const postProcessRow = (r: PersistedRecordRow) => {
+      if (r.identifier !== rowId) return r;
+      const mergedResult = this.mergeUpdatedRecord(
+        rowId,
+        r.record,
+        updatedRecord,
+      );
+      return r.withRecord(mergedResult);
+    };
+
+    this.fetchedRecordRows.update((rows) => rows.map(postProcessRow));
+    this.updateSummaryStores([{ status: 'ok', value: result }]);
   }
 
   getEmptyApiRecord(): ApiRecord {
