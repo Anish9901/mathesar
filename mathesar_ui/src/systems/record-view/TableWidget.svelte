@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { derived } from 'svelte/store';
   import { _ } from 'svelte-i18n';
 
   import type { RawColumnWithMetadata } from '@mathesar/api/rpc/columns';
@@ -21,13 +20,15 @@
     TabularData,
     setTabularDataStoreInContext,
   } from '@mathesar/stores/table-data';
-  import { ProcessedColumn } from '@mathesar/stores/table-data/processedColumns';
-  import { currentTablesData } from '@mathesar/stores/tables';
   import MiniActionsPane from '@mathesar/systems/table-view/actions-pane/MiniActionsPane.svelte';
   import TableView from '@mathesar/systems/table-view/TableView.svelte';
   import Pagination from '@mathesar/utils/Pagination';
-  import { orderProcessedColumns } from '@mathesar/utils/tables';
 
+  const tabularDataStore = setTabularDataStoreInContext(
+    // Sacrifice type safety here since the value is initialized reactively
+    // below.
+    undefined as unknown as TabularData,
+  );
   const meta = new Meta({
     pagination: new Pagination({ size: 10 }),
   });
@@ -41,40 +42,13 @@
   export let fkColumn: Pick<RawColumnWithMetadata, 'id' | 'name' | 'metadata'>;
   export let isInModal = false;
 
-  const tabularData = new TabularData({
+  $: tabularData = new TabularData({
     database: table.schema.database,
     table,
     meta,
     contextualFilters: new Map([[String(fkColumn.id), recordPk]]),
   });
-
-  tabularData.processedColumns = derived(
-    [
-      tabularData.columnsDataStore.columns,
-      tabularData.constraintsDataStore,
-      currentTablesData,
-    ],
-    ([columns, constraintsData, tablesData]) => {
-      const currentTable = tablesData.tablesMap.get(table.oid) || table;
-      return orderProcessedColumns(
-        new Map(
-          columns.map((column, columnIndex) => [
-            String(column.id),
-            new ProcessedColumn({
-              tableOid: currentTable.oid,
-              column,
-              columnIndex,
-              constraints: constraintsData.constraints,
-              hasEnhancedPrimaryKeyCell: true,
-            }),
-          ]),
-        ),
-        currentTable,
-      );
-    },
-  );
-
-  const tabularDataStore = setTabularDataStoreInContext(tabularData);
+  $: tabularDataStore.set(tabularData);
   $: ({ currentRolePrivileges } = table.currentAccess);
   $: canViewTable = $currentRolePrivileges.has('SELECT');
   $: getTablePageUrl = $storeToGetTablePageUrl;
