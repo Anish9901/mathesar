@@ -728,14 +728,18 @@ export class RecordsData {
       const result = first(response.value.results);
       if (!result) return makeFallbackRow();
 
-      forEachCell((cellKey) => {
-        // If no other request is updating the same cell, update the status
-        if (this.latestCellUpdateRequestId.get(cellKey) === requestId) {
+      for (const columnId of Object.keys(row.record)) {
+        const cellKey = getCellKey(row.identifier, columnId);
+        if (
+          // If no other request is updating the same cell, update the status
+          this.latestCellUpdateRequestId.get(cellKey) === requestId ||
+          isDraftRecordRow(row)
+        ) {
           cellStatus.set(cellKey, { state: 'success' });
           cellClientSideErrors.delete(cellKey);
           this.latestCellUpdateRequestId.delete(cellKey);
         }
-      });
+      }
 
       const mergedResult = this.mergeUpdatedRecord(
         row.identifier,
