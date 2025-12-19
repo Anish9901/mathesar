@@ -9,19 +9,16 @@
   import FieldErrors from '@mathesar/components/form/FieldErrors.svelte';
   import Null from '@mathesar/components/Null.svelte';
   import { RichText } from '@mathesar/components/rich-text';
-
   import {
     iconDescription,
     iconLinkToRecordPage,
     iconModalRecordView,
     iconSetToNull,
   } from '@mathesar/icons';
-
   import { storeToGetRecordPageUrl } from '@mathesar/stores/storeBasedUrls';
   import type { ProcessedColumn } from '@mathesar/stores/table-data';
   import { currentTablesMap } from '@mathesar/stores/tables';
   import { modalRecordViewContext } from '@mathesar/systems/record-view-modal/modalRecordViewContext';
-  
   import {
     ButtonMenuItem,
     DropdownMenu,
@@ -31,6 +28,9 @@
     LinkMenuItem,
     iconExpandDown,
   } from '@mathesar-component-library';
+  import Tooltip from '@mathesar-component-library-dir/tooltip/Tooltip.svelte';
+
+  import RecordStore from './RecordStore';
 
   /**
    * This is used to determine whether to display a `NULL` overlay indicator.
@@ -46,10 +46,6 @@
    * The pattern we're currently using is brittle because if we add new data
    * types we shouldn't need to update this code here.
    */
-
-  import Tooltip from '@mathesar-component-library-dir/tooltip/Tooltip.svelte';
-
-  import RecordStore from './RecordStore';
 
   const cellDataTypesThatUsePlaceholderText = new Set<CellDataType>([
     'date',
@@ -103,8 +99,7 @@
     });
     modalRecordView.open(recordStore);
   }
-</script>/code/mathesar_ui/src/systems/record-view/DirectField.svelte
-  22:3  error  There should be no empty line within import group
+</script>
 
 <div class="direct-field">
   <div class="left cell">
