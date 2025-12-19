@@ -102,11 +102,8 @@ export function columnTypeOptionsAreEqual(
   return true;
 }
 
-export function castColumnIdToNumber(columnId?: any) {
-  const numericId =
-    columnId === undefined || columnId === null || columnId === ''
-      ? NaN
-      : Number(columnId);
+export function castColumnIdToNumber(columnId: string | number) {
+  const numericId = columnId === '' ? NaN : Number(columnId);
   if (Number.isNaN(numericId)) {
     throw new Error('Invalid columnId');
   } else {

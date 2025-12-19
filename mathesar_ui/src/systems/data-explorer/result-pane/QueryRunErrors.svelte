@@ -8,7 +8,7 @@
   import { databasesStore } from '@mathesar/stores/databases';
   import { currentSchema } from '@mathesar/stores/schemas';
   import { castColumnIdToNumber } from '@mathesar/utils/columnUtils';
-  import { Button, hasProperty } from '@mathesar-component-library';
+  import { Button, hasNumberProperty } from '@mathesar-component-library';
 
   import QueryManager from '../QueryManager';
   import type { QueryRunner } from '../QueryRunner';
@@ -35,7 +35,7 @@
     {#if errors instanceof ApiMultiError}
       {#each errors.errors as apierror}
         <ul>
-          {#if apierror.code === QUERY_CONTAINS_DELETED_COLUMN && hasProperty(apierror.detail, 'column_id')}
+          {#if apierror.code === QUERY_CONTAINS_DELETED_COLUMN && hasNumberProperty(apierror.detail, 'column_id')}
             {@const columnId = castColumnIdToNumber(apierror.detail.column_id)}
             <li class="error">
               <p class="strong">
