@@ -28,6 +28,22 @@
     LinkMenuItem,
     iconExpandDown,
   } from '@mathesar-component-library';
+
+      /**
+   * This is used to determine whether to display a `NULL` overlay indicator.
+   * For text data types the indicator is important because otherwise the user
+   * has no way to distinguish an empty string from a `NULL` value. But for some
+   * data types (e.g. Date), we can't show the indicator because the input
+   * component already shows placeholder text to guide the user towards the
+   * required formatting.
+   *
+   * TODO: Refactor this logic. Invert control. Each data type should define a
+   * common param to indicate how a NULL value should be displayed over its
+   * input component. Then we should grab onto that param within this component.
+   * The pattern we're currently using is brittle because if we add new data
+   * types we shouldn't need to update this code here.
+   */
+  
   import Tooltip from '@mathesar-component-library-dir/tooltip/Tooltip.svelte';
 
   import RecordStore from './RecordStore';
@@ -93,7 +109,6 @@
         <Label controller={labelController}>
           <ProcessedColumnName {processedColumn} />
         </Label>
-
         {#if processedColumn.column.description}
           <Tooltip placements={['right']}>
             <span
@@ -103,14 +118,12 @@
             >
               <Icon {...iconDescription} />
             </span>
-
             <div slot="content">
               {processedColumn.column.description}
             </div>
           </Tooltip>
         {/if}
       </div>
-
       <div class="options">
         <DropdownMenu
           showArrow={false}
@@ -128,19 +141,16 @@
             >
               {$_('quick_view_linked_record')}
             </ButtonMenuItem>
-
             {@const linkedRecordUrl = getRecordUrl({
               tableId: linkFk.referent_table_oid,
               recordId: value,
             })}
-
             {#if linkedRecordUrl}
               <LinkMenuItem href={linkedRecordUrl} icon={iconLinkToRecordPage}>
                 {$_('open_linked_record')}
               </LinkMenuItem>
             {/if}
           {/if}
-
           <ButtonMenuItem
             icon={iconSetToNull}
             on:click={() => field.set(null)}
@@ -166,7 +176,6 @@
         <Null />
       </div>
     {/if}
-
     <DynamicInput
       bind:value={$field}
       {disabled}
@@ -192,7 +201,6 @@
       hasError={$showsError}
       allowsHyperlinks
     />
-
     <FieldErrors {field} />
   </div>
 </div>
@@ -238,9 +246,6 @@
 
   .info-icon:hover {
     color: var(--color-fg);
-  }
-
-  .options {
   }
 
   .input {
