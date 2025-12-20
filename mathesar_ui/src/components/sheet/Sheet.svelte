@@ -14,7 +14,9 @@
     type SheetCellDetails,
     beginSelection,
     findContainingSheetCell,
+    selectCellRange,
   } from './selection';
+  import { isSelectingCellRangeContext } from './selection/isSelectingCellRangeContext';
   import type SheetSelectionStore from './selection/SheetSelectionStore';
   import {
     calculateColumnStyleMapAndRowWidth,
@@ -24,9 +26,10 @@
   } from './utils';
 
   type SheetColumnType = $$Generic;
-  type SheetColumnIdentifierKey = $$Generic;
 
   const clipboardHandlerStore = getClipboardHandlerStoreFromContext();
+  const isSelectingCellRange = writable(false);
+  isSelectingCellRangeContext.set(isSelectingCellRange);
 
   export let columns: SheetColumnType[];
   export let usesVirtualList = false;
@@ -37,24 +40,25 @@
   export let selection: SheetSelectionStore | undefined = undefined;
   export let onCellSelectionStart: (c: SheetCellDetails) => void = () => {};
 
-  export let getColumnIdentifier: (
-    c: SheetColumnType,
-  ) => SheetColumnIdentifierKey;
+  export let getColumnIdentifier: (c: SheetColumnType) => string;
 
   export let scrollOffset = 0;
 
   export let horizontalScrollOffset = 0;
   export let paddingRight = hasPaddingRight ? 100 : 0;
 
-  export let columnWidths: ImmutableMap<SheetColumnIdentifierKey, number> =
-    new ImmutableMap();
+  export let columnWidths: ImmutableMap<string, number> = new ImmutableMap();
 
   export let sheetElement: HTMLElement | undefined = undefined;
+
+  interface SheetContextMenuCallbackArgs {
+    targetCell: SheetCellDetails;
+    position: ClientPosition;
+    beginSelectingCellRange: () => void;
+  }
+
   export let onCellContextMenu:
-    | ((p: {
-        targetCell: SheetCellDetails;
-        position: ClientPosition;
-      }) => 'opened' | 'empty')
+    | ((p: SheetContextMenuCallbackArgs) => 'opened' | 'empty')
     | undefined = undefined;
 
   $: ({ columnStyleMap, rowWidth } = calculateColumnStyleMapAndRowWidth(
@@ -155,17 +159,31 @@
     // cells in the column.
     e.preventDefault();
 
-    beginSelection({
-      selection,
-      sheetElement,
-      startingCell,
-      targetCell,
-      selectionInProgress,
-    });
-
-    if (startingCell === targetCell) {
+    if ($isSelectingCellRange) {
+      selectCellRange({ selection, targetCell });
       onCellSelectionStart(targetCell);
+      isSelectingCellRange.set(false);
+    } else {
+      beginSelection({
+        selection,
+        sheetElement,
+        startingCell,
+        targetCell,
+        selectionInProgress,
+      });
+      if (startingCell === targetCell) {
+        onCellSelectionStart(targetCell);
+      }
     }
+  }
+
+  function beginSelectingCellRange() {
+    isSelectingCellRange.set(true);
+    function stop() {
+      isSelectingCellRange.set(false);
+      window.removeEventListener('mousedown', stop);
+    }
+    window.addEventListener('mousedown', stop);
   }
 
   function handleContextMenu(event: MouseEvent) {
@@ -173,7 +191,11 @@
     const target = event.target as HTMLElement;
     const targetCell = findContainingSheetCell(target);
     if (!targetCell) return;
-    const state = onCellContextMenu({ targetCell, position: event });
+    const state = onCellContextMenu({
+      targetCell,
+      position: event,
+      beginSelectingCellRange,
+    });
     if (state === 'opened') {
       event.preventDefault();
     }

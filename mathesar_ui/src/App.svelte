@@ -44,11 +44,13 @@
 <style global lang="scss">
   @import 'component-library/styles.scss';
   @import 'packages/new-item-highlighter/highlightNewItems.scss';
+  @import 'components/drag-and-drop/dnd.css';
 
   $product-utility-colors: (
     'schema': $salmon,
     'database': $amethyst,
     'table': $pumpkin,
+    'view': hsl(220, 65%, 55%),
     'column': hsl(hue($salmon), 40%, 60%),
     'record': hsl(296, 35%, 45%),
     'record-fk': hsl(296, 70%, 45%),
@@ -103,6 +105,16 @@
     --cell-bg-color-disabled: var(--color-bg-input-disabled);
     --cell-bg-color-row-hover: var(--color-bg-input-hover);
     --cell-bg-color-row-selected: var(--color-selection-subtle-1);
+    --cell-bg-color-joined-cell: color-mix(
+      in srgb,
+      var(--color-record-fk),
+      transparent 98%
+    );
+    --cell-bg-color-joined-header: color-mix(
+      in srgb,
+      var(--color-record-fk),
+      transparent 90%
+    );
 
     --cell-text-color-processing: var(--color-fg-base-muted);
 
@@ -138,7 +150,7 @@
     --app-header-z-index: 1;
 
     overflow: hidden;
-    height: 100vh;
+    height: 100svh;
 
     /* Apply typography base styles */
     font-family: var(--font-family-base);
@@ -264,8 +276,8 @@
   }
 
   .app-loader {
-    width: 100vw;
-    height: 100vh;
+    width: 100svw;
+    height: 100svh;
     align-items: center;
     justify-content: center;
     display: flex;

@@ -1,14 +1,23 @@
 import { type Readable, derived } from 'svelte/store';
 
-import { getSheetContext } from '../utils';
+import { type ColumnPosition, getSheetContext } from '../utils';
 
-export function getSheetCellStyle<ColumnIdentifierKey>(
-  columnIdentifierKey: ColumnIdentifierKey,
-): Readable<string | undefined> {
+export function getSheetColumnPosition(
+  columnIdentifierKey: string,
+): Readable<ColumnPosition | undefined> {
   const { stores } = getSheetContext();
   const { columnStyleMap } = stores;
   return derived(columnStyleMap, (map) => {
     const columnPosition = map.get(columnIdentifierKey);
-    return columnPosition?.styleString;
+    return columnPosition;
   });
+}
+
+export function getSheetCellStyle(
+  columnIdentifierKey: string,
+): Readable<string | undefined> {
+  return derived(
+    getSheetColumnPosition(columnIdentifierKey),
+    (p) => p?.styleString,
+  );
 }

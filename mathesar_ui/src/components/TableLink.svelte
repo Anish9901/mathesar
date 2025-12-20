@@ -34,9 +34,12 @@
     gap: var(--sm5);
     text-decoration: none;
     max-width: 100%;
+    color: var(--color-fg-base);
+    cursor: pointer;
 
     &:hover,
-    &:focus {
+    &:active {
+      color: var(--color-table);
       text-decoration: underline;
     }
 
