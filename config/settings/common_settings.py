@@ -10,13 +10,15 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.1/ref/settings/
 """
 
+from collections import defaultdict
+import json
 import os
 import traceback
 from pathlib import Path
-
-import json
 import yaml
-from collections import defaultdict
+
+from django.core.management.utils import get_random_secret_key
+
 from config.database_config import PostgresConfig, parse_port
 
 
@@ -122,7 +124,8 @@ try:
                 )
 except Exception as e:
     # We swallow any exceptions when SSO is misconfigured in sso.yml so that the django server doesn't fail to start.
-    traceback.print_exception(type(e), e, e.__traceback__)  # Print the traceback in case of an exception.
+    if OIDC_CONFIG_DICT not in [None, {}]:
+        traceback.print_exception(type(e), e, e.__traceback__)  # Print the traceback in case of an exception.
 
 
 SOCIALACCOUNT_PROVIDERS = {
@@ -161,6 +164,7 @@ MODERNRPC_METHODS_MODULES = [
     'mathesar.rpc.databases.privileges',
     'mathesar.rpc.databases.setup',
     'mathesar.rpc.explorations',
+    'mathesar.rpc.forms',
     'mathesar.rpc.records',
     'mathesar.rpc.roles',
     'mathesar.rpc.roles.configured',
@@ -229,8 +233,21 @@ for db_key, db_dict in DATABASES.items():
 # TODO: We use this variable for analytics, consider removing/renaming it.
 TEST = bool(os.environ.get('TEST', default=False))
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', default="2gr6ud88x=(p855_5nbj_+7^gw-iz&n7ldqv%94mjaecl+b9=4")
+SECRETS_ROOT = os.path.join(BASE_DIR, '.secrets')
+SECRET_KEY = os.environ.get("SECRET_KEY")
+# We don't want to persist envvar SECRET_KEY
+if not SECRET_KEY:
+    os.makedirs(SECRETS_ROOT, exist_ok=True)
+    SECRET_KEY_FILE = os.path.join(SECRETS_ROOT, 'secret_key.txt')
+    try:
+        with open(SECRET_KEY_FILE, 'x') as f:
+            f.write(get_random_secret_key())
+    except FileExistsError:
+        pass  # We'll just use a preexisting key in this case.
+
+    with open(SECRET_KEY_FILE, 'r') as f:
+        SECRET_KEY = f.read()
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG') in ['t', 'true', 'True']
