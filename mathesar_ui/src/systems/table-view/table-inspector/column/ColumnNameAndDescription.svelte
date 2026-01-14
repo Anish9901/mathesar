@@ -31,7 +31,7 @@
 
   async function handleColumnNameChange(newName: string): Promise<void> {
     try {
-      await columnsDataStore.rename(column.id, newName);
+      await columnsDataStore.rename(column.column.id, newName);
     } catch (error) {
       toast.error(`${$_('unable_to_rename_column')} ${getErrorMessage(error)}`);
     }
@@ -41,7 +41,10 @@
     description: string,
   ): Promise<void> {
     try {
-      await columnsDataStore.updateDescription(column.id, description ?? null);
+      await columnsDataStore.updateDescription(
+        column.column.id,
+        description ?? null,
+      );
     } catch (error) {
       toast.error(
         `${$_('unable_to_update_column_desc')} ${getErrorMessage(error)}`,
@@ -74,6 +77,10 @@
   .column-property {
     display: flex;
     flex-direction: column;
+
+    .label {
+      color: var(--color-fg-label);
+    }
 
     > :global(* + *) {
       margin-top: 0.25rem;

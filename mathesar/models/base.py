@@ -2,7 +2,8 @@ import os
 
 from django.conf import settings
 from django.db import models
-from encrypted_fields.fields import EncryptedCharField
+from django.contrib.sessions.models import Session
+from encrypted_fields.fields import EncryptedCharField, EncryptedJSONField
 
 from db.sql.install import uninstall, install
 from db.analytics import get_object_counts
@@ -22,6 +23,15 @@ class BaseModel(models.Model):
 class Server(BaseModel):
     host = models.CharField(max_length=255)
     port = models.IntegerField(null=True, blank=True)
+    sslmode = models.CharField(
+        max_length=20,
+        choices=[
+            ("disable", "disable"),
+            ("prefer", "prefer"),
+            ("require", "require"),
+        ],
+        default="prefer"
+    )
 
     class Meta:
         constraints = [
@@ -127,6 +137,7 @@ class Database(BaseModel):
             dbname=self.name,
             user=role,
             password=password,
+            sslmode=self.server.sslmode,
             application_name='mathesar.models.base.Database.connect_manually',
         )
 
@@ -203,6 +214,7 @@ class UserDatabaseRoleMap(BaseModel):
             dbname=self.database.name,
             user=self.configured_role.name,
             password=self.configured_role.password,
+            sslmode=self.server.sslmode,
             application_name='mathesar.models.base.UserDatabaseRoleMap.connection',
         )
 
@@ -237,6 +249,7 @@ class ColumnMetaData(BaseModel):
     duration_min = models.CharField(max_length=255, null=True)
     duration_max = models.CharField(max_length=255, null=True)
     display_width = models.PositiveIntegerField(null=True)
+    file_backend = models.CharField(max_length=255, null=True)
 
     class Meta:
         constraints = [
@@ -316,6 +329,7 @@ class Form(BaseModel):
             dbname=self.database.name,
             user=self.associated_role.name,
             password=self.associated_role.password,
+            sslmode=self.database.server.sslmode,
             application_name='mathesar.models.base.Form.connection',
         )
 
@@ -388,3 +402,11 @@ class DataFile(BaseModel):
     delimiter = models.CharField(max_length=1, default=',', blank=True)
     escapechar = models.CharField(max_length=1, blank=True)
     quotechar = models.CharField(max_length=1, default='"', blank=True)
+
+
+class DownloadLink(BaseModel):
+    mash = models.CharField(primary_key=True, editable=False)
+    sessions = models.ManyToManyField(Session)
+    uri = models.CharField()  # should not contain sensitive info
+    thumbnail = models.JSONField(blank=True, default=dict)
+    fsspec_kwargs = EncryptedJSONField(blank=True, default=dict)

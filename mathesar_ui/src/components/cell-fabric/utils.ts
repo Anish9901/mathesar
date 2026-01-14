@@ -1,4 +1,5 @@
 import type { RawColumnWithMetadata } from '@mathesar/api/rpc/columns';
+import type { JoinPath } from '@mathesar/api/rpc/tables';
 import type { Table } from '@mathesar/models/Table';
 import type { CellInfo } from '@mathesar/stores/abstract-types/types';
 import type { RecordSummariesForSheet } from '@mathesar/stores/table-data/record-summaries/recordSummaryUtils';
@@ -7,6 +8,7 @@ import type { ComponentAndProps } from '@mathesar-component-library/types';
 import DataTypes from './data-types';
 import LinkedRecordCell from './data-types/components/linked-record/LinkedRecordCell.svelte';
 import LinkedRecordInput from './data-types/components/linked-record/LinkedRecordInput.svelte';
+import SimpleManyToManyJoinCell from './data-types/components/many-to-many/SimpleManyToManyJoinCell.svelte';
 import PrimaryKeyCell from './data-types/components/primary-key/PrimaryKeyCell.svelte';
 import type {
   LinkedRecordCellExternalProps,
@@ -15,11 +17,19 @@ import type {
 import type { CellColumnLike } from './data-types/typeDefinitions';
 import { getCellConfiguration, getCellInfo } from './data-types/utils';
 
+export interface JoinedColumnInfo {
+  alias: string;
+  joinPath: JoinPath;
+  targetTableOid: Table['oid'];
+  type: 'simple-many-to-many';
+}
+
 export function getCellCap({
   cellInfo,
   column,
   fkTargetTableId,
   pkTargetTableId,
+  joinedColumnInfo,
 }: {
   cellInfo: CellInfo;
   column: CellColumnLike;
@@ -33,6 +43,7 @@ export function getCellCap({
    * table.
    */
   pkTargetTableId?: Table['oid'];
+  joinedColumnInfo?: JoinedColumnInfo;
 }): ComponentAndProps {
   if (fkTargetTableId) {
     const props: LinkedRecordCellExternalProps = {
@@ -43,12 +54,25 @@ export function getCellCap({
       props,
     };
   }
+
   if (pkTargetTableId) {
     return {
       component: PrimaryKeyCell,
       props: { tableId: pkTargetTableId },
     };
   }
+
+  if (joinedColumnInfo) {
+    if (joinedColumnInfo.type === 'simple-many-to-many') {
+      return {
+        component: SimpleManyToManyJoinCell,
+        props: {
+          joinPath: joinedColumnInfo.joinPath,
+        },
+      };
+    }
+  }
+
   const config = getCellConfiguration(column.type, cellInfo);
   return DataTypes[cellInfo?.type ?? 'string'].get(column, config);
 }
@@ -57,20 +81,22 @@ export function getDbTypeBasedInputCap(
   column: CellColumnLike,
   optionalCellInfo?: CellInfo,
 ): ComponentAndProps {
-  const cellInfo = optionalCellInfo ?? getCellInfo(column.type);
+  const cellInfo =
+    optionalCellInfo ?? getCellInfo(column.type, column.metadata);
   const config = getCellConfiguration(column.type, cellInfo);
   return DataTypes[cellInfo?.type ?? 'string'].getInput(column, config);
 }
 
-export function getDbTypeBasedFilterCap(
+export function getDbTypeBasedSimpleInputCap(
   column: CellColumnLike,
   optionalCellInfo?: CellInfo,
 ): ComponentAndProps | undefined {
-  const cellInfo = optionalCellInfo ?? getCellInfo(column.type);
+  const cellInfo =
+    optionalCellInfo ?? getCellInfo(column.type, column.metadata);
   const factory = DataTypes[cellInfo?.type ?? 'string'];
-  if (!factory.getFilterInput) return undefined;
+  if (!factory.getSimpleInput) return undefined;
   const config = getCellConfiguration(column.type, cellInfo);
-  return factory.getFilterInput(column, config);
+  return factory.getSimpleInput(column, config);
 }
 
 export function getLinkedRecordInputCap(
@@ -87,7 +113,8 @@ export function getInitialInputValue(
   if (fkTargetTableId) {
     return undefined;
   }
-  const cellInfo = optionalCellInfo ?? getCellInfo(column.type);
+  const cellInfo =
+    optionalCellInfo ?? getCellInfo(column.type, column.metadata);
   return DataTypes[cellInfo?.type ?? 'string'].initialInputValue;
 }
 
@@ -98,7 +125,7 @@ export function getDisplayFormatter(
   value: unknown,
   recordSummaries?: RecordSummariesForSheet,
 ) => string | null | undefined {
-  const cellInfo = getCellInfo(column.type);
+  const cellInfo = getCellInfo(column.type, column.metadata);
   const config = getCellConfiguration(column.type, cellInfo);
   const dataType = cellInfo?.type ?? 'string';
   const format = DataTypes[dataType].getDisplayFormatter(column, config);

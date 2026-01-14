@@ -5,7 +5,6 @@
 
   import type { SavedExploration } from '@mathesar/api/rpc/explorations';
   import { SchemaRouteContext } from '@mathesar/contexts/SchemaRouteContext';
-  import { iconForm, iconTable } from '@mathesar/icons';
   import type { Database } from '@mathesar/models/Database';
   import type { DataForm } from '@mathesar/models/DataForm';
   import type { Schema } from '@mathesar/models/Schema';
@@ -16,13 +15,14 @@
   } from '@mathesar/routes/urls';
   import { queries as queriesStore } from '@mathesar/stores/queries';
   import { currentTableId, currentTables } from '@mathesar/stores/tables';
-  import { getLinkForTableItem } from '@mathesar/utils/tables';
+  import { getLinkForTableItem, isTableView } from '@mathesar/utils/tables';
   import { ensureReadable } from '@mathesar-component-library';
 
   import BreadcrumbSelector from './BreadcrumbSelector.svelte';
   import type {
+    BreadcrumbSelectorEntryForDataForm,
+    BreadcrumbSelectorEntryForExploration,
     BreadcrumbSelectorEntryForTable,
-    SimpleBreadcrumbSelectorEntry,
   } from './breadcrumbTypes';
 
   export let database: Database;
@@ -31,6 +31,9 @@
   const schemaRouteContext = SchemaRouteContext.getSafe();
   $: dataFormsStore = ensureReadable($schemaRouteContext?.dataForms);
   $: dataFormsList = [...($dataFormsStore?.values() ?? [])];
+  $: hasViews = [...$currentTables.values()].some((table) =>
+    isTableView(table),
+  );
 
   function makeTableBreadcrumbSelectorItem(
     table: Table,
@@ -38,9 +41,8 @@
     return {
       type: 'table',
       table,
-      label: table.name,
+      getFilterableText: () => table.name,
       href: getLinkForTableItem(database.id, schema.oid, table),
-      icon: iconTable,
       isActive() {
         return table.oid === $currentTableId;
       },
@@ -50,19 +52,19 @@
   const currentRoute = meta();
 
   function makeQueryBreadcrumbSelectorItem(
-    queryInstance: SavedExploration,
-  ): SimpleBreadcrumbSelectorEntry {
+    exploration: SavedExploration,
+  ): BreadcrumbSelectorEntryForExploration {
     return {
-      type: 'simple',
-      label: queryInstance.name,
-      href: getExplorationPageUrl(database.id, schema.oid, queryInstance.id),
-      icon: iconTable,
+      type: 'exploration',
+      exploration,
+      getFilterableText: () => exploration.name,
+      href: getExplorationPageUrl(database.id, schema.oid, exploration.id),
       isActive() {
         // TODO we don't have a store for what the current query is, so we fallback to comparing hrefs.
         const entryhref = getExplorationPageUrl(
           database.id,
           schema.oid,
-          queryInstance.id,
+          exploration.id,
         );
         const currentHref = $currentRoute.url;
         return currentHref.startsWith(entryhref);
@@ -74,20 +76,20 @@
 
   function makeDataFormBreadcrumbSelectorItem(
     dataForm: DataForm,
-  ): SimpleBreadcrumbSelectorEntry {
+  ): BreadcrumbSelectorEntryForDataForm {
     return {
-      type: 'simple',
-      label: get(dataForm.structure).name,
+      type: 'dataForm',
+      dataForm,
+      getFilterableText: () => get(dataForm.structure).name,
       href: getDataFormPageUrl(database.id, schema.oid, dataForm.id),
-      icon: iconForm,
       isActive() {
-        const entryhref = getDataFormPageUrl(
+        const entryHref = getDataFormPageUrl(
           database.id,
           schema.oid,
           dataForm.id,
         );
         const currentHref = $currentRoute.url;
-        return currentHref.startsWith(entryhref);
+        return currentHref.startsWith(entryHref);
       },
     };
   }
@@ -96,9 +98,9 @@
 <BreadcrumbSelector
   sections={[
     {
-      label: $_('tables'),
+      label: hasViews ? $_('tables_and_views') : $_('tables'),
       entries: $currentTables.map(makeTableBreadcrumbSelectorItem),
-      emptyMessage: $_('no_tables'),
+      emptyMessage: hasViews ? $_('no_tables_or_views') : $_('no_tables'),
     },
     {
       label: $_('explorations'),

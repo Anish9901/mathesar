@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { get } from 'svelte/store';
 
   import { setBreadcrumbItemsInContext } from '@mathesar/components/breadcrumb/breadcrumbUtils';
@@ -9,6 +10,11 @@
   import { toast } from '@mathesar/stores/toast';
   import { setUserProfileStoreInContext } from '@mathesar/stores/userProfile';
   import { AnonymousViewerUserModel } from '@mathesar/stores/users';
+  import AttachableMultiTagger from '@mathesar/systems/multi-tagger/AttachableMultiTagger.svelte';
+  import {
+    AttachableMultiTaggerController,
+    multiTaggerContext,
+  } from '@mathesar/systems/multi-tagger/AttachableMultiTaggerController';
   import ModalRecordSelector from '@mathesar/systems/record-selector/ModalRecordSelector.svelte';
   import {
     RecordSelectorController,
@@ -20,13 +26,31 @@
     rowSeekerContext,
   } from '@mathesar/systems/row-seeker/AttachableRowSeekerController';
   import type { CommonData } from '@mathesar/utils/preloadData';
-  import { Confirmation, ToastPresenter } from '@mathesar-component-library';
+  import {
+    Confirmation,
+    ContextMenu,
+    ContextMenuController,
+    ToastPresenter,
+  } from '@mathesar-component-library';
 
-  import { initUiTheme } from './utils/uiThemePreference';
+  import ControlledFileDetailDropdown from './components/file-attachments/file-detail-dropdown/ControlledFileDetailDropdown.svelte';
+  import {
+    FileDetailDropdownController,
+    fileDetailDropdownContext,
+  } from './components/file-attachments/file-detail-dropdown/FileDetailDropdownController';
+  import { modalFileAttachmentUploadContext } from './components/file-attachments/file-uploader/modalFileAttachmentUploadContext';
+  import ModalFileAttachmentUploadController from './components/file-attachments/file-uploader/ModalFileAttachmentUploadController';
+  import ModalFileAttachmentUploader from './components/file-attachments/file-uploader/ModalFileAttachmentUploader.svelte';
+  import ControlledLightbox from './components/file-attachments/lightbox/ControlledLightbox.svelte';
+  import {
+    LightboxController,
+    lightboxContext,
+  } from './components/file-attachments/lightbox/LightboxController';
+  import { contextMenuContext } from './contexts/contextMenuContext';
+  import { observeDeviceInfo } from './packages/svelte-device-info';
 
   export let commonData: CommonData;
 
-  initUiTheme();
   setBreadcrumbItemsInContext([]);
 
   function setUserProfileAndReleaseStores() {
@@ -56,6 +80,21 @@
 
   const rowSeekerController = new AttachableRowSeekerController();
   rowSeekerContext.set(rowSeekerController);
+
+  const multiTaggerController = new AttachableMultiTaggerController();
+  multiTaggerContext.set(multiTaggerController);
+
+  const lightboxController = new LightboxController();
+  lightboxContext.set(lightboxController);
+
+  const fileDetailDropdownController = new FileDetailDropdownController();
+  fileDetailDropdownContext.set(fileDetailDropdownController);
+
+  const modalFileAttachmentUploader = new ModalFileAttachmentUploadController();
+  modalFileAttachmentUploadContext.set(modalFileAttachmentUploader);
+
+  const contextMenu = new ContextMenuController();
+  contextMenuContext.set(contextMenu);
 
   const clipboardHandlerStore = setNewClipboardHandlerStoreInContext();
   $: clipboardHandler = $clipboardHandlerStore;
@@ -89,6 +128,8 @@
     void clipboardHandler.handlePaste(e);
     e.preventDefault();
   }
+
+  onMount(observeDeviceInfo);
 </script>
 
 <svelte:body on:copy={handleCopy} on:paste={handlePaste} />
@@ -100,5 +141,10 @@
   modalController={recordSelectorModal}
 />
 <AttachableRowSeeker controller={rowSeekerController} />
+<AttachableMultiTagger controller={multiTaggerController} />
+<ControlledLightbox controller={lightboxController} />
+<ControlledFileDetailDropdown controller={fileDetailDropdownController} />
+<ModalFileAttachmentUploader controller={modalFileAttachmentUploader} />
+<ContextMenu controller={contextMenu} />
 
 <slot />

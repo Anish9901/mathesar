@@ -1,25 +1,43 @@
 <script lang="ts">
   import type { ComponentProps } from 'svelte';
 
-  import { iconTable } from '@mathesar/icons';
   import type { Table } from '@mathesar/models/Table';
-  import { tableRequiresImportConfirmation } from '@mathesar/utils/tables';
+  import {
+    getTableIcon,
+    getTableIconColor,
+    tableRequiresImportConfirmation,
+  } from '@mathesar/utils/tables';
 
   import NameWithIcon from './NameWithIcon.svelte';
 
   interface $$Props extends Omit<ComponentProps<NameWithIcon>, 'icon'> {
-    table: Pick<Table, 'name'> &
-      Parameters<typeof tableRequiresImportConfirmation>[0];
+    table: {
+      name: Table['name'];
+      type?: Table['type'];
+    } & Parameters<typeof tableRequiresImportConfirmation>[0];
     isLoading?: boolean;
   }
 
   export let table: $$Props['table'];
   export let isLoading = false;
+  export let cssVariables: Record<string, string> | undefined = undefined;
 
   $: isNotConfirmed = tableRequiresImportConfirmation(table);
+  $: tableWithType = { ...table, type: table.type ?? 'table' };
+  $: tableIcon = getTableIcon(tableWithType);
+  $: iconColor = getTableIconColor(tableWithType);
 </script>
 
-<NameWithIcon icon={iconTable} {isLoading} {...$$restProps} bold>
+<NameWithIcon
+  icon={tableIcon}
+  {isLoading}
+  {...$$restProps}
+  cssVariables={{
+    '--icon-color': iconColor,
+    ...cssVariables,
+  }}
+  bold
+>
   <slot tableName={table.name}>
     {table.name}
   </slot>

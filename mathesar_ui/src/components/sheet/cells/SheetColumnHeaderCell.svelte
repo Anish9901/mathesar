@@ -1,9 +1,8 @@
 <script lang="ts">
   import { getSheetCellStyle } from './sheetCellUtils';
 
-  type SheetColumnIdentifierKey = $$Generic;
-
-  export let columnIdentifierKey: SheetColumnIdentifierKey;
+  export let columnIdentifierKey: string;
+  export let isRangeRestricted = false;
 
   const style = getSheetCellStyle(columnIdentifierKey);
 </script>
@@ -11,6 +10,7 @@
 <div
   data-sheet-element="column-header-cell"
   data-column-identifier={columnIdentifierKey}
+  data-sheet-column-selection={isRangeRestricted ? 'restrict-range' : undefined}
   style={$style}
 >
   <slot />
@@ -25,10 +25,10 @@
     left: 0;
     top: 0;
     height: 100%;
-    border-right: var(--cell-border-vertical);
+    border-right: 1px solid var(--color-border-header);
     border-bottom: none;
     font-size: var(--sm1);
-    font-weight: var(--font-weight-bold);
     overflow: hidden;
+    color: var(--color-fg-base);
   }
 </style>

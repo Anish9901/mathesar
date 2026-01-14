@@ -20,7 +20,7 @@
 </script>
 
 <div class="update-table-description-property-container">
-  <span class="label">{$_('table_description')}</span>
+  <span class="label">{$_('description')}</span>
   <EditableTextWithActions
     initialValue={table.description ?? ''}
     onSubmit={handleSave}
@@ -33,6 +33,10 @@
   .update-table-description-property-container {
     display: flex;
     flex-direction: column;
+
+    .label {
+      color: var(--color-fg-label);
+    }
 
     > :global(* + *) {
       margin-top: 0.25rem;

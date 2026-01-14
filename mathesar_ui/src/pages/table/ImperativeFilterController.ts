@@ -1,13 +1,14 @@
-import { getContext, setContext, tick } from 'svelte';
+import { tick } from 'svelte';
 
+import { makeContext } from '@mathesar/component-library/common/utils/contextUtils';
 import { EventHandler } from '@mathesar-component-library';
 
-export default class ImperativeFilterController extends EventHandler<{
+export class ImperativeFilterController extends EventHandler<{
   openDropdown: void;
-  addFilter: number;
+  addFilter: string;
   activateLastFilterInput: void;
 }> {
-  async beginAddingNewFilteringEntry(columnId: number) {
+  async beginAddingNewFilteringEntry(columnId: string) {
     await this.dispatch('openDropdown');
     await tick();
     await this.dispatch('addFilter', columnId);
@@ -19,7 +20,7 @@ export default class ImperativeFilterController extends EventHandler<{
     return this.on('openDropdown', fn);
   }
 
-  onAddFilter(fn: (columnId: number) => void): () => void {
+  onAddFilter(fn: (columnId: string) => void): () => void {
     return this.on('addFilter', fn);
   }
 
@@ -28,16 +29,5 @@ export default class ImperativeFilterController extends EventHandler<{
   }
 }
 
-const key = Symbol('ImperativeFilterController');
-
-export function setNewImperativeFilterControllerInContext(): ImperativeFilterController {
-  const bus = new ImperativeFilterController();
-  setContext(key, bus);
-  return bus;
-}
-
-export function getImperativeFilterControllerFromContext():
-  | ImperativeFilterController
-  | undefined {
-  return getContext(key);
-}
+export const imperativeFilterControllerContext =
+  makeContext<ImperativeFilterController>();

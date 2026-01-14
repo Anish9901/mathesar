@@ -1,9 +1,9 @@
 import { rpcMethodTypeContainer } from '@mathesar/packages/json-rpc-client-builder';
 
 import type { RecordsSummaryListResponse } from './_common/commonTypes';
-import type { RecordSummaryTemplate } from './tables';
+import type { JoinPath, RecordSummaryTemplate } from './tables';
 
-export type ResultValue = string | number | boolean | null;
+export type ResultValue = string | number | boolean | number[] | null;
 
 export type SortDirection = 'asc' | 'desc';
 export interface SortingEntry {
@@ -12,10 +12,15 @@ export interface SortingEntry {
   direction: SortDirection;
 }
 
+export type SqlOperator =
+  | {
+      type: 'and' | 'or';
+      args: [SqlExpr, SqlExpr];
+    }
+  | { type: 'not'; args: [SqlExpr] };
+
 export interface SqlComparison {
   type:
-    | 'and'
-    | 'or'
     | 'equal'
     | 'lesser'
     | 'greater'
@@ -23,7 +28,7 @@ export interface SqlComparison {
     | 'greater_or_equal'
     | 'contains_case_insensitive'
     | 'contains'
-    | 'starts_with'
+    | 'starts_with_case_insensitive'
     | 'json_array_contains';
   args: [SqlExpr, SqlExpr];
 }
@@ -45,7 +50,12 @@ export interface SqlColumn {
   type: 'attnum';
   value: number;
 }
-export type SqlExpr = SqlComparison | SqlFunction | SqlLiteral | SqlColumn;
+export type SqlExpr =
+  | SqlOperator
+  | SqlComparison
+  | SqlFunction
+  | SqlLiteral
+  | SqlColumn;
 
 export interface Group {
   /**
@@ -78,6 +88,7 @@ export interface RecordsListParams {
   grouping?: Grouping;
   filter?: SqlExpr;
   return_record_summaries?: boolean;
+  joined_columns?: { alias: string; join_path: JoinPath }[];
 }
 
 export interface RecordsSearchParams {
@@ -94,6 +105,18 @@ export type Result = Record<string, ResultValue>;
 /** Keys are stringified FK cell values. Values are record summaries. */
 export type RecordSummaryColumnData = Record<string, string>;
 
+export interface FileManifest {
+  uri: string;
+  name: string;
+  mimetype: string | null;
+  thumbnail: string | null;
+  attachment: string;
+  direct: string;
+}
+
+/** Keys are file "mash" values */
+export type FileManifestColumnData = Record<string, FileManifest>;
+
 export interface RecordsResponse {
   count: number;
   grouping: GroupingResponse | null;
@@ -101,6 +124,9 @@ export interface RecordsResponse {
   /** Keys are attnums. */
   linked_record_summaries: Record<string, RecordSummaryColumnData> | null;
   record_summaries: Record<string, string> | null;
+  /** Keys are attnums. */
+  download_links: Record<string, FileManifestColumnData>;
+  joined_record_summaries: Record<string, RecordSummaryColumnData> | null;
 }
 
 export const records = {
@@ -143,6 +169,7 @@ export const records = {
         string,
         RecordSummaryTemplate | null
       > | null;
+      joined_columns?: { alias: string; join_path: JoinPath }[];
     },
     RecordsResponse
   >(),
@@ -157,7 +184,7 @@ export const records = {
       table_oid: number;
       record_ids: ResultValue[];
     },
-    void
+    ResultValue[]
   >(),
 
   list_summaries: rpcMethodTypeContainer<
@@ -167,6 +194,10 @@ export const records = {
       limit?: number | null;
       offset?: number | null;
       search?: string | null;
+      linked_record_path?: {
+        record_pkey: ResultValue;
+        join_path: JoinPath;
+      } | null;
     },
     RecordsSummaryListResponse
   >(),

@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { ContextMenu } from '@mathesar/component-library';
   import { SheetRow, SheetRowHeaderCell } from '@mathesar/components/sheet';
   import { ROW_HEIGHT_PX } from '@mathesar/geometry';
   import {
@@ -19,26 +18,21 @@
   import GroupHeader from './GroupHeader.svelte';
   import NewRecordMessage from './NewRecordMessage.svelte';
   import RowCell from './RowCell.svelte';
-  import RowContextOptions from './RowContextOptions.svelte';
   import RowControl from './RowControl.svelte';
 
   export let row: Row;
   export let rowDescriptor: DisplayRowDescriptor;
   export let style: { [key: string]: string | number };
-  export let quickViewRecord: (tableOid: number, recordId: unknown) => void;
 
   const tabularData = getTabularDataStoreFromContext();
 
   $: ({
     recordsData,
-    columnsDataStore,
     meta,
     processedColumns,
     selection,
     canUpdateRecords,
-    canDeleteRecords,
-    canInsertRecords,
-    table,
+    allColumns,
   } = $tabularData);
   $: ({
     rowStatus,
@@ -46,14 +40,7 @@
     cellModificationStatus,
     cellClientSideErrors,
   } = meta);
-  $: ({ grouping, linkedRecordSummaries } = recordsData);
-
-  $: ({ pkColumn } = columnsDataStore);
-  $: primaryKeyColumnId = $pkColumn?.id;
-  $: recordPk =
-    primaryKeyColumnId && isRecordRow(row)
-      ? row.record[primaryKeyColumnId]
-      : undefined;
+  $: ({ grouping, linkedRecordSummaries, fileManifests } = recordsData);
   $: isPlaceholderRow = isPlaceholderRecordRow(row);
   $: rowSelectionId = getRowSelectionId(row);
   $: creationStatus = $rowCreationStatus.get(row.identifier)?.state;
@@ -105,17 +92,6 @@
           {isSelected}
           hasErrors={hasAnyErrors}
         />
-        <ContextMenu>
-          <RowContextOptions
-            tableOid={table.oid}
-            {recordPk}
-            {recordsData}
-            {row}
-            canInsertRecords={$canInsertRecords}
-            canDeleteRecords={$canDeleteRecords}
-            quickViewThisRecord={() => quickViewRecord(table.oid, recordPk)}
-          />
-        </ContextMenu>
       </SheetRowHeaderCell>
     {/if}
 
@@ -126,25 +102,21 @@
         group={row.group}
         processedColumnsMap={$processedColumns}
         recordSummariesForSheet={$linkedRecordSummaries}
+        fileManifestsForSheet={$fileManifests}
       />
     {:else if isRecordRow(row)}
-      {#each [...$processedColumns] as [columnId, processedColumn] (columnId)}
+      {#each [...$allColumns] as [columnId, columnFabric] (columnId)}
         <RowCell
-          tableOid={table.oid}
           {selection}
           {row}
           rowHasErrors={hasWholeRowErrors}
           key={getCellKey(row.identifier, columnId)}
           modificationStatusMap={cellModificationStatus}
           clientSideErrorMap={cellClientSideErrors}
-          bind:value={row.record[columnId]}
-          {processedColumn}
+          value={row.record[columnId]}
+          {columnFabric}
           {recordsData}
-          {recordPk}
-          canInsertRecords={$canInsertRecords}
           canUpdateRecords={$canUpdateRecords}
-          canDeleteRecords={$canDeleteRecords}
-          {quickViewRecord}
         />
       {/each}
     {:else if isHelpTextRow(row)}

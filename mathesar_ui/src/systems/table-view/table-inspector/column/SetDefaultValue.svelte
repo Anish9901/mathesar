@@ -54,7 +54,7 @@
         };
     try {
       await columnsDataStore.patch({
-        id: column.id,
+        id: column.column.id,
         default: defaultRequest,
       });
       typeChangeState = { state: 'success' };
@@ -79,10 +79,10 @@
 
   function setRecordSummary(recordId: string, _recordSummary: string) {
     if (linkedRecordSummaries) {
-      linkedRecordSummaries.addBespokeRecordSummary({
+      linkedRecordSummaries.addBespokeValue({
         columnId: String(column.id),
-        recordId,
-        recordSummary: _recordSummary,
+        key: recordId,
+        value: _recordSummary,
       });
     }
   }
@@ -101,7 +101,7 @@
   </LabeledInput>
   {#if !isDefaultNull}
     <DynamicInput
-      componentAndProps={column.inputComponentAndProps}
+      componentAndProps={column.simpleInputComponentAndProps}
       bind:value
       {disabled}
       {recordSummary}

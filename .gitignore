@@ -181,9 +181,11 @@ Temporary Items
 .media/
 .secrets/
 docs/_build/
+msar/
 
-## SSO-SPECIFIC ##
+## yaml config files ##
 sso.yml
+file_storage.yml
 
 # UI
 node_modules/

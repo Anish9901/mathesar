@@ -100,6 +100,11 @@ METHODS = [
         "columns.patch",
         [user_is_authenticated]
     ),
+    (
+        columns.reset_mash,
+        "columns.reset_mash",
+        [user_is_superuser]
+    ),
 
     (
         columns.metadata.list_,
@@ -246,11 +251,6 @@ METHODS = [
     (
         explorations.run,
         "explorations.run",
-        [user_is_authenticated]
-    ),
-    (
-        explorations.run_saved,
-        "explorations.run_saved",
         [user_is_authenticated]
     ),
 

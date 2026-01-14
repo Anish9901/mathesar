@@ -33,10 +33,14 @@
 </script>
 
 <div class="import-preview">
-  <Sheet restrictWidthToRowWidth {columns} getColumnIdentifier={(c) => c.id}>
+  <Sheet
+    restrictWidthToRowWidth
+    {columns}
+    getColumnIdentifier={(c) => String(c.id)}
+  >
     <SheetHeader inheritFontStyle>
       {#each columns as column (column.id)}
-        <SheetColumnHeaderCell columnIdentifierKey={column.id}>
+        <SheetColumnHeaderCell columnIdentifierKey={String(column.id)}>
           <PreviewColumn
             {isLoading}
             processedColumn={column}
@@ -47,7 +51,7 @@
             {renamedIdColumn}
           />
           <SheetCellResizer
-            columnIdentifierKey={column.id}
+            columnId={String(column.id)}
             minColumnWidth={MIN_IMPORT_COLUMN_WIDTH_PX}
           />
         </SheetColumnHeaderCell>
@@ -61,7 +65,7 @@
       >
         <div {...htmlAttributes} style={styleString}>
           {#each columns as column (column)}
-            <SheetDataCell columnIdentifierKey={column.id}>
+            <SheetDataCell columnIdentifierKey={String(column.id)}>
               <CellFabric
                 columnFabric={column}
                 value={record[column.column.name]}
@@ -78,24 +82,16 @@
 
 <style lang="scss">
   .import-preview {
+    min-width: fit-content;
+
     :global([data-sheet-element='data-cell']) {
-      background: var(--white);
-    }
-    :global([data-sheet-element='data-cell']:last-child),
-    :global([data-sheet-element='column-header-cell']:last-child) {
-      border-right: none;
+      background: var(--color-bg-input);
     }
     :global(
         [data-sheet-element='data-row']:last-child
           [data-sheet-element='data-cell']
       ) {
       border-bottom: none;
-    }
-  }
-
-  :global(body.theme-dark) .import-preview {
-    :global([data-sheet-element='data-cell']) {
-      background: var(--neutral-900);
     }
   }
 </style>

@@ -12,17 +12,17 @@ import type {
 import type { CellColumnFabric } from '@mathesar/components/cell-fabric/types';
 import {
   getCellCap,
-  getDbTypeBasedFilterCap,
   getDbTypeBasedInputCap,
+  getDbTypeBasedSimpleInputCap,
   getDisplayFormatter,
   getInitialInputValue,
   getLinkedRecordInputCap,
 } from '@mathesar/components/cell-fabric/utils';
-import { retrieveFilters } from '@mathesar/components/filter-entry/utils';
 import type { Table } from '@mathesar/models/Table';
 import {
   getAbstractTypeForDbType,
-  type getFiltersForAbstractType,
+  getEqualityFiltersForAbstractType,
+  getFiltersForAbstractType,
   getPreprocFunctionsForAbstractType,
 } from '@mathesar/stores/abstract-types';
 import type {
@@ -43,8 +43,11 @@ export class ProcessedColumn implements CellColumnFabric {
   /**
    * This property is also available via `column.id`, but it's duplicated at a
    * higher level for brevity's sake because it's used so frequently.
+   *
+   * Note: This is a stringified version of the column's attnum (RawColumn.id).
+   * The RawColumn.id remains a number for API compatibility.
    */
-  readonly id: RawColumnWithMetadata['id'];
+  readonly id: string;
 
   readonly column: RawColumnWithMetadata;
 
@@ -73,7 +76,7 @@ export class ProcessedColumn implements CellColumnFabric {
 
   readonly inputComponentAndProps: ComponentAndProps;
 
-  readonly filterComponentAndProps: ComponentAndProps;
+  readonly simpleInputComponentAndProps: ComponentAndProps;
 
   readonly allowedFiltersMap: ReturnType<typeof getFiltersForAbstractType>;
 
@@ -95,7 +98,7 @@ export class ProcessedColumn implements CellColumnFabric {
     constraints: RawConstraint[];
     hasEnhancedPrimaryKeyCell?: boolean;
   }) {
-    this.id = props.column.id;
+    this.id = String(props.column.id);
     this.column = props.column;
     this.columnIndex = props.columnIndex;
     this.tableOid = props.tableOid;
@@ -111,7 +114,10 @@ export class ProcessedColumn implements CellColumnFabric {
       (c) => c.columns.length !== 1,
     );
 
-    this.abstractType = getAbstractTypeForDbType(this.column.type);
+    this.abstractType = getAbstractTypeForDbType(
+      this.column.type,
+      this.column.metadata,
+    );
 
     this.initialInputValue = getInitialInputValue(
       this.column,
@@ -147,14 +153,14 @@ export class ProcessedColumn implements CellColumnFabric {
         })
       : getDbTypeBasedInputCap(this.column, this.abstractType.cellInfo);
 
-    this.filterComponentAndProps =
-      getDbTypeBasedFilterCap(this.column, this.abstractType.cellInfo) ??
+    this.simpleInputComponentAndProps =
+      getDbTypeBasedSimpleInputCap(this.column, this.abstractType.cellInfo) ??
       this.inputComponentAndProps;
 
-    this.allowedFiltersMap = retrieveFilters(
-      this.abstractType.identifier,
-      this.linkFk,
-    );
+    this.allowedFiltersMap = (() =>
+      this.linkFk !== undefined
+        ? getEqualityFiltersForAbstractType(this.abstractType.identifier)
+        : getFiltersForAbstractType(this.abstractType.identifier))();
 
     this.preprocFunctions = getPreprocFunctionsForAbstractType(
       this.abstractType.identifier,
@@ -200,6 +206,6 @@ export function getFirstEditableColumn(
   );
 }
 
-/** Maps column ids to processed columns */
-export type ProcessedColumns = Map<number, ProcessedColumn>;
+/** Maps column ids (as strings) to processed columns */
+export type ProcessedColumns = Map<string, ProcessedColumn>;
 export type ProcessedColumnsStore = Readable<ProcessedColumns>;

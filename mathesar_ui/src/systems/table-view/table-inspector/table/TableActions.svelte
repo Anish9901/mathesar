@@ -2,7 +2,13 @@
   import { _ } from 'svelte-i18n';
   import { router } from 'tinro';
 
-  import { iconDeleteMajor, iconExploration } from '@mathesar/icons';
+  import { getQueryStringFromParams } from '@mathesar/api/rest/utils/requestUtils';
+  import {
+    iconDeleteMajor,
+    iconExploration,
+    iconExport,
+    iconImportData,
+  } from '@mathesar/icons';
   import { getSchemaPageUrl } from '@mathesar/routes/urls';
   import { confirmDelete } from '@mathesar/stores/confirmation';
   import { getTabularDataStoreFromContext } from '@mathesar/stores/table-data';
@@ -11,6 +17,8 @@
     constructDataExplorerUrlToSummarizeFromGroup,
     createDataExplorerUrlToExploreATable,
   } from '@mathesar/systems/data-explorer';
+  import { importModalContext } from '@mathesar/systems/table-view/import/ImportController';
+  import { isTableView } from '@mathesar/utils/tables';
   import {
     AnchorButton,
     Button,
@@ -22,15 +30,25 @@
   import TableDeleteConfirmationBody from './TableDeleteConfirmationBody.svelte';
 
   const tabularData = getTabularDataStoreFromContext();
+  const importModal = importModalContext.getOrError();
 
-  $: ({ table, columnsDataStore, meta } = $tabularData);
-  $: ({ grouping } = meta);
+  $: ({ table, columnsDataStore, meta, canInsertRecords, canSelectRecords } =
+    $tabularData);
+
+  $: isView = isTableView(table);
+  $: ({ filtering, sorting, grouping } = meta);
   $: ({ columns } = columnsDataStore);
   $: explorationPageUrl = createDataExplorerUrlToExploreATable(
     table.schema.database.id,
     table.schema.oid,
     table,
   );
+  $: exportLinkParams = getQueryStringFromParams({
+    database_id: table.schema.database.id,
+    table_oid: table.oid,
+    ...$sorting.recordsRequestParamsIncludingGrouping($grouping),
+    ...$filtering.recordsRequestParams(),
+  });
   $: summarizationUrl = (() =>
     constructDataExplorerUrlToSummarizeFromGroup(
       table.schema.database.id,
@@ -47,11 +65,12 @@
 
   function handleDeleteTable() {
     void confirmDelete({
-      identifierType: $_('table'),
+      identifierType: isView ? $_('view') : $_('table'),
       body: {
         component: TableDeleteConfirmationBody,
         props: {
           tableName: table.name,
+          type: table.type,
         },
       },
       onProceed: async () => {
@@ -93,13 +112,46 @@
   {/if}
 
   <Button
-    appearance="outline-danger"
-    on:click={handleDeleteTable}
-    disabled={!$currentRoleOwns}
+    on:click={() => importModal.open()}
+    disabled={!$canInsertRecords}
+    appearance="action"
   >
-    <Icon {...iconDeleteMajor} />
-    <span>{$_('delete_table')}</span>
+    <Icon {...iconImportData} />
+    <span>{$_('import')}</span>
   </Button>
+
+  {#if $canSelectRecords}
+    <AnchorButton
+      href="/api/export/v0/tables/?{exportLinkParams}"
+      appearance="action"
+      data-tinro-ignore
+      aria-label={$_('export')}
+      download="{table.name}.csv"
+    >
+      <div class="action-item">
+        <div>
+          <Icon {...iconExport} />
+          <span>{$_('export')}</span>
+          <Help>
+            {$_('export_table_as_csv_help', {
+              values: { tableName: table.name },
+            })}
+          </Help>
+        </div>
+      </div>
+    </AnchorButton>
+  {/if}
+
+  {#if !isView}
+    <Button
+      appearance="danger"
+      on:click={handleDeleteTable}
+      disabled={!$currentRoleOwns}
+    >
+      <Icon {...iconDeleteMajor} />
+      <span>{isView ? $_('delete_view') : $_('delete_table')}</span>
+    </Button>
+  {/if}
 </div>
 
 <style lang="scss">

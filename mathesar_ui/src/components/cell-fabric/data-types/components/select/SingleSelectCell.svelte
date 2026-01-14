@@ -27,6 +27,7 @@
 
   export let isActive: DefinedProps['isActive'];
   export let value: DefinedProps['value'] = undefined;
+  export let setValue: (newValue: DefinedProps['value']) => void;
   export let disabled: DefinedProps['disabled'];
   export let isIndependentOfSheet: $$Props['isIndependentOfSheet'];
 
@@ -89,8 +90,8 @@
   }
 
   function setValueFromListBox(values: Option[]) {
-    [value] = values;
-    dispatch('update', { value });
+    const [newValue] = values;
+    setValue(newValue);
   }
 
   function handleDropdownClose(api: ListBoxApi<Option>) {
@@ -150,7 +151,7 @@
   // This needs to be global since we do not have actual dom
   // elements in this component
   :global(.dropdown.content.single-select-cell-dropdown) {
-    border: 1px solid var(--neutral-200);
+    border: 1px solid var(--color-border-grid);
     max-width: 250px;
   }
   .cell {

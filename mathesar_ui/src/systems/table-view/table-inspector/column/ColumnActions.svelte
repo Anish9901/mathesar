@@ -38,7 +38,7 @@
         $_('could_break_tables_views'),
         $_('are_you_sure_to_proceed'),
       ],
-      onProceed: () => columnsDataStore.deleteColumn(c.id),
+      onProceed: () => columnsDataStore.deleteColumn(c.column.id),
     });
   }
 
@@ -94,7 +94,7 @@
   {/if}
   {#if column}
     <Button
-      appearance="outline-primary"
+      appearance="danger"
       on:click={() => column && handleDeleteColumn(column)}
       disabled={!$currentRoleOwns}
     >

@@ -13,15 +13,11 @@
     isHelpTextRow,
     isPlaceholderRecordRow,
   } from '@mathesar/stores/table-data';
-  import { currentTablesMap } from '@mathesar/stores/tables';
-  import RecordStore from '@mathesar/systems/record-view/RecordStore';
-  import { modalRecordViewContext } from '@mathesar/systems/record-view-modal/modalRecordViewContext';
 
   import Row from './row/Row.svelte';
   import ScrollAndRowHeightHandler from './ScrollAndRowHeightHandler.svelte';
 
   const tabularData = getTabularDataStoreFromContext();
-  const modalRecordView = modalRecordViewContext.get();
 
   export let usesVirtualList = false;
 
@@ -54,18 +50,6 @@
     const row = $displayRowDescriptors?.[index].row;
     return row ? getItemSizeFromRow(row) : ROW_HEIGHT_PX;
   }
-
-  function quickViewRecord(_tableOid: number, _recordId: unknown) {
-    if (!modalRecordView) return;
-    if (_recordId === undefined) return;
-    const containingTable = $currentTablesMap.get(_tableOid);
-    if (!containingTable) return;
-    const recordStore = new RecordStore({
-      table: containingTable,
-      recordPk: String(_recordId),
-    });
-    modalRecordView.open(recordStore);
-  }
 </script>
 
 {#key oid}
@@ -87,9 +71,8 @@
         {#if $displayRowDescriptors[item.index] && shouldRender}
           <Row
             style={item.style}
-            bind:row={$displayRowDescriptors[item.index].row}
+            row={$displayRowDescriptors[item.index].row}
             rowDescriptor={$displayRowDescriptors[item.index]}
-            {quickViewRecord}
           />
         {/if}
       {/each}
@@ -101,9 +84,8 @@
           position: 'relative',
           height: getItemSizeFromRow(displayRowDescriptor.row),
         }}
-        bind:row={displayRowDescriptor.row}
+        row={displayRowDescriptor.row}
         rowDescriptor={displayRowDescriptor}
-        {quickViewRecord}
       />
     {/each}
   {/if}

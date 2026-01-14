@@ -5,26 +5,28 @@
   import { Button, Icon, iconError } from '@mathesar-component-library';
 
   export let state: 'loading' | 'error' | undefined = undefined;
+  export let showLabel = true;
 
   $: isLoading = state === 'loading';
   $: isError = state === 'error';
 </script>
 
-<Button
-  class="refresh-button"
-  appearance="secondary"
-  size="medium"
-  disabled={isLoading}
-  on:click
->
-  <Icon {...isError && !isLoading ? iconError : iconRefresh} spin={isLoading} />
-  <span>
-    {#if isLoading}
-      {$_('loading')}
-    {:else if isError}
-      {$_('retry')}
-    {:else}
-      {$_('refresh')}
+<div class="refresh-button">
+  <Button size="medium" disabled={isLoading} on:click>
+    <Icon
+      {...isError && !isLoading ? iconError : iconRefresh}
+      spin={isLoading}
+    />
+    {#if showLabel}
+      <span>
+        {#if isLoading}
+          {$_('loading')}
+        {:else if isError}
+          {$_('retry')}
+        {:else}
+          {$_('refresh')}
+        {/if}
+      </span>
     {/if}
-  </span>
-</Button>
+  </Button>
+</div>

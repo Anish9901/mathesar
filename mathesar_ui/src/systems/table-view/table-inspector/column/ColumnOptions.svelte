@@ -31,7 +31,7 @@
   $: allowsNull = column.column.nullable;
   $: ({ uniqueColumns } = constraintsDataStore);
   $: allowsDuplicates = !(
-    column.column.primary_key || $uniqueColumns.has(column.id)
+    column.column.primary_key || $uniqueColumns.has(column.column.id)
   );
 
   async function toggleAllowNull() {
@@ -156,7 +156,7 @@
 
     .null {
       font-style: italic;
-      color: var(--neutral-500);
+      color: var(--color-fg-base-muted);
     }
   }
 </style>

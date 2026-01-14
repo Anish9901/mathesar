@@ -35,7 +35,9 @@
   async function save() {
     typeChangeState = { state: 'processing' };
     try {
-      await columnsDataStore.setDisplayOptions(column, displayOptions);
+      await columnsDataStore.setDisplayOptions(
+        new Map([[column.column.id, displayOptions]]),
+      );
       actionButtonsVisible = false;
       typeChangeState = { state: 'success' };
     } catch (err) {
@@ -94,11 +96,14 @@
     {/if}
   </div>
 {:else}
-  <span>{$_('no_formatting_option_data_type')}</span>
+  <span class="disabled">{$_('no_formatting_option_data_type')}</span>
 {/if}
 
 <style lang="scss">
   .footer {
     margin-top: 1rem;
+  }
+  .disabled {
+    color: var(--color-fg-base-muted);
   }
 </style>

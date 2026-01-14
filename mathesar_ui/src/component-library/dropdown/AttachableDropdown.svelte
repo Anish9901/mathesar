@@ -15,6 +15,8 @@
   import StringOrComponent from '@mathesar-component-library-dir/string-or-component/StringOrComponent.svelte';
   import type { ComponentAndProps } from '@mathesar-component-library-dir/types';
 
+  import focusTrap from '../common/actions/focusTrap';
+
   import { AccompanyingElements } from './AccompanyingElements';
 
   const dispatch = createEventDispatcher();
@@ -45,9 +47,22 @@
    * resizes.
    */
   export let autoReposition = false;
+  export let trapFocus = false;
+
+  /**
+   * By default, we ensure that the dropdown content width is no smaller than
+   * the width of its trigger element — unless the trigger element is wider than
+   * 250px, in which case it ensures that the dropdown content width is no
+   * smaller than 250px.
+   *
+   * This option controls that threshold. Set it to 0 if you want to disable
+   * this min-width behavior, allowing the content to be quite narrow.
+   */
+  export let matchTriggerWidthPxUpTo: number | undefined = undefined;
 
   let contentElement: HTMLElement | undefined;
 
+  $: focusTrapAction = trapFocus ? focusTrap : () => {};
   $: placement = preferredPlacement ?? placements[0] ?? 'bottom-start';
   $: fallbackPlacements = (() => {
     const p = placements.filter((pm) => pm !== placement);
@@ -119,6 +134,7 @@
     class={['dropdown content', classes].join(' ')}
     bind:this={contentElement}
     use:portal={portalTarget}
+    use:focusTrapAction
     use:popper={{
       reference: trigger,
       autoReposition,
@@ -133,12 +149,16 @@
           },
         ],
       },
+      customModifierOptions: {
+        matchTriggerWidthPxUpTo,
+      },
     }}
     use:clickOffBounds={{
       callback: close,
       references: clickOffBoundsReferences,
     }}
     on:click={checkAndCloseOnInnerClick}
+    on:click
     on:mouseenter
     on:mouseleave
     data-attachable-dropdown

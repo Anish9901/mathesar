@@ -3,6 +3,7 @@ from typing import TypedDict, Optional
 from modernrpc.core import REQUEST_KEY
 
 from mathesar.models.base import Database
+from mathesar.models import exceptions as db_exceptions
 from mathesar.rpc.decorators import mathesar_rpc_method
 
 
@@ -86,7 +87,7 @@ def patch(*, database_id: int, patch: ConfiguredDatabasePatch, **kwargs) -> Conf
     Patch a configured database, given its id.
 
     Args:
-        database_id: The Django id of the database
+        database_id: The Django id of the database.
         patch: An object containing the fields to update.
 
     Returns:
@@ -101,6 +102,17 @@ def patch(*, database_id: int, patch: ConfiguredDatabasePatch, **kwargs) -> Conf
     return ConfiguredDatabaseInfo.from_model(database)
 
 
+class DisconnectResult(TypedDict):
+    """
+    Result of disconnecting a database.
+
+    Attributes:
+        sql_cleaned: Whether Mathesar schemas were successfully removed from the database.
+            False indicates the connection was unavailable and cleanup was skipped.
+    """
+    sql_cleaned: bool
+
+
 @mathesar_rpc_method(name="databases.configured.disconnect")
 def disconnect(
         *,
@@ -110,7 +122,7 @@ def disconnect(
         role_name: str = None,
         password: str = None,
         disconnect_db_server: bool = False
-) -> None:
+) -> DisconnectResult:
     """
     Disconnect a configured database, after removing Mathesar SQL from it.
 
@@ -122,26 +134,43 @@ def disconnect(
     make sure the user can't accidentally lose data calling this
     function.
 
+    If the database connection is unavailable, the SQL cleanup will be
+    skipped and only the Mathesar database record will be removed.
+
     Args:
         database_id: The Django id of the database.
         schemas_to_remove: Mathesar schemas we should remove SQL from.
         strict: If True, we throw an exception and roll back changes if
             we fail to remove any objects which we expected to remove.
-        role_name: the username of the role used for upgrading.
-        password: the password of the role used for upgrading.
+        role_name: The username of the role used for SQL removal.
+        password: The password of the role used for SQL removal.
         disconnect_db_server: If True, will delete the stored server
             metadata(host, port, role credentials) from Mathesar.
             This is intended for optional use while disconnecting the
             last database on the server.
+
+    Returns:
+        The result of the disconnect operation.
     """
     database = Database.objects.get(id=database_id)
-    database.uninstall_sql(
-        schemas_to_remove=schemas_to_remove,
-        strict=strict,
-        role_name=role_name,
-        password=password,
-    )
+
+    # Try to uninstall SQL, but if connection is unavailable, skip it
+    # This allows disconnecting databases with broken connections
+    sql_cleaned = True
+    try:
+        database.uninstall_sql(
+            schemas_to_remove=schemas_to_remove,
+            strict=strict,
+            role_name=role_name,
+            password=password,
+        )
+    except db_exceptions.NoConnectionAvailable:
+        # Connection is broken, skip SQL cleanup and just remove the database record
+        sql_cleaned = False
+
     database.delete()
     server_db_count = len(Database.objects.filter(server=database.server))
     if disconnect_db_server and server_db_count == 0:
         database.server.delete()
+
+    return DisconnectResult(sql_cleaned=sql_cleaned)

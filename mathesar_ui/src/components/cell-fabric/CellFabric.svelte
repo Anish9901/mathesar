@@ -4,14 +4,28 @@
   This component is meant to be common for tables, queries, and for import preview
 -->
 <script lang="ts">
+  import type { FileAttachmentRequestParams } from '@mathesar/api/rest/fileAttachments';
+  import type { FileManifest } from '@mathesar/api/rpc/records';
+  import type { ImmutableMap } from '@mathesar-component-library';
+
   import type { HorizontalAlignment } from './data-types/components/typeDefinitions';
   import type { CellColumnFabric } from './types';
 
   export let columnFabric: CellColumnFabric;
   export let value: unknown;
+  export let setValue: (newValue: unknown) => void = () => {};
   export let recordSummary: string | undefined = undefined;
+  export let fileManifest: FileManifest | undefined = undefined;
+  export let setFileManifest:
+    | ((mash: string, manifest: FileManifest) => void)
+    | undefined = undefined;
+  export let fileRequestParams: FileAttachmentRequestParams | undefined =
+    undefined;
   export let setRecordSummary:
     | ((recordId: string, recordSummary: string) => void)
+    | undefined = undefined;
+  export let joinedRecordSummariesMap:
+    | ImmutableMap<string, string>
     | undefined = undefined;
   export let isActive = false;
   export let disabled = false;
@@ -46,13 +60,17 @@
     {horizontalAlignment}
     {recordSummary}
     {setRecordSummary}
+    {joinedRecordSummariesMap}
+    {fileManifest}
+    {setFileManifest}
+    {fileRequestParams}
     {searchValue}
     {isProcessing}
     {showTruncationPopover}
     {canViewLinkedEntities}
-    bind:value
+    {value}
+    {setValue}
     on:movementKeyDown
-    on:update
   />
 
   <div class="loader">
@@ -84,7 +102,7 @@
     right: 1px;
     bottom: 1px;
     position: absolute;
-    background: var(--background-color);
+    background: var(--color-bg-input);
     z-index: 1;
   }
   .bg {
@@ -93,7 +111,7 @@
     right: var(--cell-padding);
     bottom: var(--cell-padding);
     position: absolute;
-    background: var(--disabled-background);
+    background: var(--color-bg-input-hover);
   }
   .cell-fabric:not(.show-as-skeleton) .loader {
     display: none;

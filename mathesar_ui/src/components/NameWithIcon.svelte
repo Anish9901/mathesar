@@ -1,7 +1,12 @@
 <script lang="ts">
   import type { ComponentProps } from 'svelte';
 
-  import { Icon, Spinner, Truncate } from '@mathesar-component-library';
+  import {
+    Icon,
+    Spinner,
+    Truncate,
+    makeStyleStringFromCssVariables,
+  } from '@mathesar-component-library';
   import type { IconProps } from '@mathesar-component-library/types';
 
   interface $$Props extends ComponentProps<Truncate> {
@@ -11,6 +16,8 @@
     iconHasBox?: boolean;
     truncate?: boolean;
     bold?: boolean;
+    cssVariables?: Record<string, string>;
+    hideIcon?: boolean;
   }
 
   /** TODO: Update component and prop names */
@@ -21,12 +28,24 @@
   export let iconHasBox = false;
   export let truncate = true;
   export let bold = false;
+  export let cssVariables: $$Props['cssVariables'] = undefined;
+  export let hideIcon = false;
 
+  $: style = cssVariables
+    ? makeStyleStringFromCssVariables(cssVariables)
+    : undefined;
   $: icons = Array.isArray(icon) ? icon : [icon];
 </script>
 
 <Truncate {...$$restProps} passthrough={!truncate}>
-  <span class="name-with-icon" on:click class:boxed={iconHasBox} class:bold>
+  <span
+    class="name-with-icon"
+    on:click
+    class:boxed={iconHasBox}
+    class:bold
+    class:hide-icon={hideIcon}
+    {style}
+  >
     <span class="icon" style="white-space: nowrap">
       {#if isLoading}
         <Spinner />
@@ -53,7 +72,7 @@
     font-weight: var(--font-weight-medium);
   }
   .icon {
-    color: var(--icon-color, currentcolor);
+    color: var(--icon-color, var(--color-fg-icon, currentcolor));
     opacity: var(--NameWithIcon__icon-opacity, 0.75);
     vertical-align: bottom;
   }
@@ -64,11 +83,14 @@
     display: inline-flex;
     border-radius: 0.25em;
     padding: 0.2em;
-    background: var(--icon-color, currentcolor);
+    background: var(--icon-color, var(--color-fg-icon, currentcolor));
     vertical-align: -10%;
   }
   .name-with-icon.boxed .icon > :global(svg) {
-    color: var(--white);
+    color: var(--color-fg-inverted);
+  }
+  .name-with-icon.hide-icon .icon {
+    display: none;
   }
   .name {
     color: var(--name-color, currentcolor);

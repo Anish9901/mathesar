@@ -33,6 +33,7 @@
       - add_primary_key_column
       - patch
       - delete
+      - reset_mash
       - list_with_metadata
       - ColumnInfo
       - ColumnListReturn
@@ -131,7 +132,6 @@
       - delete
       - replace
       - run
-      - run_saved
       - ExplorationInfo
       - ExplorationDef
       - ExplorationResult
@@ -178,7 +178,9 @@
       - Group
       - GroupingResponse
       - SearchParam
+      - RecordSummaryMapping
       - RecordSummaryList
+      - LinkedRecordPath
       - SummarizedRecordReference
 
 ## Roles

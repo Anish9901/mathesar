@@ -86,7 +86,10 @@
   }
 
   function getDataForNewRecord(): Record<string, unknown> {
-    const pkColumnIds = $columns.filter((c) => c.primary_key).map((c) => c.id);
+    const pkColumnIds = $columns
+      .filter((c) => c.primary_key)
+      .map((c) => String(c.id));
+    // SearchFuzzy.without expects string[], which we now have
     return Object.fromEntries($searchFuzzy.without(pkColumnIds));
   }
 
@@ -191,7 +194,9 @@
             },
           })}
         {:else}
-          {$_('count_records', { values: { count: $recordCount } })}
+          {$_('count_records', {
+            values: { count: numberFormatter.format($recordCount) },
+          })}
         {/if}
       </div>
     {/if}
@@ -245,25 +250,25 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    color: var(--gray-400);
+    color: var(--color-fg-base-muted);
     z-index: var(--z-index__record_selector__overlay);
     pointer-events: none;
   }
   .content-loading.prevent-user-entry {
     pointer-events: all;
-    background: rgba(255, 255, 255, 0.5);
+    background: color-mix(in srgb, var(--color-bg-base), transparent 50%);
   }
   .results-loading {
     padding: 1rem;
     display: flex;
     justify-content: center;
     align-items: center;
-    color: var(--gray-400);
+    color: var(--color-fg-base-muted);
   }
   .no-results {
     padding: 1.5rem;
     text-align: center;
-    color: var(--color-gray-dark);
+    color: var(--color-fg-subtle-2);
   }
 
   .loading .stats {
@@ -289,7 +294,7 @@
       order: 3;
       text-align: center;
       font-size: var(--sm1);
-      color: var(--text-color-muted);
+      color: var(--color-fg-base-muted);
     }
     .add-button {
       order: 2;

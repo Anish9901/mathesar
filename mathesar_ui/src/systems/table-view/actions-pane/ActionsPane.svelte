@@ -1,43 +1,34 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
 
-  import { getQueryStringFromParams } from '@mathesar/api/rest/utils/requestUtils';
   import EntityPageHeader from '@mathesar/components/EntityPageHeader.svelte';
+  import InspectorButton from '@mathesar/components/InspectorButton.svelte';
   import ModificationStatus from '@mathesar/components/ModificationStatus.svelte';
-  import {
-    iconExport,
-    iconInspector,
-    iconRequiresAttention,
-    iconTable,
-  } from '@mathesar/icons';
+  import { iconRequiresAttention } from '@mathesar/icons';
   import { tableInspectorVisible } from '@mathesar/stores/localStorage';
   import { getTabularDataStoreFromContext } from '@mathesar/stores/table-data';
   import {
-    AnchorButton,
-    Button,
-    Icon,
-    Tooltip,
-  } from '@mathesar-component-library';
+    getTableIcon,
+    getTableIconFillColor,
+    isTableView,
+  } from '@mathesar/utils/tables';
+  import { Icon, Tooltip } from '@mathesar-component-library';
 
-  import FilterDropdown from './record-operations/filter/FilterDropdown.svelte';
+  import TableFilter from './record-operations/filter/TableFilter.svelte';
   import GroupDropdown from './record-operations/group/GroupDropdown.svelte';
+  import JoinDropdown from './record-operations/join/JoinDropdown.svelte';
   import SortDropdown from './record-operations/sort/SortDropdown.svelte';
 
   const tabularData = getTabularDataStoreFromContext();
 
   $: ({ table, meta, isLoading, hasPrimaryKey } = $tabularData);
   $: ({ currentRolePrivileges } = table.currentAccess);
-  $: ({ filtering, sorting, grouping, sheetState } = meta);
+  $: ({ sorting, grouping, sheetState } = meta);
 
   $: isSelectable = $currentRolePrivileges.has('SELECT');
-  $: exportLinkParams = getQueryStringFromParams({
-    database_id: table.schema.database.id,
-    table_oid: table.oid,
-    ...$sorting.recordsRequestParamsIncludingGrouping($grouping),
-    ...$filtering.recordsRequestParams(),
-  });
-
-  const canViewLinkedEntities = true;
+  $: isView = isTableView(table);
+  $: tableIcon = getTableIcon(table);
+  $: iconFillColor = getTableIconFillColor(table);
 
   function toggleTableInspector() {
     tableInspectorVisible.update((v) => !v);
@@ -48,14 +39,19 @@
   title={{
     name: table.name,
     description: table.description ?? undefined,
-    icon: iconTable,
+    icon: tableIcon,
   }}
+  --icon-fill-color={iconFillColor}
+  --icon-stroke-color="var(--color-fg-inverted)"
 >
   {#if isSelectable}
     <div class="quick-access">
-      <FilterDropdown {filtering} {canViewLinkedEntities} />
+      <TableFilter />
       <SortDropdown {sorting} />
       <GroupDropdown {grouping} />
+      {#if !isView}
+        <JoinDropdown />
+      {/if}
     </div>
   {/if}
 
@@ -68,7 +64,11 @@
           <Icon size="1.3em" {...iconRequiresAttention} />
         </div>
         <span slot="content">
-          {$_('no_row_op_support_table_without_pk')}
+          {#if isView}
+            {$_('no_support_editing_views')}
+          {:else}
+            {$_('no_row_op_support_table_without_pk')}
+          {/if}
         </span>
       </Tooltip>
     </div>
@@ -76,37 +76,11 @@
 
   <div class="aux-actions" slot="actions-right">
     {#if isSelectable}
-      <Tooltip allowHover>
-        <AnchorButton
-          slot="trigger"
-          href="/api/export/v0/tables/?{exportLinkParams}"
-          data-tinro-ignore
-          appearance="secondary"
-          size="medium"
-          aria-label={$_('export')}
-          download="{table.name}.csv"
-        >
-          <Icon {...iconExport} />
-          <span class="responsive-button-label">{$_('export')}</span>
-        </AnchorButton>
-        <span slot="content">
-          {$_('export_csv_help', {
-            values: { tableName: table.name },
-          })}
-        </span>
-      </Tooltip>
-
-      <Button
-        appearance="secondary"
-        size="medium"
+      <InspectorButton
         disabled={$isLoading}
-        on:click={toggleTableInspector}
         active={$tableInspectorVisible}
-        aria-label={$_('inspector')}
-      >
-        <Icon {...iconInspector} />
-        <span class="responsive-button-label">{$_('inspector')}</span>
-      </Button>
+        toggle={toggleTableInspector}
+      />
     {/if}
   </div>
 </EntityPageHeader>
@@ -125,7 +99,7 @@
   .no-pk-warning {
     display: flex;
     align-items: center;
-    color: var(--yellow-400);
+    color: var(--color-fg-warning);
   }
 
   .aux-actions {

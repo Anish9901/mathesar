@@ -156,9 +156,10 @@ const docsPages = {
   databasePermissions: '/user-guide/databases/#permissions',
   databases: '/user-guide/databases/',
   dataTypes: '/user-guide/data-types/',
+  fileDataType: '/user-guide/data-types/#file',
   import: '/user-guide/importing-data/',
   internalSchemas: '/user-guide/schemas/#internal',
-  metadata: '/user-guide/metadata/',
+  metadata: '/user-guide/databases#understanding-mathesars-metadata/',
   relationships: '/user-guide/relationships/',
   roles: '/user-guide/roles/',
   rolesInheritance: '/user-guide/roles/#inheritance',
@@ -169,6 +170,7 @@ const docsPages = {
   tablePermissions: '/user-guide/tables/#permissions',
   userAdmin: '/user-guide/users/#admin',
   userGuide: '/user-guide/',
+  sslMode: '/user-guide/databases/#ssl',
 };
 
 export type DocsPage = keyof typeof docsPages;

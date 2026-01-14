@@ -1,19 +1,26 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
-  import { writable } from 'svelte/store';
+  import { derived, readable, writable } from 'svelte/store';
 
   import {
     type ClipboardHandler,
     getClipboardHandlerStoreFromContext,
   } from '@mathesar/stores/clipboard';
   import { getModifierKeyCombo } from '@mathesar/utils/pointerUtils';
-  import { ImmutableMap } from '@mathesar-component-library/types';
+  import type { ClientPosition } from '@mathesar-component-library';
+  import {
+    ImmutableMap,
+    ImmutableSet,
+    defined,
+  } from '@mathesar-component-library/types';
 
   import {
     type SheetCellDetails,
     beginSelection,
     findContainingSheetCell,
+    selectCellRange,
   } from './selection';
+  import { isSelectingCellRangeContext } from './selection/isSelectingCellRangeContext';
   import type SheetSelectionStore from './selection/SheetSelectionStore';
   import {
     calculateColumnStyleMapAndRowWidth,
@@ -23,9 +30,10 @@
   } from './utils';
 
   type SheetColumnType = $$Generic;
-  type SheetColumnIdentifierKey = $$Generic;
 
   const clipboardHandlerStore = getClipboardHandlerStoreFromContext();
+  const isSelectingCellRange = writable(false);
+  isSelectingCellRangeContext.set(isSelectingCellRange);
 
   export let columns: SheetColumnType[];
   export let usesVirtualList = false;
@@ -36,19 +44,50 @@
   export let selection: SheetSelectionStore | undefined = undefined;
   export let onCellSelectionStart: (c: SheetCellDetails) => void = () => {};
 
-  export let getColumnIdentifier: (
-    c: SheetColumnType,
-  ) => SheetColumnIdentifierKey;
+  export let getColumnIdentifier: (c: SheetColumnType) => string;
 
   export let scrollOffset = 0;
 
   export let horizontalScrollOffset = 0;
   export let paddingRight = hasPaddingRight ? 100 : 0;
 
-  export let columnWidths: ImmutableMap<SheetColumnIdentifierKey, number> =
-    new ImmutableMap();
+  export let columnWidths: ImmutableMap<string, number> = new ImmutableMap();
 
   export let sheetElement: HTMLElement | undefined = undefined;
+
+  /** [columnId, width] pairs to persist to the database. */
+  export let persistColumnWidths: (
+    widthsMap: [string, number | null][],
+  ) => void = () => {};
+
+  interface SheetContextMenuCallbackArgs {
+    targetCell: SheetCellDetails;
+    position: ClientPosition;
+    beginSelectingCellRange: () => void;
+  }
+
+  export let onCellContextMenu:
+    | ((p: SheetContextMenuCallbackArgs) => 'opened' | 'empty')
+    | undefined = undefined;
+
+  $: fullySelectedColumnIds =
+    defined(selection, (s) => derived(s, (v) => v.fullySelectedColumnIds)) ??
+    readable(new ImmutableSet<string>());
+
+  /**
+   * Returns a mapping of column ids to widths so that the user can resize
+   * multiple columns via a single column resizer. If the given column id is
+   * part of the selection, this returns a mapping for all selected columns.
+   * Otherwise, it just uses the given column id.
+   */
+  function getSmartColumnWidthsMap(
+    columnId: string,
+    width: number | null,
+  ): [string, number | null][] {
+    return $fullySelectedColumnIds.has(columnId)
+      ? [...$fullySelectedColumnIds].map((id) => [id, width])
+      : [[columnId, width]];
+  }
 
   $: ({ columnStyleMap, rowWidth } = calculateColumnStyleMapAndRowWidth(
     columns,
@@ -78,11 +117,18 @@
     stores,
     api: {
       getColumnWidth: (id) => normalizeColumnWidth(columnWidths.get(id)),
-      setColumnWidth: (key, width) => {
-        columnWidths = columnWidths.with(key, width);
+      handleDraggingColumnWidth: (id, width) => {
+        const widthsMap = getSmartColumnWidthsMap(id, width);
+        columnWidths = widthsMap.reduce(
+          (newColumnWidths, [columnId, newWidth]) =>
+            newWidth === null
+              ? newColumnWidths.without(columnId)
+              : newColumnWidths.with(columnId, newWidth),
+          columnWidths,
+        );
       },
-      resetColumnWidth: (key) => {
-        columnWidths = columnWidths.without(key);
+      handleReleaseColumnWidth: (id, width) => {
+        persistColumnWidths(getSmartColumnWidthsMap(id, width));
       },
       setHorizontalScrollOffset: (offset) => {
         horizontalScrollOffset = offset;
@@ -119,6 +165,7 @@
   }
 
   function handleMouseDown(e: MouseEvent) {
+    if (e.button !== 0) return;
     if (!selection) return;
     if (!sheetElement) return;
 
@@ -147,16 +194,45 @@
     // cells in the column.
     e.preventDefault();
 
-    beginSelection({
-      selection,
-      sheetElement,
-      startingCell,
-      targetCell,
-      selectionInProgress,
-    });
-
-    if (startingCell === targetCell) {
+    if ($isSelectingCellRange) {
+      selectCellRange({ selection, targetCell });
       onCellSelectionStart(targetCell);
+      isSelectingCellRange.set(false);
+    } else {
+      beginSelection({
+        selection,
+        sheetElement,
+        startingCell,
+        targetCell,
+        selectionInProgress,
+      });
+      if (startingCell === targetCell) {
+        onCellSelectionStart(targetCell);
+      }
+    }
+  }
+
+  function beginSelectingCellRange() {
+    isSelectingCellRange.set(true);
+    function stop() {
+      isSelectingCellRange.set(false);
+      window.removeEventListener('mousedown', stop);
+    }
+    window.addEventListener('mousedown', stop);
+  }
+
+  function handleContextMenu(event: MouseEvent) {
+    if (!onCellContextMenu) return;
+    const target = event.target as HTMLElement;
+    const targetCell = findContainingSheetCell(target);
+    if (!targetCell) return;
+    const state = onCellContextMenu({
+      targetCell,
+      position: event,
+      beginSelectingCellRange,
+    });
+    if (state === 'opened') {
+      event.preventDefault();
     }
   }
 
@@ -184,6 +260,7 @@
   class:selection-in-progress={$selectionInProgress}
   {style}
   on:mousedown={handleMouseDown}
+  on:contextmenu={handleContextMenu}
   on:focusin={enableClipboard}
   on:focusout={disableClipboard}
   bind:this={sheetElement}
@@ -195,8 +272,8 @@
 
 <style lang="scss">
   .sheet {
-    border: 1px solid var(--border-color);
-    background-color: var(--sheet-background);
+    border: 1px solid var(--canvas-border-color);
+    background-color: var(--canvas-background);
     margin: 0;
     border-radius: 0.5rem;
     overflow: hidden;
@@ -220,7 +297,7 @@
     );
 
     &.has-border {
-      border: 1px solid var(--border-color);
+      border: 1px solid var(--color-border-header);
     }
 
     &.uses-virtual-list {

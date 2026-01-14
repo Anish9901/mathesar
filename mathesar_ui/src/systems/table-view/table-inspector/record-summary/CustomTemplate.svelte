@@ -29,7 +29,7 @@
     templateConfig = templateConfig.withoutPart(key);
   }
 
-  function replacePart(key: number, part: string | number[]) {
+  function replacePart(key: number, part: string | string[]) {
     templateConfig = templateConfig.withPartReplaced(key, part);
   }
 
@@ -108,7 +108,7 @@
   }
   .no-fields {
     text-align: center;
-    color: var(--color-text-muted);
+    color: var(--color-fg-base-muted);
     font-size: var(--sm1);
   }
   .add {

@@ -27,6 +27,20 @@ Mathesar will remember the connection even after the application is shut down. Y
     - To connect to PostgreSQL via Unix socket, set the "Host" value as the path to the socket, for example: (`/var/run/postgresql`). You may omit the "Port" if using the default (`5432`) or otherwise specify.
         - When using Docker, make sure the container can access the socket path as a mounted volume.
 
+### SSL Mode {:#ssl}
+
+When connecting to an external database, you can configure the SSL mode to control how Mathesar establishes secure connections:
+
+- **Prefer SSL** (default): Attempts to use SSL if the server supports it, but falls back to an unencrypted connection if SSL is not available. This is a good balance between security and compatibility.
+- **Require SSL**: Always uses SSL encryption. The connection will fail if the server doesn't support SSL. Use this for production databases where security is critical.
+- **Disable SSL**: Never uses SSL. Only use this for local development or trusted networks where encryption is not needed.
+
+!!! tip
+    Most cloud-hosted PostgreSQL services (AWS RDS, Google Cloud SQL, Supabase, etc.) support SSL connections. We recommend using "Prefer SSL" or "Require SSL" for these services.
+
+!!! note
+    PostgreSQL also supports `verify-ca` and `verify-full` modes for server certificate verification, but Mathesar does not currently support these. If you need certificate verification for your use case, please [open an issue](https://github.com/mathesar-foundation/mathesar/issues) to let us know.
+
 ## Creating a new database
 
 If you're starting your database from scratch with Mathesar you can either:
@@ -93,31 +107,57 @@ Separate from your connected PostgreSQL database, Mathesar also maintains an int
       <ul>
         <li>
           The
-          <a href="/user-guide/schemas/">schemas</a>
+          <a href="../schemas">schemas</a>
           and
-          <a href="/user-guide/tables/">tables</a>
+          <a href="../tables">tables</a>
           you see from within Mathesar
         </li>
         <li>The rows, columns, and cells within those tables</li>
         <li>
-          <a href="/user-guide/relationships/">Relationships</a>
+          <a href="../relationships">Relationships</a>
           between those tables
         </li>
         <li>
-          <a href="/user-guide/roles/">Roles</a>
+          <a href="../roles">Roles</a>
           and their privileges
         </li>
       </ul>
     </td>
     <td>
       <ul>
-        <li><a href="/user-guide/users/">Users</a></li>
+        <li><a href="../users">Users</a></li>
         <li>Database connection credentials, including saved role passwords</li>
-        <li><a href="/user-guide/collaborators/">Collaborators</a></li>
-        <li><a href="/user-guide/metadata/">Metadata</a></li>
-        <li><a href="/user-guide/data-explorer/">Saved Explorations</a></li>
+        <li><a href="../collaborators">Collaborators</a></li>
+        <li><a href="#metadata">Metadata</a></li>
+        <li><a href="../data-explorer">Saved Explorations</a></li>
       </ul>
     </td>
   </tr>
   </tbody>
 </table>
+
+### Understanding Mathesar's Metadata {:#metadata}
+
+Mathesar keeps as much of your data as possible inside your connected PostgreSQL database, structured consistently with the way it appears in the Mathesar interface. However, some of the customization that Mathesar offers doesn't fit neatly into the PostgreSQL model, so Mathesar stores a thin layer of metadata in its [internal database](./databases.md#internal) to support these features.
+
+#### Table metadata
+
+For each table, the following optional configurations are stored as metadata:
+
+- **Column order**
+
+    Interestingly, PostgreSQL does not allow existing columns to be rearranged. Mathesar allows you to customize the column order by dragging and dropping columns in the table view. This order is stored as metadata. When no metadata is present, the columns will be displayed in the order they are stored in PostgreSQL.
+
+- **Record summary template**
+
+    The template used to generate [record summaries](./relationships.md#record-summaries). This allows links to records in the table to be summarized into short human-readable pieces of text.
+
+    Without any metadata, the record summary will be generated using the first text-like column of the table if possible.
+
+#### Column metadata
+
+Many of Mathesar's [data types](./data-types.md) have type-specific **formatting** options which are stored as metadata. These options allow you to customize the way the data is displayed in the Mathesar interface.
+
+#### Metadata access control
+
+{% include 'snippets/metadata-access-control.md' %}

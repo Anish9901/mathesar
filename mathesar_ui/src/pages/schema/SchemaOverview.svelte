@@ -12,6 +12,7 @@
   import { getDataExplorerPageUrl } from '@mathesar/routes/urls';
   import { fetchExplorationsForCurrentSchema } from '@mathesar/stores/queries';
   import { fetchTablesForCurrentSchema } from '@mathesar/stores/tables';
+  import { isTableView } from '@mathesar/utils/tables';
   import {
     AnchorButton,
     Button,
@@ -50,12 +51,13 @@
     schema.database.id,
     schema.oid,
   );
+  $: hasViews = [...tablesMap.values()].some((table) => isTableView(table));
 </script>
 
 <div class="schema-overview" class:has-tables={hasTables}>
   <div class="tables">
     <header>
-      <h2>{$_('tables')}</h2>
+      <h2>{hasViews ? $_('tables_and_views') : $_('tables')}</h2>
       <div>
         <CreateTableButton
           database={schema.database}
@@ -148,7 +150,11 @@
               {$_('what_is_an_exploration')}
             </div>
             <div slot="footer">
-              <AnchorButton href={dataExplorerPageUrl} size="small">
+              <AnchorButton
+                href={dataExplorerPageUrl}
+                size="small"
+                appearance="tip"
+              >
                 {$_('open_data_explorer')}
               </AnchorButton>
             </div>

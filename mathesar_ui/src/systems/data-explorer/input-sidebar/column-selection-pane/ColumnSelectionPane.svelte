@@ -2,15 +2,13 @@
   import { _ } from 'svelte-i18n';
 
   import type QueryManager from '../../QueryManager';
-  import type { ColumnWithLink } from '../../utils';
 
   import SelectableColumn from './SelectableColumn.svelte';
   import SelectableColumnTree from './SelectableColumnTree.svelte';
   import TableGroupCollapsible from './TableGroupCollapsible.svelte';
 
   export let queryManager: QueryManager;
-  export let linkCollapsibleOpenState: Record<ColumnWithLink['id'], boolean> =
-    {};
+  export let linkCollapsibleOpenState: Record<string, boolean> = {};
 
   $: ({ inputColumns, query } = queryManager);
   $: ({ baseTableColumns, tablesThatReferenceBaseTable } = $inputColumns);
@@ -92,8 +90,8 @@
     section {
       header {
         padding: var(--sm3);
-        background: var(--inspector-hover);
-        font-weight: 590;
+        background: var(--color-bg-header);
+        font-weight: var(--font-weight-bold);
       }
       .content {
         padding: var(--lg1);

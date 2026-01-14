@@ -13,9 +13,9 @@
   import FieldChainTail from './FieldChainTail.svelte';
 
   export let schema: Schema;
-  export let columnIds: number[];
+  export let columnIds: string[];
   export let columns: ProcessedColumns;
-  export let onUpdate: (columnIds: number[]) => void;
+  export let onUpdate: (columnIds: string[]) => void;
 
   $: column = defined(columnIds[0], (c) => columns.get(c));
   /**
@@ -73,7 +73,7 @@
   }
   .deleted-column {
     margin-top: 0.8rem;
-    color: var(--text-color-muted);
+    color: var(--color-fg-base-disabled);
     font-size: var(--sm1);
     font-style: italic;
   }

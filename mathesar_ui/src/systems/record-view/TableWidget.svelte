@@ -11,6 +11,11 @@
   import { iconRecord } from '@mathesar/icons';
   import type { Table } from '@mathesar/models/Table';
   import {
+    ImperativeFilterController,
+    imperativeFilterControllerContext,
+  } from '@mathesar/pages/table/ImperativeFilterController';
+  import { storeToGetTablePageUrl } from '@mathesar/stores/storeBasedUrls';
+  import {
     Meta,
     TabularData,
     setTabularDataStoreInContext,
@@ -28,26 +33,38 @@
     pagination: new Pagination({ size: 10 }),
   });
 
+  const imperativeFilterController = new ImperativeFilterController();
+  imperativeFilterControllerContext.set(imperativeFilterController);
+
   export let recordPk: string;
   export let recordSummary: string;
   export let table: Table;
-  export let fkColumn: Pick<RawColumnWithMetadata, 'id' | 'name'>;
+  export let fkColumn: Pick<RawColumnWithMetadata, 'id' | 'name' | 'metadata'>;
+  export let isInModal = false;
 
   $: tabularData = new TabularData({
     database: table.schema.database,
     table,
     meta,
-    contextualFilters: new Map([[fkColumn.id, recordPk]]),
+    contextualFilters: new Map([[String(fkColumn.id), recordPk]]),
   });
   $: tabularDataStore.set(tabularData);
   $: ({ currentRolePrivileges } = table.currentAccess);
   $: canViewTable = $currentRolePrivileges.has('SELECT');
+  $: getTablePageUrl = $storeToGetTablePageUrl;
+  $: href = isInModal ? undefined : getTablePageUrl({ tableId: table.oid });
 </script>
 
 <div class="table-widget">
   <div class="top">
     <h3 class="bold-header">
-      <TableName {table} truncate={false} />
+      {#if href}
+        <a class="table-link" {href}>
+          <TableName {table} truncate={false} />
+        </a>
+      {:else}
+        <TableName {table} truncate={false} />
+      {/if}
       <Help>
         <RichText text={$_('related_records_help')} let:slotName>
           {#if slotName === 'tableName'}
@@ -64,6 +81,7 @@
                 name: fkColumn.name,
                 type: 'unknown',
                 type_options: null,
+                metadata: fkColumn.metadata,
                 constraintsType: ['foreignkey'],
               }}
               truncate={false}
@@ -98,7 +116,7 @@
     justify-content: space-between;
     align-items: center;
     overflow: hidden;
-    color: var(--text-color-primary);
+    color: var(--color-fg-base);
     margin-bottom: var(--sm1);
   }
   .top > :global(*) {
@@ -109,5 +127,13 @@
   }
   .results {
     margin-top: var(--sm1);
+    border: transparent;
+  }
+  .table-link {
+    color: inherit;
+    text-decoration: none;
+  }
+  .table-link:hover {
+    text-decoration: underline;
   }
 </style>

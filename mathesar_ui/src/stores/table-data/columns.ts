@@ -6,15 +6,18 @@ import type { ColumnMetadata } from '@mathesar/api/rpc/_common/columnDisplayOpti
 import type {
   ColumnCreationSpec,
   ColumnPatchSpec,
+  ColumnTypeOptions,
   RawColumnWithMetadata,
 } from '@mathesar/api/rpc/columns';
 import type { Database } from '@mathesar/models/Database';
 import type { Table } from '@mathesar/models/Table';
+import { batchRun } from '@mathesar/packages/json-rpc-client-builder';
 import { getErrorMessage } from '@mathesar/utils/errors';
 import {
   type CancellablePromise,
   EventHandler,
   WritableSet,
+  isDefinedNonNullable,
 } from '@mathesar-component-library';
 
 export class ColumnsDataStore extends EventHandler<{
@@ -91,6 +94,26 @@ export class ColumnsDataStore extends EventHandler<{
     await this.fetch();
   }
 
+  async addWithMetadata(
+    columnDetails: ColumnCreationSpec,
+    metadata: ColumnMetadata | null,
+  ): Promise<void> {
+    const result = await api.columns
+      .add({ ...this.apiContext, column_data_list: [columnDetails] })
+      .run();
+    const [columnId] = result;
+    if (columnId && isDefinedNonNullable(metadata)) {
+      await api.columns.metadata
+        .set({
+          ...this.apiContext,
+          column_meta_data_list: [{ attnum: columnId, ...metadata }],
+        })
+        .run();
+    }
+    await this.dispatch('columnAdded');
+    await this.fetch();
+  }
+
   async rename(id: RawColumnWithMetadata['id'], name: string): Promise<void> {
     await api.columns
       .patch({ ...this.apiContext, column_data_list: [{ id, name }] })
@@ -140,26 +163,54 @@ export class ColumnsDataStore extends EventHandler<{
   }
 
   async setDisplayOptions(
-    column: Pick<RawColumnWithMetadata, 'id'>,
-    displayOptions: ColumnMetadata | null,
+    /** Key is column id, value is display options */
+    changes: Map<number, ColumnMetadata | null>,
   ): Promise<void> {
+    if (!changes.size) {
+      return;
+    }
+
+    const { apiContext } = this;
+    function* getApiRequests() {
+      for (const [columnId, displayOptions] of changes.entries()) {
+        yield api.columns.metadata.set({
+          ...apiContext,
+          column_meta_data_list: [{ attnum: columnId, ...displayOptions }],
+        });
+      }
+    }
+    await batchRun([...getApiRequests()]);
+
+    this.fetchedColumns.update((columns) =>
+      columns.map((column) => {
+        const metadata = changes.get(column.id);
+        return metadata === undefined ? column : { ...column, metadata };
+      }),
+    );
+  }
+
+  async changeType(spec: {
+    id: RawColumnWithMetadata['id'];
+    type: ColumnCreationSpec['type'];
+    type_options: ColumnTypeOptions | null;
+    metadata: ColumnMetadata | null;
+  }): Promise<void> {
+    await api.columns
+      .patch({
+        ...this.apiContext,
+        column_data_list: [
+          { id: spec.id, type: spec.type, type_options: spec.type_options },
+        ],
+      })
+      .run();
     await api.columns.metadata
       .set({
         ...this.apiContext,
-        column_meta_data_list: [{ attnum: column.id, ...displayOptions }],
+        column_meta_data_list: [{ attnum: spec.id, ...spec.metadata }],
       })
       .run();
-
-    this.fetchedColumns.update((columns) =>
-      columns.map((c) =>
-        c.id === column.id
-          ? {
-              ...c,
-              metadata: { ...c.metadata, ...displayOptions },
-            }
-          : c,
-      ),
-    );
+    await this.fetch();
+    await this.dispatch('columnPatched');
   }
 
   destroy(): void {

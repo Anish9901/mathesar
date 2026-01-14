@@ -8,9 +8,19 @@
     requiredField,
   } from '@mathesar/components/form';
   import { iconAddNew } from '@mathesar/icons';
+  import {
+    abstractTypeToColumnSaveSpec,
+    defaultAbstractType,
+  } from '@mathesar/stores/abstract-types';
+  import type { AbstractType } from '@mathesar/stores/abstract-types/types';
   import { getTabularDataStoreFromContext } from '@mathesar/stores/table-data';
   import { columnNameIsAvailable } from '@mathesar/utils/columnUtils';
-  import { Dropdown, Icon, Spinner } from '@mathesar-component-library';
+  import {
+    Dropdown,
+    Icon,
+    Spinner,
+    focusTrap,
+  } from '@mathesar-component-library';
 
   import ColumnTypeSelector from './ColumnTypeSelector.svelte';
 
@@ -19,23 +29,27 @@
   $: ({ columns } = columnsDataStore);
 
   $: columnName = requiredField('', [columnNameIsAvailable($columns)]);
-  const columnType = requiredField<string | undefined>(undefined);
-  $: form = makeForm({ columnName, columnType });
+
+  const columnAbstractType = requiredField<AbstractType>(defaultAbstractType);
+  $: form = makeForm({ columnName, columnAbstractType });
   $: ({ isSubmitting } = form);
 
   async function addColumn(closeDropdown: () => void) {
-    await columnsDataStore.add({
-      name: $columnName,
-      type: $columnType,
-    });
+    const spec = abstractTypeToColumnSaveSpec($columnAbstractType);
+    await columnsDataStore.addWithMetadata(
+      {
+        name: $columnName,
+        ...spec.dbOptions,
+      },
+      spec.metadata,
+    );
     closeDropdown();
   }
 </script>
 
 <Dropdown
   closeOnInnerClick={false}
-  triggerAppearance="secondary"
-  triggerClass="btn-borderless"
+  triggerAppearance="plain"
   showArrow={false}
   ariaLabel={$_('new_column')}
   on:close={form.reset}
@@ -48,10 +62,10 @@
       <Icon class="opt" {...iconAddNew} size="0.9em" />
     {/if}
   </svelte:fragment>
-  <div slot="content" class="new-column-dropdown" let:close>
+  <div slot="content" class="new-column-dropdown" let:close use:focusTrap>
     <Field field={columnName} label={$_('column_name')} layout="stacked" />
     <Field
-      field={columnType}
+      field={columnAbstractType}
       input={{ component: ColumnTypeSelector }}
       label={$_('select_type')}
       layout="stacked"

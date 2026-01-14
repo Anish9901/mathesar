@@ -3,8 +3,10 @@
     AttachableDropdown,
     Button,
     Icon,
+    filterViaTextQuery,
     iconSearch,
   } from '@mathesar/component-library';
+  import focusTrap from '@mathesar/component-library/common/actions/focusTrap';
   import TextInputWithPrefix from '@mathesar/component-library/text-input/TextInputWithPrefix.svelte';
   import { iconExpandRight } from '@mathesar/icons';
   import { modal } from '@mathesar/stores/modal';
@@ -17,6 +19,7 @@
     BreadcrumbSelectorEntry,
     BreadcrumbSelectorSectionData,
   } from './breadcrumbTypes';
+  import { BREADCRUMB_SELECTOR_ROW_CLASS } from './breadcrumbUtils';
 
   const connectDatabaseModalController = modal.spawnModalController();
 
@@ -27,15 +30,97 @@
   let triggerElement: HTMLButtonElement;
   let isOpen = false;
   let filterString: string;
+  let contentElement: HTMLDivElement | undefined;
+  let selectedIndex = -1;
 
   // Focus the text input when dropdown is opened
   let textInputEl: HTMLInputElement | undefined;
-  $: if (isOpen) {
-    textInputEl?.focus();
-  } else {
-    filterString = '';
+  $: isOpen, (filterString = '');
+
+  // Get all filtered entries for keyboard navigation
+  $: allFilteredEntries = [
+    ...sections.flatMap((section) =>
+      Array.from(
+        filterViaTextQuery(section.entries, filterString, (e) =>
+          e.getFilterableText(),
+        ),
+      ),
+    ),
+    ...persistentLinks,
+  ];
+  $: allFilteredEntries, (selectedIndex = -1);
+
+  function scrollToSelected() {
+    if (selectedIndex >= 0 && contentElement) {
+      const links = contentElement.querySelectorAll(
+        `.${BREADCRUMB_SELECTOR_ROW_CLASS} a`,
+      );
+      const selectedLink = links[selectedIndex] as HTMLElement;
+      if (selectedLink) {
+        selectedLink.focus();
+        selectedLink.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
+  function handleKeyDown(event: KeyboardEvent) {
+    if (!isOpen) {
+      return;
+    }
+
+    const target = event.target as HTMLElement;
+    const isSearchInput = target === textInputEl;
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      isOpen = false;
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      if (selectedIndex >= allFilteredEntries.length - 1) {
+        // Loop back to search input, then to first item
+        selectedIndex = -1;
+        textInputEl?.focus();
+      } else {
+        selectedIndex += 1;
+        scrollToSelected();
+      }
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (selectedIndex === -1) {
+        // From search input, go to last item
+        selectedIndex = allFilteredEntries.length - 1;
+        scrollToSelected();
+      } else if (selectedIndex === 0) {
+        // From first item, go to search input
+        selectedIndex = -1;
+        textInputEl?.focus();
+      } else {
+        selectedIndex -= 1;
+        scrollToSelected();
+      }
+      return;
+    }
+
+    // For alphanumeric keys and editing keys, focus the search input
+    // This works when an anchor link is focused
+    if (
+      !isSearchInput &&
+      (event.key.length === 1 ||
+        event.key === 'Backspace' ||
+        event.key === 'Delete')
+    ) {
+      textInputEl?.focus();
+    }
   }
 </script>
+
+<svelte:window on:keydown={handleKeyDown} />
 
 <div class="entity-switcher" class:is-open={isOpen}>
   <Button
@@ -58,7 +143,11 @@
     trigger={triggerElement}
     class="breadcrumb-selector-dropdown"
   >
-    <div class="entity-switcher-content">
+    <div
+      class="entity-switcher-content"
+      bind:this={contentElement}
+      use:focusTrap
+    >
       <div class="search">
         <TextInputWithPrefix
           prefixIcon={iconSearch}
@@ -105,7 +194,7 @@
     display: grid;
     grid-template: auto 1fr / 1fr;
     grid-gap: var(--sm4);
-    max-height: calc(100vh - 2rem);
+    max-height: calc(100svh - 2rem);
   }
   .sections {
     overflow-y: auto;
@@ -120,31 +209,28 @@
     margin-top: var(--sm5);
     padding-left: 0;
     padding-top: var(--sm5);
-    border-top: 1px solid var(--border-color);
+    border-top: 1px solid var(--color-border-section);
   }
   .entity-switcher .trigger {
-    color: var(--text-color-primary);
+    color: var(--color-fg-navigation);
     border-radius: var(--border-radius-m);
     display: flex;
     align-items: center;
     padding: var(--sm4);
 
     &:hover {
-      background-color: rgba(255, 117, 76, 0.15);
-      color: var(--salmon-800);
+      background-color: var(--color-bg-raised-1-hover);
+      color: var(--color-fg-navigation-hover);
+      border-color: var(--color-border-raised-1-hover);
     }
+  }
 
-    &:active {
-      background-color: rgba(255, 117, 76, 0.25);
-      color: var(--salmon-800);
-    }
-
-    :global(body.theme-dark) &:hover {
-      color: var(--salmon-200);
-    }
-
-    :global(body.theme-dark) &:active {
-      color: var(--salmon-200);
+  .entity-switcher:has(button:focus) {
+    .trigger {
+      background-color: var(--color-bg-raised-1-focused);
+      color: var(--color-fg-navigation-focused);
+      border-color: var(--color-border-raised-1-focused);
+      box-shadow: inset 0 0 2px 1px var(--color-shadow);
     }
   }
 </style>

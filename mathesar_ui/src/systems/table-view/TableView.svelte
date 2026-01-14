@@ -4,24 +4,32 @@
   import { get } from 'svelte/store';
   import { _ } from 'svelte-i18n';
 
+  import type { ColumnMetadata } from '@mathesar/api/rpc/_common/columnDisplayOptions';
   import { ImmutableMap, Spinner } from '@mathesar/component-library';
   import { Sheet } from '@mathesar/components/sheet';
   import { SheetClipboardHandler } from '@mathesar/components/sheet/clipboard';
+  import { contextMenuContext } from '@mathesar/contexts/contextMenuContext';
   import { ROW_HEADER_WIDTH_PX } from '@mathesar/geometry';
   import { iconPaste } from '@mathesar/icons';
   import type { Table } from '@mathesar/models/Table';
+  import { imperativeFilterControllerContext } from '@mathesar/pages/table/ImperativeFilterController';
   import { confirm } from '@mathesar/stores/confirmation';
   import { tableInspectorVisible } from '@mathesar/stores/localStorage';
+  import { modal } from '@mathesar/stores/modal';
   import {
     ID_ADD_NEW_COLUMN,
     ID_ROW_CONTROL_COLUMN,
     getTabularDataStoreFromContext,
+    isJoinedColumn,
   } from '@mathesar/stores/table-data';
   import { toast } from '@mathesar/stores/toast';
-  import { stringifyMapKeys } from '@mathesar/utils/collectionUtils';
+  import { modalRecordViewContext } from '@mathesar/systems/record-view-modal/modalRecordViewContext';
 
   import Body from './Body.svelte';
+  import { openTableCellContextMenu } from './context-menu/contextMenu';
   import Header from './header/Header.svelte';
+  import { importModalContext } from './import/ImportController';
+  import ImportModal from './import/ImportModal.svelte';
   import StatusPane from './StatusPane.svelte';
   import WithTableInspector from './table-inspector/WithTableInspector.svelte';
   import { getCustomizedColumnWidths } from './tableViewUtils';
@@ -29,6 +37,11 @@
   type Context = 'page' | 'widget';
 
   const tabularData = getTabularDataStoreFromContext();
+  const importModal = modal.spawnModalController();
+  importModalContext.set(importModal);
+  const contextMenu = contextMenuContext.get();
+  const modalRecordView = modalRecordViewContext.get();
+  const imperativeFilterController = imperativeFilterControllerContext.get();
 
   export let context: Context = 'page';
   export let table: Table;
@@ -40,15 +53,24 @@
   $: ({ currentRoleOwns } = table.currentAccess);
   $: usesVirtualList = context !== 'widget';
   $: sheetHasBorder = context === 'widget';
-  $: ({ processedColumns, display, isLoading, selection, recordsData } =
-    $tabularData);
+  $: ({
+    processedColumns,
+    joinedColumns,
+    display,
+    isLoading,
+    selection,
+    recordsData,
+    allColumns,
+    columnsDataStore,
+  } = $tabularData);
+  $: $tabularData, (tableInspectorTab = 'table');
   $: clipboardHandler = new SheetClipboardHandler({
     copyingContext: {
       getRows: () =>
         new Map(
           map(([k, r]) => [k, r.record], get(recordsData.selectableRowsMap)),
         ),
-      getColumns: () => stringifyMapKeys(get(processedColumns)),
+      getColumns: () => get(processedColumns),
       getRecordSummaries: () => get(recordsData.linkedRecordSummaries),
     },
     pastingContext: {
@@ -59,7 +81,7 @@
       getSheetColumns: () => [
         ...map(({ column }) => column, get(processedColumns).values()),
       ],
-      bulkDml: (...args) => recordsData.bulkDml(...args),
+      bulkDml: (args) => recordsData.bulkDml(args),
       confirm: (title) =>
         confirm({
           title,
@@ -72,8 +94,8 @@
     showToastError: toast.error,
   });
   $: ({ horizontalScrollOffset, scrollOffset } = display);
-  $: columnOrder = table.metadata?.column_order ?? [];
-  $: hasNewColumnButton = context !== 'widget' && $currentRoleOwns;
+  $: columnOrder = (table.metadata?.column_order ?? []).map(String);
+  $: hasNewColumnButton = $currentRoleOwns;
   /**
    * These are separate variables for readability and also to keep the door open
    * to more easily displaying the Table Inspector even if DDL operations are
@@ -81,9 +103,14 @@
    */
   $: supportsTableInspector = context === 'page';
   $: sheetColumns = (() => {
-    const columns = [
+    const columns: Array<{ column: { id: string; name: string } }> = [
       { column: { id: ID_ROW_CONTROL_COLUMN, name: 'ROW_CONTROL' } },
-      ...$processedColumns.values(),
+      ...[...$processedColumns.values()].map((pc) => ({
+        column: { id: pc.id, name: pc.column.name },
+      })),
+      ...[...$joinedColumns.values()].map((jc) => ({
+        column: { id: jc.id, name: jc.displayName },
+      })),
     ];
     if (hasNewColumnButton) {
       columns.push({ column: { id: ID_ADD_NEW_COLUMN, name: 'ADD_NEW' } });
@@ -95,13 +122,28 @@
     [ID_ROW_CONTROL_COLUMN, ROW_HEADER_WIDTH_PX],
     [ID_ADD_NEW_COLUMN, 32],
     ...getCustomizedColumnWidths($processedColumns.values()),
+    ...[...$joinedColumns.keys()].map((id): [string, number] => [id, 300]),
   ]);
   $: showTableInspector = $tableInspectorVisible && supportsTableInspector;
+
+  function persistColumnWidths(widthsMap: [string, number | null][]): void {
+    function* getChanges(): Generator<[number, ColumnMetadata | null]> {
+      for (const [columnId, width] of widthsMap) {
+        const column = $allColumns.get(columnId);
+        if (!column) continue;
+        // Joined columns do not persist width to the database
+        if (isJoinedColumn(column)) continue;
+        yield [parseInt(column.id, 10), { display_width: width }];
+      }
+    }
+    void columnsDataStore.setDisplayOptions(new Map(getChanges()));
+  }
 </script>
 
 <div class="table-view">
   <WithTableInspector
     {context}
+    {table}
     {showTableInspector}
     bind:activeTabId={tableInspectorTab}
   >
@@ -112,6 +154,7 @@
           {columnWidths}
           {selection}
           {usesVirtualList}
+          {persistColumnWidths}
           onCellSelectionStart={(cell) => {
             if (cell.type === 'column-header-cell') {
               tableInspectorTab = 'column';
@@ -119,6 +162,23 @@
             if (cell.type === 'row-header-cell') {
               tableInspectorTab = 'record';
             }
+          }}
+          onCellContextMenu={({
+            targetCell,
+            position,
+            beginSelectingCellRange,
+          }) => {
+            if (!contextMenu) return 'empty';
+            return openTableCellContextMenu({
+              targetCell,
+              position,
+              contextMenu,
+              modalRecordView,
+              tabularData: $tabularData,
+              imperativeFilterController,
+              clipboardHandler,
+              beginSelectingCellRange,
+            });
           }}
           bind:horizontalScrollOffset={$horizontalScrollOffset}
           bind:scrollOffset={$scrollOffset}
@@ -142,6 +202,15 @@
   <StatusPane {context} />
 </div>
 
+<ImportModal
+  controller={importModal}
+  {table}
+  tableColumns={$processedColumns}
+  onFinish={() => {
+    void recordsData.fetch();
+  }}
+/>
+
 <style>
   .table-view {
     --status-bar-padding: 0;
@@ -160,6 +229,5 @@
     text-align: center;
     font-size: 2rem;
     padding: 2rem;
-    color: var(--neutral-500);
   }
 </style>
